@@ -145,7 +145,7 @@ Gerar links públicos.
 
 Exemplo:
 
-/share/core
+/share/projeto-exemplo
 
 /share/daliancas
 

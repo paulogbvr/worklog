@@ -200,7 +200,7 @@ Implemente links públicos de visualização.
 
 Exemplo:
 
-- /share/core
+- /share/projeto-exemplo
 - /share/daliancas
 - /share/worklog
 

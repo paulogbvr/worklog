@@ -366,17 +366,15 @@ Priorizar:
 
 ## V2
 
-- GitHub
-- Commits
-- Deploys
-- Custos
-- Notas fiscais
-- PDF
-- Relatórios
+- Relatórios em PDF
+- Filtros por período
+- Exportação financeira
+- Melhorias no portal compartilhável
+- Histórico avançado de pagamentos
 
 ## V3
 
 - Multiusuário
-- Equipes
-- Agência
-- SaaS
+- Permissões por usuário
+- Múltiplos workspaces
+- Planos para uso futuro como produto
