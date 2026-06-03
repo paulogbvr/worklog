@@ -2,19 +2,134 @@
 
 Sistema para acompanhamento de horas trabalhadas, cálculo financeiro por projeto e compartilhamento transparente com clientes.
 
-## Objetivo
+Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supabase como banco de dados principal.
+
+---
+
+# Status do Projeto
+
+| Etapa                 | Status          |
+| --------------------- | --------------- |
+| Documentação          | ✅ Concluído    |
+| Ambiente (.env)       | ✅ Concluído    |
+| Supabase              | ✅ Configurado  |
+| WakaTime              | ✅ Configurado  |
+| Estrutura Inicial     | ⏳ Em andamento |
+| Banco (Prisma)        | ⏳ Em andamento |
+| Integração WakaTime   | ⏳ Em andamento |
+| Dashboard             | ⏳ Em andamento |
+| Projetos              | ⏳ Em andamento |
+| Registros de Trabalho | ⏳ Em andamento |
+| Pagamentos            | ⏳ Em andamento |
+| Portal Compartilhável | ⏳ Em andamento |
+| Deploy                | ⏳ Em andamento |
+
+### Progresso Geral
+
+```txt
+████░░░░░░░░░░░░░░░░ 20%
+```
+
+---
+
+# Estrutura do Projeto
+
+```txt
+/
+├── README.md
+├── CLAUDE.md
+├── .env.local
+├── .env.example
+├── .gitignore
+│
+├── docs/
+│   ├── vision/
+│   │   └── WORKLOG_SPEC.md
+│   │
+│   ├── planning/
+│   │   └── EXECUTION_PLAN.md
+│   │
+│   ├── project-memory/
+│   │   ├── PROGRESS.md
+│   │   ├── DECISIONS.md
+│   │   ├── TASK_PLAN.md
+│   │   └── FINDINGS.md
+│   │
+│   ├── architecture/
+│   │   └── STACK.md
+│   │
+│   └── references/
+│       └── LINKS.md
+│
+├── prisma/
+├── src/
+└── public/
+```
+
+---
+
+# Documentação Principal
+
+Antes de implementar qualquer coisa, consultar:
+
+1. README.md
+2. CLAUDE.md
+3. docs/vision/WORKLOG_SPEC.md
+4. docs/planning/EXECUTION_PLAN.md
+5. docs/project-memory/PROGRESS.md
+6. docs/project-memory/DECISIONS.md
+7. docs/project-memory/TASK_PLAN.md
+8. docs/architecture/STACK.md
+9. docs/references/LINKS.md
+10. docs/project-memory/FINDINGS.md
+
+---
+
+# Decisões Arquiteturais
+
+## Banco
+
+- Supabase PostgreSQL
+
+## ORM
+
+- Prisma ORM
+
+## Rastreamento de Horas
+
+- WakaTime
+
+## Deploy
+
+- Vercel
+
+## Fonte Oficial das Horas
+
+- WakaTime
+
+## Fonte Oficial dos Dados Financeiros
+
+- Banco PostgreSQL (Supabase)
+
+## Registros Manuais
+
+- WorkLogEntry
+
+---
+
+# Objetivo
 
 Centralizar:
 
 - projetos
 - clientes
-- horas trabalhadas
+- horas registradas pelo WakaTime
 - registros manuais de trabalho
 - valores acumulados
 - pagamentos realizados
 - valores pendentes
 
-Utilizando o WakaTime como fonte oficial de rastreamento de tempo em código.
+Tudo em um único local.
 
 ---
 
@@ -26,7 +141,15 @@ WakaTime
 
 ↓
 
-Horas por Projeto
+Sincronização
+
+↓
+
+Supabase
+
+↓
+
+Projetos
 
 ↓
 
@@ -42,7 +165,7 @@ Dashboard
 
 ↓
 
-Portal do Cliente
+Portal Compartilhável
 
 ↓
 
@@ -57,10 +180,13 @@ Histórico de Pagamentos
 Visualizar:
 
 - horas totais
+- horas WakaTime
+- horas dedicadas
 - valor total
-- valor pendente
 - valor recebido
+- valor pendente
 - projetos ativos
+- projetos pendentes de configuração
 - clientes ativos
 - última atualização do WakaTime
 
@@ -73,7 +199,6 @@ Cada projeto possui:
 - nome
 - cliente
 - valor por hora
-- repositórios vinculados
 - nome do projeto no WakaTime
 - horas acumuladas pelo WakaTime
 - horas dedicadas manualmente
@@ -81,8 +206,35 @@ Cada projeto possui:
 - valor recebido
 - saldo pendente
 - status ativo/inativo
+- status de configuração
 
 Além das horas importadas pelo WakaTime, cada projeto poderá possuir registros manuais de trabalho.
+
+---
+
+## Projetos Automáticos
+
+Sempre que um novo projeto aparecer no WakaTime:
+
+- verificar se já existe no banco
+- caso não exista, criar automaticamente
+
+Projeto recém criado:
+
+- ativo
+- sem cliente
+- sem valor por hora
+
+Status:
+
+```txt
+Pendente de Configuração
+```
+
+O usuário deverá apenas definir:
+
+- cliente
+- valor por hora
 
 ---
 
@@ -186,7 +338,7 @@ valor pendente
 
 ---
 
-## Integração WakaTime
+# Integração WakaTime
 
 Documentação oficial:
 
@@ -216,45 +368,70 @@ Regras:
 - usar a API Key apenas no backend/server-side
 - nunca expor a API Key no frontend
 - tratar erros de autenticação
-- manter fallback com dados mockados enquanto a integração estiver em desenvolvimento
+- registrar última sincronização
+- criar projetos automaticamente quando necessário
 
 ---
 
-## Variáveis de Ambiente
+# Banco de Dados
+
+Banco principal:
+
+Supabase PostgreSQL
+
+ORM:
+
+Prisma ORM
+
+Regras:
+
+- Prisma será responsável por todas as operações de banco
+- Supabase será utilizado como PostgreSQL gerenciado
+- autenticação Supabase não será utilizada inicialmente
+- toda comunicação deverá passar pelo backend
+
+---
+
+# Variáveis de Ambiente
 
 Criar um arquivo `.env.local` na raiz do projeto.
 
 Exemplo:
 
 ```env
+# API Key do WakaTime
 WAKATIME_API_KEY=sua_api_key_aqui
+
+# Banco Supabase PostgreSQL
+DATABASE_URL="postgresql://postgres:SUA_SENHA@db.djuyxaznecfkwcjzkwlh.supabase.co:5432/postgres"
 ```
 
-Também criar um `.env.example` com:
+Criar também um `.env.example`:
 
 ```env
 WAKATIME_API_KEY=
+DATABASE_URL=
 ```
 
-A API Key real deve ficar apenas no `.env.local`.
+Regras:
 
-O `.env.local` não deve ser commitado.
+- a API Key real deve ficar apenas no `.env.local`
+- a DATABASE_URL real deve ficar apenas no `.env.local`
+- nunca commitar `.env.local`
 
 ---
 
-## Controle de Tempo
+# Controle de Tempo
 
-O sistema deverá apresentar:
-
-### Horas WakaTime
+## Horas WakaTime
 
 Tempo efetivamente registrado pelo WakaTime.
 
-### Horas Dedicadas
+## Horas Dedicadas
 
 Tempo calculado através dos registros de trabalho cadastrados manualmente.
 
-### Diferença
+## Diferença
 
 Comparação entre:
 
@@ -263,7 +440,7 @@ Comparação entre:
 
 Permitindo identificar tempo gasto em atividades fora da programação.
 
-### Valor Financeiro
+## Valor Financeiro
 
 Horas Dedicadas
 
@@ -279,7 +456,7 @@ Valor Total
 
 # Direção Visual
 
-O WorkLog deve ter aparência de dashboard SaaS moderno, limpo, premium e interativo.
+O WorkLog deve ter aparência de dashboard moderno, limpo, premium e interativo.
 
 Referência visual principal:
 
@@ -292,18 +469,15 @@ Usar como inspiração:
 - sensação de elementos reagindo ao cursor
 - efeitos sutis de "grudar" no mouse
 - transições fluidas
-- interface viva, mas sem exagero
+- interface viva sem exagero
 - experiência premium e memorável
 
 Referências adicionais:
 
-https://dribbble.com/tags/time-tracker
-
-https://dribbble.com/search/time-tracking-dashboard
-
-https://dribbble.com/search/dark-saas-dashboard
-
-https://dribbble.com/search/saas-project-management
+- https://dribbble.com/tags/time-tracker
+- https://dribbble.com/search/time-tracking-dashboard
+- https://dribbble.com/search/dark-saas-dashboard
+- https://dribbble.com/search/saas-project-management
 
 Priorizar:
 
@@ -313,7 +487,7 @@ Priorizar:
 - boa hierarquia visual
 - botões com microinterações
 - tela de registros de trabalho fácil de usar
-- portal compartilhável com aparência profissional
+- portal compartilhável profissional
 
 ---
 
@@ -325,10 +499,27 @@ Priorizar:
 - Shadcn UI
 - PostgreSQL
 - Prisma ORM
+- Supabase
 - Vercel
 
 ---
 
-# Status
+# Próxima Etapa
 
-Planejamento inicial.
+Implementar:
+
+- Prisma
+- Supabase
+- Integração WakaTime
+- Dashboard inicial
+- Projetos automáticos via WakaTime
+- Registros de Trabalho
+- Pagamentos
+
+Após conclusão da estrutura base, atualizar:
+
+- tabela de status
+- barra de progresso
+- próxima etapa
+- docs/project-memory/PROGRESS.md
+- docs/project-memory/TASK_PLAN.md

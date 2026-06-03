@@ -14,6 +14,7 @@ Exibir:
 - valor pendente
 - valor recebido
 - projetos ativos
+- projetos pendentes de configuração
 - clientes ativos
 - última atualização do WakaTime
 
@@ -38,6 +39,30 @@ Cada projeto deve possuir:
 - valor pendente
 - registros de trabalho
 - pagamentos
+- status de configuração
+- última sincronização
+
+---
+
+### Status de Configuração
+
+Um projeto pode estar:
+
+- configurado
+- pendente de configuração
+
+Projeto configurado:
+
+- possui cliente
+- possui valor por hora
+
+Projeto pendente:
+
+- foi criado automaticamente pelo WakaTime
+- ainda não possui cliente
+- ainda não possui valor por hora
+
+Projetos pendentes devem ser destacados no dashboard.
 
 ---
 
@@ -99,7 +124,9 @@ Regras:
 
 - cada pagamento pertence a um projeto
 - o valor pago deve reduzir o valor pendente
-- o histórico de pagamentos deve aparecer no dashboard, no projeto e no portal compartilhável
+- o histórico de pagamentos deve aparecer no dashboard
+- o histórico de pagamentos deve aparecer no projeto
+- o histórico de pagamentos deve aparecer no portal compartilhável
 
 ---
 
@@ -160,7 +187,7 @@ Criar `.env.local` com:
 
 ```env
 WAKATIME_API_KEY=sua_api_key_aqui
-DATABASE_URL=sua_url_do_banco_aqui
+DATABASE_URL="postgresql://postgres:SUA_SENHA@db.seu-projeto.supabase.co:5432/postgres"
 ```
 
 Regras:
@@ -169,6 +196,7 @@ Regras:
 - nunca commitar `.env.local`
 - nunca expor a API Key no frontend
 - usar a API Key apenas no backend/server-side
+- usar DATABASE_URL apenas no backend/server-side
 
 ---
 
@@ -186,11 +214,44 @@ Backend WorkLog
 
 ↓
 
-Banco
+Supabase (PostgreSQL)
 
 ↓
 
 Frontend
+
+---
+
+## Sincronização
+
+Sempre que um projeto novo aparecer no WakaTime:
+
+- verificar se já existe no banco
+- caso não exista, criar automaticamente
+
+Campos iniciais:
+
+- nome
+- wakatimeProjectName
+- active = true
+
+Campos pendentes:
+
+- cliente
+- valor por hora
+
+O sistema deve registrar a data da última sincronização.
+
+Projetos criados automaticamente devem aparecer como:
+
+```txt
+Pendente de Configuração
+```
+
+até que o usuário defina:
+
+- cliente
+- valor por hora
 
 ---
 
@@ -206,6 +267,14 @@ Botão:
 
 Atualizar Agora
 
+Ao atualizar:
+
+- buscar projetos do WakaTime
+- atualizar horas
+- criar projetos inexistentes
+- registrar sincronização
+- salvar última atualização
+
 ---
 
 # Cálculo
@@ -214,9 +283,13 @@ Atualizar Agora
 
 Tempo registrado automaticamente pelo WakaTime.
 
+---
+
 ## Horas Dedicadas
 
 Tempo calculado com base nos registros manuais de trabalho.
+
+---
 
 ## Diferença
 
@@ -286,6 +359,8 @@ Campos:
 - hourlyRate
 - wakatimeProjectName
 - active
+- configurationStatus
+- lastSyncAt
 - createdAt
 - updatedAt
 
@@ -329,6 +404,40 @@ Campos:
 - active
 - createdAt
 - updatedAt
+
+---
+
+## SyncLog
+
+Campos:
+
+- id
+- syncedAt
+- success
+- message
+
+Objetivo:
+
+Registrar histórico de sincronizações com o WakaTime.
+
+---
+
+# Banco de Dados
+
+Banco principal:
+
+Supabase PostgreSQL
+
+ORM:
+
+Prisma ORM
+
+Regras:
+
+- Prisma deve ser responsável por todas as operações de banco
+- Supabase será utilizado apenas como PostgreSQL gerenciado
+- autenticação Supabase não é necessária neste momento
+- toda comunicação deve passar pelo backend
 
 ---
 
