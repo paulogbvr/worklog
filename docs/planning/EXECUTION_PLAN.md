@@ -10,7 +10,7 @@ O objetivo é construir uma versão bonita, simples e funcional utilizando dados
 
 Criar projeto.
 
-Prompt Claude:
+Direção para Codex:
 
 Leia README.md e WORKLOG_SPEC.md.
 
@@ -50,7 +50,7 @@ Direção visual:
 
 Configurar Ambiente.
 
-Prompt Claude:
+Direção para Codex:
 
 Criar e validar os arquivos de ambiente.
 
@@ -84,7 +84,7 @@ Regras:
 
 Criar Banco com Supabase e Prisma.
 
-Prompt Claude:
+Direção para Codex:
 
 O banco PostgreSQL já foi criado no Supabase.
 
@@ -138,7 +138,7 @@ npx prisma migrate dev
 
 Integração WakaTime.
 
-Prompt Claude:
+Direção para Codex:
 
 Implemente integração real com API do WakaTime.
 
@@ -189,7 +189,7 @@ Regra de criação automática:
 
 Criar Dashboard.
 
-Prompt Claude:
+Direção para Codex:
 
 Implemente dashboard utilizando dados reais do banco e dados sincronizados do WakaTime.
 
@@ -215,7 +215,7 @@ O dashboard deve apresentar uma visão geral simples e clara do WorkLog.
 
 Criar Projetos e Registros de Trabalho.
 
-Prompt Claude:
+Direção para Codex:
 
 Implemente a área de projetos.
 
@@ -258,7 +258,7 @@ Regras:
 
 Pagamentos.
 
-Prompt Claude:
+Direção para Codex:
 
 Implemente a área de pagamentos.
 
@@ -283,7 +283,7 @@ Regras:
 
 Portal Compartilhável.
 
-Prompt Claude:
+Direção para Codex:
 
 Implemente links públicos de visualização.
 
@@ -315,7 +315,7 @@ Não permitir edição no portal público.
 
 Deploy.
 
-Prompt Claude:
+Direção para Codex:
 
 Preparar deploy Vercel.
 

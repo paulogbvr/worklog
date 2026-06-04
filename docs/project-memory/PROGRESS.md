@@ -83,7 +83,7 @@ Concluído:
 - Projetos devem ser criados automaticamente a partir do WakaTime
 - Registros manuais complementam as horas do WakaTime
 - README deve ser mantido atualizado
-- CLAUDE.md deve ser seguido antes de qualquer implementação
+- AGENTS.md deve ser seguido antes de qualquer implementação
 
 ---
 
@@ -150,3 +150,142 @@ Projetos novos detectados no WakaTime devem ser criados automaticamente no banco
 ```txt
 Pendente de Configuração
 ```
+
+---
+
+## 2026-06-04
+
+### Alinhamento Documental para Codex
+
+Concluído:
+
+- `AGENTS.md` definido como instrução operacional oficial
+- `CLAUDE.md` mantido apenas como ponte legada
+- `docs/architecture/DATA_MODEL.md` criado
+- `docs/architecture/WAKATIME_SYNC.md` criado
+- `docs/project-memory/TASK_PLAN.md` transformado em roadmap de implementação
+- README atualizado com nova ordem de leitura e estrutura documental
+
+---
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+60%
+```
+
+Implementação:
+
+```txt
+0%
+```
+
+Projeto Geral:
+
+```txt
+████░░░░░░░░░░░░░░░░ 20%
+```
+
+---
+
+### Próximo Passo
+
+Implementar:
+
+1. Fundação Next.js
+2. TypeScript
+3. TailwindCSS
+4. estrutura inicial de `src/`
+5. scripts de validação
+
+---
+
+## 2026-06-04
+
+### Fundação Next.js
+
+Concluído:
+
+- Next.js inicializado
+- TypeScript configurado
+- TailwindCSS configurado
+- scripts `dev`, `lint`, `typecheck`, `build` e `start` criados
+- tela inicial em `src/app/page.tsx`
+- layout global em `src/app/layout.tsx`
+- estilos globais em `src/app/globals.css`
+- validação server-side de variáveis em `src/lib/env.ts`
+- `package-lock.json` gerado
+- versões de dependências fixadas em `package.json`
+
+---
+
+### Validação
+
+Executado com sucesso:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev
+```
+
+Servidor local validado:
+
+```txt
+http://127.0.0.1:3000
+```
+
+Resposta HTTP:
+
+```txt
+200 OK
+```
+
+---
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+70%
+```
+
+Implementação:
+
+```txt
+10%
+```
+
+Projeto Geral:
+
+```txt
+█████░░░░░░░░░░░░░░░ 25%
+```
+
+---
+
+### Próximo Passo
+
+Implementar:
+
+1. Prisma
+2. schema inicial
+3. conexão Supabase PostgreSQL
+4. Prisma Client
+5. primeira migration

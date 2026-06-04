@@ -14,7 +14,7 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Ambiente (.env)       | ✅ Concluído    |
 | Supabase              | ✅ Configurado  |
 | WakaTime              | ✅ Configurado  |
-| Estrutura Inicial     | ⏳ Em andamento |
+| Estrutura Inicial     | ✅ Concluído    |
 | Banco (Prisma)        | ⏳ Em andamento |
 | Integração WakaTime   | ⏳ Em andamento |
 | Dashboard             | ⏳ Em andamento |
@@ -27,7 +27,7 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 ### Progresso Geral
 
 ```txt
-████░░░░░░░░░░░░░░░░ 20%
+█████░░░░░░░░░░░░░░░ 25%
 ```
 
 ---
@@ -37,7 +37,14 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 ```txt
 /
 ├── README.md
+├── AGENTS.md
 ├── CLAUDE.md
+├── package.json
+├── package-lock.json
+├── next.config.ts
+├── tsconfig.json
+├── postcss.config.mjs
+├── eslint.config.mjs
 ├── .env.local
 ├── .env.example
 ├── .gitignore
@@ -56,13 +63,21 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 │   │   └── FINDINGS.md
 │   │
 │   ├── architecture/
-│   │   └── STACK.md
+│   │   ├── STACK.md
+│   │   ├── DATA_MODEL.md
+│   │   └── WAKATIME_SYNC.md
 │   │
 │   └── references/
 │       └── LINKS.md
 │
 ├── prisma/
 ├── src/
+│   ├── app/
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   └── lib/
+│       └── env.ts
 └── public/
 ```
 
@@ -73,15 +88,19 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 Antes de implementar qualquer coisa, consultar:
 
 1. README.md
-2. CLAUDE.md
+2. AGENTS.md
 3. docs/vision/WORKLOG_SPEC.md
-4. docs/planning/EXECUTION_PLAN.md
-5. docs/project-memory/PROGRESS.md
-6. docs/project-memory/DECISIONS.md
+4. docs/architecture/DATA_MODEL.md
+5. docs/architecture/WAKATIME_SYNC.md
+6. docs/planning/EXECUTION_PLAN.md
 7. docs/project-memory/TASK_PLAN.md
-8. docs/architecture/STACK.md
-9. docs/references/LINKS.md
-10. docs/project-memory/FINDINGS.md
+8. docs/project-memory/PROGRESS.md
+9. docs/project-memory/DECISIONS.md
+10. docs/architecture/STACK.md
+11. docs/references/LINKS.md
+12. docs/project-memory/FINDINGS.md
+
+`CLAUDE.md` existe apenas como arquivo legado de compatibilidade. Para o Codex, a fonte operacional é `AGENTS.md`.
 
 ---
 
@@ -352,9 +371,6 @@ Importar automaticamente:
 
 - projetos
 - horas
-- atividades
-- linguagens
-- editores
 - tempo por projeto
 
 Atualização:
@@ -510,13 +526,12 @@ Implementar:
 
 - Prisma
 - Supabase
-- Integração WakaTime
-- Dashboard inicial
-- Projetos automáticos via WakaTime
-- Registros de Trabalho
-- Pagamentos
+- schema inicial
+- conexão com o banco real
+- primeira migration
+- Prisma Client
 
-Após conclusão da estrutura base, atualizar:
+Após conclusão de cada etapa importante, atualizar:
 
 - tabela de status
 - barra de progresso

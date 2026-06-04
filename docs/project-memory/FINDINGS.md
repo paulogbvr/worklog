@@ -120,6 +120,72 @@ Utilizar Supabase PostgreSQL como infraestrutura principal.
 
 ---
 
+## 2026-06-04
+
+### Descoberta
+
+O projeto ainda não possui aplicação Next.js inicializada.
+
+### Evidência
+
+Não existe `package.json` e os diretórios `src/`, `prisma/` e `public/` estão vazios.
+
+### Impacto
+
+A próxima etapa deve ser a fundação do app antes de Prisma, dashboard ou componentes.
+
+### Ação
+
+Inicializar Next.js com TypeScript, TailwindCSS e scripts de validação.
+
+---
+
+## 2026-06-04
+
+### Descoberta
+
+`AGENTS.md` e `CLAUDE.md` duplicavam praticamente as mesmas instruções.
+
+### Evidência
+
+Leitura comparativa dos dois arquivos.
+
+### Impacto
+
+Duplicidade poderia gerar divergência nas próximas sessões.
+
+### Ação
+
+Manter `AGENTS.md` como fonte oficial e reduzir `CLAUDE.md` a uma ponte legada.
+
+---
+
+## 2026-06-04
+
+### Descoberta
+
+O `next@16.2.7` depende internamente de `postcss@8.4.31`, que o `npm audit` marca com vulnerabilidade moderada.
+
+### Evidência
+
+`npm audit --omit=dev` reportou `GHSA-qx2v-qp2m-jg93` via `next/node_modules/postcss`.
+
+### Impacto
+
+Sem ajuste, o projeto ficaria com alerta de audit mesmo usando a versão atual do Next.
+
+### Ação
+
+Adicionar override de `postcss` para `8.5.15` em `package.json` e validar novamente.
+
+Resultado:
+
+```txt
+found 0 vulnerabilities
+```
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

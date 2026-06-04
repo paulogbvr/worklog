@@ -41,7 +41,6 @@ Uso no projeto:
 
 - buscar projetos
 - buscar horas
-- buscar atividades
 - sincronizar tempo por projeto
 
 ---
@@ -252,9 +251,11 @@ A fonte de verdade do projeto continua sendo:
 
 ```txt
 README.md
-CLAUDE.md
+AGENTS.md
 docs/vision/WORKLOG_SPEC.md
 docs/planning/EXECUTION_PLAN.md
+docs/architecture/DATA_MODEL.md
+docs/architecture/WAKATIME_SYNC.md
 docs/project-memory/DECISIONS.md
 docs/architecture/STACK.md
 ```

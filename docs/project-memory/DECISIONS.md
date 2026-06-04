@@ -258,3 +258,103 @@ Frontend
 ```
 
 Mocks devem ser utilizados apenas como fallback temporário.
+
+---
+
+### DECISION-011
+
+#### Título
+
+Instruções Oficiais para Codex
+
+#### Decisão
+
+O arquivo `AGENTS.md` será a instrução operacional oficial para o Codex.
+
+`CLAUDE.md` será mantido apenas como ponte legada de compatibilidade.
+
+#### Motivo
+
+Evitar duplicidade entre instruções de agentes e reduzir risco de divergência.
+
+#### Impacto
+
+Mudanças de processo devem ser feitas em `AGENTS.md`.
+
+---
+
+### DECISION-012
+
+#### Título
+
+Separação entre Horas WakaTime e Horas Dedicadas
+
+#### Decisão
+
+Horas WakaTime representam tempo de código sincronizado automaticamente.
+
+Horas Dedicadas representam tempo faturável registrado no WorkLog por `WorkLogEntry`.
+
+#### Motivo
+
+Nem todo trabalho faturável aparece no WakaTime, e nem todo dado técnico do WakaTime precisa virar cálculo financeiro automaticamente.
+
+#### Impacto
+
+O cálculo financeiro inicial deve usar:
+
+```txt
+Horas Dedicadas x Valor Hora
+```
+
+Horas WakaTime devem ser exibidas para comparação e transparência.
+
+---
+
+### DECISION-013
+
+#### Título
+
+Horas WakaTime Agregadas por Projeto e Dia
+
+#### Decisão
+
+O MVP deve persistir horas WakaTime agregadas por projeto e dia.
+
+#### Motivo
+
+Preservar histórico suficiente para dashboard, comparação e futura filtragem sem armazenar dados excessivos.
+
+#### Impacto
+
+O schema inicial deve incluir uma entidade equivalente a `WakaTimeProjectDay`.
+
+Linguagens, editores e atividades detalhadas ficam fora do MVP.
+
+---
+
+### DECISION-014
+
+#### Título
+
+Gerenciador de Pacotes Inicial
+
+#### Decisão
+
+O WorkLog utilizará `npm` como gerenciador de pacotes inicial.
+
+#### Motivo
+
+O projeto foi inicializado com `package-lock.json`, mantendo instalação simples e compatível com Vercel.
+
+#### Impacto
+
+Comandos oficiais iniciais:
+
+```bash
+npm install
+npm run dev
+npm run lint
+npm run typecheck
+npm run build
+```

@@ -32,6 +32,12 @@ Estilização:
 TailwindCSS
 ```
 
+Gerenciador de pacotes:
+
+```txt
+npm
+```
+
 Componentes:
 
 ```txt
@@ -144,6 +150,13 @@ src/
 prisma/
 public/
 docs/
+```
+
+Documentos complementares de arquitetura:
+
+```txt
+docs/architecture/DATA_MODEL.md
+docs/architecture/WAKATIME_SYNC.md
 ```
 
 ---

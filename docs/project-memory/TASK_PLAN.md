@@ -1,395 +1,307 @@
 # TASK_PLAN
 
-## Prioridade Atual
+Roadmap de implementacao do WorkLog.
 
 Objetivo:
 
-Criar a primeira versão funcional do WorkLog utilizando:
-
-- Next.js
-- TypeScript
-- Prisma
-- Supabase
-- WakaTime
+```txt
+Saber quanto tempo foi trabalhado,
+quanto isso vale,
+quanto ja foi pago,
+e quanto ainda falta receber.
+```
 
 ---
 
-# P0 — Fundação
+# Estado Atual
 
-## TASK-001
+Documentacao base concluida.
 
-### Título
+Ambiente real configurado:
 
-Criar estrutura inicial Next.js
+- `DATABASE_URL`
+- `WAKATIME_API_KEY`
 
-### Status
+Aplicacao inicializada:
 
-Pendente
+- `package.json`
+- `package-lock.json`
+- Next.js
+- TypeScript
+- TailwindCSS
+- scripts `lint`, `typecheck` e `build`
+- `src/app`
+- `src/lib/env.ts`
 
-### Objetivo
+Ainda pendente:
 
-Criar a base do projeto.
+- `prisma/schema.prisma`
+- migrations
+- integracao WakaTime real
 
-### Entregáveis
+---
+
+# M0 — Alinhamento Documental
+
+Status:
+
+```txt
+Concluido
+```
+
+Entregaveis:
+
+- `AGENTS.md` como instrucao oficial do Codex
+- `CLAUDE.md` mantido apenas como ponte legada
+- `DATA_MODEL.md` criado
+- `WAKATIME_SYNC.md` criado
+- roadmap transformado neste arquivo
+
+---
+
+# M1 — Fundacao Next.js
+
+Status:
+
+```txt
+Concluido
+```
+
+Objetivo:
+
+Criar a base tecnica do projeto.
+
+Entregaveis:
 
 - Next.js
 - TypeScript
 - TailwindCSS
-- Estrutura de pastas
-- Configurações iniciais
+- estrutura inicial de `src/`
+- scripts `lint`, `typecheck` e `build`
+- validacao inicial de variaveis de ambiente
+
+Criterio de aceite:
+
+- app abre localmente
+- comandos de validacao existem
+- nenhum segredo exposto no frontend
 
 ---
 
-## TASK-002
+# M2 — Prisma e Banco
 
-### Título
-
-Configurar Prisma
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Conectar Prisma ao Supabase.
-
-### Entregáveis
-
-- schema.prisma
-- Prisma Client
-- Prisma Generate
-- Primeira Migration
-
----
-
-## TASK-003
-
-### Título
-
-Criar Models Iniciais
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Criar entidades principais.
-
-### Entregáveis
-
-- Client
-- Project
-- WorkLogEntry
-- Payment
-- ShareLink
-- SyncLog
-
----
-
-# P1 — Integração
-
-## TASK-004
-
-### Título
-
-Integrar WakaTime
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Consumir API oficial.
-
-### Entregáveis
-
-- Cliente WakaTime
-- Autenticação
-- Consulta de Projetos
-- Consulta de Horas
-
----
-
-## TASK-005
-
-### Título
-
-Criar Sincronização Manual
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Permitir atualização sob demanda.
-
-### Entregáveis
-
-- Botão Atualizar Agora
-- Atualização de Projetos
-- Atualização de Horas
-- Registro da Última Sincronização
-
----
-
-## TASK-006
-
-### Título
-
-Criar Projetos Automáticos
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Criar projetos automaticamente quando surgirem no WakaTime.
-
-### Entregáveis
-
-- Verificação de existência
-- Criação automática
-- Status pendente de configuração
-
----
-
-# P2 — Dashboard
-
-## TASK-007
-
-### Título
-
-Criar Dashboard
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Visualizar dados gerais.
-
-### Entregáveis
-
-- Cards
-- Indicadores
-- Resumos financeiros
-- Horas WakaTime
-- Horas Dedicadas
-
----
-
-## TASK-008
-
-### Título
-
-Criar Página de Projetos
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Gerenciar projetos.
-
-### Entregáveis
-
-- Listagem
-- Detalhes
-- Status de configuração
-- Histórico
-
----
-
-## TASK-009
-
-### Título
-
-Criar Registros de Trabalho
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Permitir registrar trabalho manual.
-
-### Entregáveis
-
-- Adicionar registro
-- Editar registro
-- Excluir registro
-- Cálculo automático
-
----
-
-## TASK-010
-
-### Título
-
-Criar Gestão de Clientes
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Relacionar clientes aos projetos.
-
-### Entregáveis
-
-- Cadastro
-- Edição
-- Listagem
-
----
-
-## TASK-011
-
-### Título
-
-Criar Gestão de Pagamentos
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Controlar recebimentos.
-
-### Entregáveis
-
-- Cadastro
-- Histórico
-- Valor recebido
-- Valor pendente
-
----
-
-# P3 — Compartilhamento
-
-## TASK-012
-
-### Título
-
-Criar Portal Compartilhável
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Permitir visualização pelo cliente.
-
-### Entregáveis
-
-- Página pública
-- Link compartilhável
-- Somente leitura
-
----
-
-# P4 — Visual
-
-## TASK-013
-
-### Título
-
-Aplicar Direção Visual Premium
-
-### Status
-
-Pendente
-
-### Objetivo
-
-Implementar experiência visual inspirada em:
+Status:
 
 ```txt
-https://dennissnellenberg.com/
+Pendente
 ```
 
-### Entregáveis
+Objetivo:
 
-- Microinterações
-- Animações suaves
-- Cards premium
-- Sidebar moderna
-- Transições fluidas
+Criar o schema inicial e conectar ao Supabase PostgreSQL.
+
+Entregaveis:
+
+- `prisma/schema.prisma`
+- Prisma Client
+- primeira migration
+- models do MVP
+
+Criterio de aceite:
+
+- `npx prisma generate` executa com sucesso
+- migration aplica no banco Supabase
+- schema segue `docs/architecture/DATA_MODEL.md`
 
 ---
 
-# P5 — Produção
+# M3 — Sincronizacao WakaTime Manual
 
-## TASK-014
+Status:
 
-### Título
-
-Preparar Deploy
-
-### Status
-
+```txt
 Pendente
+```
 
-### Objetivo
+Objetivo:
 
-Publicar primeira versão.
+Trazer projetos e horas reais do WakaTime.
 
-### Entregáveis
+Entregaveis:
 
-- Build validado
-- Variáveis configuradas
-- Deploy Vercel
+- cliente server-side WakaTime
+- route handler de sincronizacao
+- criacao automatica de projetos
+- persistencia de horas por projeto e dia
+- `SyncLog`
+
+Criterio de aceite:
+
+- projetos reais aparecem no banco
+- projeto novo nasce ativo e pendente de configuracao
+- erro de API nao derruba o dashboard
+
+---
+
+# M4 — Dashboard Real
+
+Status:
+
+```txt
+Pendente
+```
+
+Objetivo:
+
+Exibir resumo operacional e financeiro usando dados reais.
+
+Entregaveis:
+
+- horas WakaTime
+- horas dedicadas
+- diferenca entre horas
+- valor total
+- valor recebido
+- valor pendente
+- projetos pendentes
+- ultima sincronizacao
+
+Criterio de aceite:
+
+- dashboard funciona com banco vazio
+- dashboard funciona apos sincronizacao real
+- valores financeiros usam horas dedicadas
+
+---
+
+# M5 — Projetos, Clientes e Registros
+
+Status:
+
+```txt
+Pendente
+```
+
+Objetivo:
+
+Permitir configurar projetos e registrar trabalho manual.
+
+Entregaveis:
+
+- cadastro e edicao de clientes
+- configuracao de cliente e valor/hora em projetos
+- CRUD de registros de trabalho
+- suporte a registros atravessando meia-noite
+- recalculo de duracao
+
+Criterio de aceite:
+
+- projeto pendente pode virar configurado
+- registros alteram horas dedicadas
+- valor total recalcula corretamente
+
+---
+
+# M6 — Pagamentos
+
+Status:
+
+```txt
+Pendente
+```
+
+Objetivo:
+
+Controlar recebimentos por projeto.
+
+Entregaveis:
+
+- cadastro de pagamento
+- historico por projeto
+- valor recebido
+- saldo pendente
+
+Criterio de aceite:
+
+- pagamento reduz valor pendente
+- historico aparece no dashboard e no projeto
+
+---
+
+# M7 — Portal Compartilhavel
+
+Status:
+
+```txt
+Pendente
+```
+
+Objetivo:
+
+Criar visualizacao publica somente leitura para clientes.
+
+Entregaveis:
+
+- `/share/{slug}`
+- dados do projeto
+- horas
+- valores
+- historico de pagamentos
+- ultima atualizacao
+
+Criterio de aceite:
+
+- portal nao permite edicao
+- slug e unico
+- link pode ser desativado
+
+---
+
+# M8 — Visual Premium e Deploy
+
+Status:
+
+```txt
+Pendente
+```
+
+Objetivo:
+
+Polir a experiencia e publicar a primeira versao.
+
+Entregaveis:
+
+- microinteracoes suaves
+- dashboard responsivo
+- build validado
+- variaveis configuradas na Vercel
+- protecao administrativa antes de deploy publico
+
+Criterio de aceite:
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+- deploy acessivel sem expor segredos
 
 ---
 
 # Backlog Futuro
 
-## FUTURE-001
-
-Relatórios PDF
-
----
-
-## FUTURE-002
-
-Exportação Financeira
+- relatorios PDF
+- exportacao financeira
+- filtros avancados por periodo
+- multiusuario
+- permissoes
+- workspaces
 
 ---
 
-## FUTURE-003
+# Regra de Atualizacao
 
-Filtros Avançados
+Ao concluir uma etapa:
 
----
-
-## FUTURE-004
-
-Multiusuário
-
----
-
-## FUTURE-005
-
-Workspaces
-
----
-
-# Regra
-
-Ao concluir uma tarefa:
-
-1. Atualizar status da tarefa
-2. Atualizar PROGRESS.md
-3. Atualizar README.md
-4. Registrar novas decisões em DECISIONS.md quando necessário
+1. atualizar status neste arquivo
+2. atualizar `docs/project-memory/PROGRESS.md`
+3. atualizar `README.md`
+4. registrar novas decisoes em `DECISIONS.md` quando necessario
