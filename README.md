@@ -85,6 +85,10 @@ https://worklog-projects.vercel.app/
 │   └── lib/
 │       └── env.ts
 └── public/
+    ├── favicon.ico
+    ├── icon.png
+    ├── apple-icon.png
+    └── og-image.png
 ```
 
 ---
@@ -510,6 +514,14 @@ Priorizar:
 - botões com microinterações
 - tela de registros de trabalho fácil de usar
 - portal compartilhável profissional
+
+Assets de identidade:
+
+- favicon próprio do WorkLog
+- ícone web/app em `public/icon.png`
+- ícone Apple em `public/apple-icon.png`
+- imagem de preview social em `public/og-image.png`
+- metadata Open Graph e Twitter Card configurados no App Router
 
 ---
 

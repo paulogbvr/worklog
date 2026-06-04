@@ -33,6 +33,8 @@ Aplicacao inicializada:
 - `src/app`
 - `src/lib/env.ts`
 - deploy inicial em `https://worklog-projects.vercel.app/`
+- favicon e metadata social configurados
+- imagem de preview social em `public/og-image.png`
 
 Ainda pendente:
 
@@ -274,6 +276,7 @@ Entregaveis:
 
 - microinteracoes suaves
 - dashboard responsivo
+- favicon e preview social
 - build validado
 - variaveis configuradas na Vercel
 - protecao administrativa antes de deploy publico

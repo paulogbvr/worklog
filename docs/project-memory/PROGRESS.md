@@ -323,3 +323,33 @@ Continuar:
 1. diagnosticar migration Prisma no Supabase
 2. aplicar primeira migration
 3. concluir M2 — Prisma e Banco
+
+---
+
+## 2026-06-04
+
+### Identidade Compartilhável
+
+Concluído:
+
+- favicon próprio do WorkLog criado
+- `public/icon.png` criado
+- `public/apple-icon.png` criado
+- `public/og-image.png` criado
+- metadata principal configurada no App Router
+- Open Graph configurado
+- Twitter Card configurado
+
+Objetivo:
+
+Garantir uma prévia bonita e profissional quando o link do WorkLog for compartilhado em WhatsApp, Discord, Telegram, iMessage, LinkedIn e redes sociais.
+
+Arquivos:
+
+```txt
+public/favicon.ico
+public/icon.png
+public/apple-icon.png
+public/og-image.png
+src/app/layout.tsx
+```
