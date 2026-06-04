@@ -1,13 +1,13 @@
 # TASK_PLAN
 
-Roadmap de implementacao do WorkLog.
+Roadmap de implementação do WorkLog.
 
 Objetivo:
 
 ```txt
 Saber quanto tempo foi trabalhado,
 quanto isso vale,
-quanto ja foi pago,
+quanto já foi pago,
 e quanto ainda falta receber.
 ```
 
@@ -15,14 +15,14 @@ e quanto ainda falta receber.
 
 # Estado Atual
 
-Documentacao base concluida.
+Documentação base concluída.
 
 Ambiente real configurado:
 
 - `DATABASE_URL`
 - `WAKATIME_API_KEY`
 
-Aplicacao inicializada:
+Aplicação inicializada:
 
 - `package.json`
 - `package-lock.json`
@@ -36,14 +36,15 @@ Aplicacao inicializada:
 - deploy inicial em `https://worklog-projects.vercel.app/`
 - favicon monochrome minimalista em `public/favicon.ico`
 - metadata social configurada com imagem Open Graph absoluta
-- imagem de preview social monochrome em `public/og-image.png`
-- navegacao desktop/mobile refinada sem logo visual no app
+- imagem de preview social monochrome versionada em `public/og-worklog-v3.png`
+- navegação desktop/mobile refinada sem logo visual no app
+- acentuação PT-BR revisada nos textos visíveis do app
 
 Ainda pendente:
 
 - `prisma/schema.prisma`
 - migrations
-- integracao WakaTime real
+- integração WakaTime real
 
 ---
 
@@ -52,12 +53,12 @@ Ainda pendente:
 Status:
 
 ```txt
-Concluido
+Concluído
 ```
 
-Entregaveis:
+Entregáveis:
 
-- `AGENTS.md` como instrucao oficial do Codex
+- `AGENTS.md` como instrução oficial do Codex
 - `CLAUDE.md` mantido apenas como ponte legada
 - `DATA_MODEL.md` criado
 - `WAKATIME_SYNC.md` criado
@@ -65,19 +66,19 @@ Entregaveis:
 
 ---
 
-# M1 — Fundacao Next.js
+# M1 — Fundação Next.js
 
 Status:
 
 ```txt
-Concluido
+Concluído
 ```
 
 Objetivo:
 
-Criar a base tecnica do projeto.
+Criar a base técnica do projeto.
 
-Entregaveis:
+Entregáveis:
 
 - Next.js
 - TypeScript
@@ -85,12 +86,12 @@ Entregaveis:
 - estrutura inicial de `src/`
 - shell visual com sidebar desktop e drawer mobile
 - scripts `lint`, `typecheck` e `build`
-- validacao inicial de variaveis de ambiente
+- validação inicial de variáveis de ambiente
 
-Criterio de aceite:
+Critério de aceite:
 
 - app abre localmente
-- comandos de validacao existem
+- comandos de validação existem
 - nenhum segredo exposto no frontend
 
 ---
@@ -107,14 +108,14 @@ Objetivo:
 
 Criar o schema inicial e conectar ao Supabase PostgreSQL.
 
-Entregaveis:
+Entregáveis:
 
 - `prisma/schema.prisma`
 - Prisma Client
 - primeira migration
 - models do MVP
 
-Criterio de aceite:
+Critério de aceite:
 
 - `npx prisma generate` executa com sucesso
 - migration aplica no banco Supabase
@@ -122,7 +123,7 @@ Criterio de aceite:
 
 ---
 
-# M3 — Sincronizacao WakaTime Manual
+# M3 — Sincronização WakaTime Manual
 
 Status:
 
@@ -134,19 +135,19 @@ Objetivo:
 
 Trazer projetos e horas reais do WakaTime.
 
-Entregaveis:
+Entregáveis:
 
 - cliente server-side WakaTime
-- route handler de sincronizacao
-- criacao automatica de projetos
+- route handler de sincronização
+- criação automática de projetos
 - persistencia de horas por projeto e dia
 - `SyncLog`
 
-Criterio de aceite:
+Critério de aceite:
 
 - projetos reais aparecem no banco
-- projeto novo nasce ativo e pendente de configuracao
-- erro de API nao derruba o dashboard
+- projeto novo nasce ativo e pendente de configuração
+- erro de API não derruba o dashboard
 
 ---
 
@@ -162,7 +163,7 @@ Objetivo:
 
 Exibir resumo operacional e financeiro usando dados reais.
 
-Entregaveis:
+Entregáveis:
 
 - horas WakaTime
 - horas dedicadas
@@ -171,12 +172,12 @@ Entregaveis:
 - valor recebido
 - valor pendente
 - projetos pendentes
-- ultima sincronizacao
+- última sincronização
 
-Criterio de aceite:
+Critério de aceite:
 
 - dashboard funciona com banco vazio
-- dashboard funciona apos sincronizacao real
+- dashboard funciona após sincronização real
 - valores financeiros usam horas dedicadas
 
 ---
@@ -193,15 +194,15 @@ Objetivo:
 
 Permitir configurar projetos e registrar trabalho manual.
 
-Entregaveis:
+Entregáveis:
 
 - cadastro e edicao de clientes
-- configuracao de cliente e valor/hora em projetos
+- configuração de cliente e valor/hora em projetos
 - CRUD de registros de trabalho
 - suporte a registros atravessando meia-noite
-- recalculo de duracao
+- recálculo de duração
 
-Criterio de aceite:
+Critério de aceite:
 
 - projeto pendente pode virar configurado
 - registros alteram horas dedicadas
@@ -221,17 +222,17 @@ Objetivo:
 
 Controlar recebimentos por projeto.
 
-Entregaveis:
+Entregáveis:
 
 - cadastro de pagamento
-- historico por projeto
+- histórico por projeto
 - valor recebido
 - saldo pendente
 
-Criterio de aceite:
+Critério de aceite:
 
 - pagamento reduz valor pendente
-- historico aparece no dashboard e no projeto
+- histórico aparece no dashboard e no projeto
 
 ---
 
@@ -245,21 +246,21 @@ Pendente
 
 Objetivo:
 
-Criar visualizacao publica somente leitura para clientes.
+Criar visualização pública somente leitura para clientes.
 
-Entregaveis:
+Entregáveis:
 
 - `/share/{slug}`
 - dados do projeto
 - horas
 - valores
-- historico de pagamentos
-- ultima atualizacao
+- histórico de pagamentos
+- última atualização
 
-Criterio de aceite:
+Critério de aceite:
 
-- portal nao permite edicao
-- slug e unico
+- portal não permite edição
+- slug é único
 - link pode ser desativado
 
 ---
@@ -274,48 +275,48 @@ Pendente
 
 Objetivo:
 
-Polir a experiencia e publicar a primeira versao.
+Polir a experiência e publicar a primeira versão.
 
-Entregaveis:
+Entregáveis:
 
-- microinteracoes suaves
+- microinterações suaves
 - dashboard responsivo
-- favicon e preview social
+- favicon e preview social versionado
 - build validado
-- variaveis configuradas na Vercel
-- protecao administrativa antes de deploy publico
+- variáveis configuradas na Vercel
+- proteção administrativa antes de deploy público
 
-Deploy inicial ja disponivel:
+Deploy inicial já disponível:
 
 ```txt
 https://worklog-projects.vercel.app/
 ```
 
-Criterio de aceite:
+Critério de aceite:
 
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
-- deploy acessivel sem expor segredos
+- deploy acessível sem expor segredos
 
 ---
 
 # Backlog Futuro
 
-- relatorios PDF
-- exportacao financeira
+- relatórios PDF
+- exportação financeira
 - filtros avancados por periodo
-- multiusuario
-- permissoes
+- multiusuário
+- permissões
 - workspaces
 
 ---
 
-# Regra de Atualizacao
+# Regra de Atualização
 
 Ao concluir uma etapa:
 
 1. atualizar status neste arquivo
 2. atualizar `docs/project-memory/PROGRESS.md`
 3. atualizar `README.md`
-4. registrar novas decisoes em `DECISIONS.md` quando necessario
+4. registrar novas decisões em `DECISIONS.md` quando necessário

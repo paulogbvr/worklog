@@ -88,7 +88,7 @@ function EnvPanel({
           ].join(" ")}
         />
         <span className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-50 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#161616] px-2.5 py-1.5 text-xs text-white/78 shadow-2xl shadow-black/40 group-hover:block">
-          {envStatus.configured ? "Variaveis configuradas" : "Variaveis pendentes"}
+          {envStatus.configured ? "Variáveis configuradas" : "Variáveis pendentes"}
         </span>
       </div>
     );
@@ -98,7 +98,7 @@ function EnvPanel({
     <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-white/38">Ambiente</p>
       <p className="mt-2 text-sm font-medium">
-        {envStatus.configured ? "Variaveis configuradas" : "Variaveis pendentes"}
+        {envStatus.configured ? "Variáveis configuradas" : "Variáveis pendentes"}
       </p>
       <div className="mt-4 space-y-2">
         {Object.entries(envStatus.keys).map(([key, configured]) => (
@@ -148,7 +148,7 @@ export function AppShell({
               </Link>
             )}
             <button
-              aria-label={collapsed ? "Expandir navegacao" : "Recolher navegacao"}
+              aria-label={collapsed ? "Expandir navegação" : "Recolher navegação"}
               className="grid size-9 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-white/62 transition-colors hover:bg-white/[0.08] hover:text-white"
               onClick={() => setCollapsed((value) => !value)}
               title={collapsed ? "Expandir" : "Recolher"}

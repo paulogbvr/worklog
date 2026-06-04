@@ -412,3 +412,60 @@ Projeto Geral:
 ```txt
 █████░░░░░░░░░░░░░░░ 26%
 ```
+
+---
+
+## 2026-06-04
+
+### Correção de Preview Social e Acentuação
+
+Concluído:
+
+- HTML de produção inspecionado com user-agents padrão, Facebook e WhatsApp
+- tags `og:image`, `og:image:width`, `og:image:height`, `og:title`, `og:description`, `twitter:image`, `twitter:title` e `twitter:description` confirmadas em produção
+- ausência de conflitos `opengraph-image.*` e `twitter-image.*` confirmada
+- imagem social versionada criada em `public/og-worklog-v3.png`
+- metadata Open Graph atualizada para usar exclusivamente `https://worklog-projects.vercel.app/og-worklog-v3.png`
+- metadata reforçada com `secureUrl`, `type`, largura, altura e alt
+- favicon mantido apenas como favicon em `public/favicon.ico`
+- textos visíveis do app revisados para acentuação correta em PT-BR
+
+Diagnóstico:
+
+O problema não era ausência de tags Open Graph no HTML atual. A causa encontrada foi cache de preview social usando a URL estável anterior `og-image.png`. Como WhatsApp e outros crawlers podem manter o preview antigo por URL, a correção aplicada foi versionar a imagem social com um novo caminho público.
+
+Arquivos:
+
+```txt
+public/favicon.ico
+public/og-worklog-v3.png
+src/app/layout.tsx
+src/app/page.tsx
+src/components/app-shell.tsx
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+70%
+```
+
+Implementação:
+
+```txt
+13%
+```
+
+Projeto Geral:
+
+```txt
+█████░░░░░░░░░░░░░░░ 27%
+```

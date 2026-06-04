@@ -2,7 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { getServerEnvStatus } from "@/lib/env";
 
 const metrics = [
-  { label: "Horas WakaTime", value: "0h", detail: "Aguardando sincronizacao" },
+  { label: "Horas WakaTime", value: "0h", detail: "Aguardando sincronização" },
   { label: "Horas Dedicadas", value: "0h", detail: "Nenhum registro manual" },
   { label: "Valor Recebido", value: "R$ 0,00", detail: "Sem pagamentos" },
   { label: "Valor Pendente", value: "R$ 0,00", detail: "Sem projetos configurados" }
@@ -22,7 +22,7 @@ const workflow = [
   {
     id: "registros",
     label: "Registros",
-    detail: "Horas dedicadas ajustadas manualmente quando necessario."
+    detail: "Horas dedicadas ajustadas manualmente quando necessário."
   },
   {
     id: "pagamentos",
@@ -47,8 +47,8 @@ export default function Home() {
           </h1>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white/64">
-          Ultima sincronizacao
-          <strong className="mt-1 block text-white">Nao realizada</strong>
+          Última sincronização
+          <strong className="mt-1 block text-white">Não realizada</strong>
         </div>
       </header>
 
@@ -93,15 +93,15 @@ export default function Home() {
         </section>
 
         <section className="rounded-lg border border-white/10 bg-[#111111]/92 p-5">
-          <h2 className="text-lg font-semibold">Proxima etapa</h2>
+          <h2 className="text-lg font-semibold">Próxima etapa</h2>
           <p className="mt-3 text-sm leading-6 text-white/56">
             Conectar Prisma ao Supabase e criar o schema inicial para clientes, projetos,
-            registros, pagamentos e sincronizacoes.
+            registros, pagamentos e sincronizações.
           </p>
           <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
             <div className="h-full w-[25%] rounded-full bg-white/70" />
           </div>
-          <p className="mt-3 text-xs text-white/42">Banco e sincronizacao real</p>
+          <p className="mt-3 text-xs text-white/42">Banco e sincronização real</p>
         </section>
       </div>
     </AppShell>

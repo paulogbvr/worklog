@@ -5,7 +5,8 @@ const title = "WorkLog — Controle de horas e pagamentos";
 const description =
   "Acompanhe horas trabalhadas, projetos, pagamentos e valores pendentes com integração WakaTime.";
 const siteUrl = "https://worklog-projects.vercel.app";
-const ogImageUrl = `${siteUrl}/og-image.png`;
+const ogImageUrl = `${siteUrl}/og-worklog-v3.png`;
+const ogImageAlt = "WorkLog — Controle de horas e pagamentos";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -28,9 +29,11 @@ export const metadata: Metadata = {
     images: [
       {
         url: ogImageUrl,
+        secureUrl: ogImageUrl,
+        type: "image/png",
         width: 1200,
         height: 630,
-        alt: "WorkLog — Controle de horas e pagamentos"
+        alt: ogImageAlt
       }
     ]
   },
@@ -38,7 +41,16 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: [ogImageUrl]
+    images: [
+      {
+        url: ogImageUrl,
+        secureUrl: ogImageUrl,
+        type: "image/png",
+        width: 1200,
+        height: 630,
+        alt: ogImageAlt
+      }
+    ]
   }
 };
 

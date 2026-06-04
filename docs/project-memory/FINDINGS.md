@@ -186,6 +186,47 @@ found 0 vulnerabilities
 
 ---
 
+## 2026-06-04
+
+### Descoberta
+
+O preview social estava vulnerável a cache externo porque a imagem Open Graph usava uma URL estável:
+
+```txt
+https://worklog-projects.vercel.app/og-image.png
+```
+
+### Evidência
+
+O HTML de produção já continha as tags Open Graph e Twitter Card corretas, inclusive quando consultado com user-agents de Facebook e WhatsApp.
+
+Também foi confirmado que:
+
+- `og-image.png` respondia `200 OK`
+- `favicon.ico` respondia `200 OK`
+- não existiam arquivos automáticos `opengraph-image.*` ou `twitter-image.*`
+- o App Router usava apenas `src/app/layout.tsx` como fonte de metadata social
+
+### Impacto
+
+WhatsApp e outros crawlers sociais podem continuar exibindo preview antigo ou fallback de favicon quando a página e a imagem social mantêm a mesma URL após ajustes.
+
+### Ação
+
+Versionar a imagem social para:
+
+```txt
+public/og-worklog-v3.png
+```
+
+e apontar a metadata exclusivamente para:
+
+```txt
+https://worklog-projects.vercel.app/og-worklog-v3.png
+```
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:
