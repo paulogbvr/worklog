@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectConfigurationStatus {
+  PENDING
+  CONFIGURED
+}
+
+enum SyncProvider {
+  WAKATIME
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  notes     String?
+  projects  Project[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Project {
+  id                  String                     @id @default(cuid())
+  clientId            String?
+  client              Client?                    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name                String
+  hourlyRate          Decimal?                   @db.Decimal(10, 2)
+  wakatimeProjectId   String?                    @unique
+  wakatimeProjectName String?                    @unique
+  active              Boolean                    @default(true)
+  configurationStatus ProjectConfigurationStatus @default(PENDING)
+  lastSyncAt          DateTime?
+  workLogEntries      WorkLogEntry[]
+  wakatimeDays        WakaTimeProjectDay[]
+  payments            Payment[]
+  shareLinks          ShareLink[]
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  @@index([clientId])
+  @@index([active])
+  @@index([configurationStatus])
+}
+
+model WorkLogEntry {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startedAt       DateTime
+  endedAt         DateTime
+  durationSeconds Int
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([startedAt])
+}
+
+model WakaTimeProjectDay {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date         DateTime @db.Date
+  totalSeconds Int
+  syncedAt     DateTime @default(now())
+
+  @@unique([projectId, date])
+  @@index([date])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(10, 2)
+  paidAt    DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([paidAt])
+}
+
+model ShareLink {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slug      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([active])
+}
+
+model SyncLog {
+  id         String       @id @default(cuid())
+  provider   SyncProvider
+  startedAt  DateTime     @default(now())
+  finishedAt DateTime?
+  success    Boolean      @default(false)
+  message    String?
+
+  @@index([provider])
+  @@index([startedAt])
+}
