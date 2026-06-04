@@ -39,11 +39,15 @@ Aplicação inicializada:
 - imagem de preview social monochrome versionada em `public/og-worklog-v3.png`
 - navegação desktop/mobile refinada sem logo visual no app
 - acentuação PT-BR revisada nos textos visíveis do app
+- `prisma/schema.prisma`
+- `prisma.config.ts`
+- `src/lib/prisma.ts`
+- migration inicial em `prisma/migrations/20260604231000_init/migration.sql`
+- scripts `prisma:validate`, `prisma:generate`, `prisma:migrate` e `prisma:deploy`
 
 Ainda pendente:
 
-- `prisma/schema.prisma`
-- migrations
+- aplicar migration no Supabase via `DIRECT_URL`/pooler
 - integração WakaTime real
 
 ---
@@ -101,7 +105,7 @@ Critério de aceite:
 Status:
 
 ```txt
-Pendente
+Parcialmente concluído
 ```
 
 Objetivo:
@@ -110,16 +114,22 @@ Criar o schema inicial e conectar ao Supabase PostgreSQL.
 
 Entregáveis:
 
-- `prisma/schema.prisma`
-- Prisma Client
-- primeira migration
-- models do MVP
+- `prisma/schema.prisma` criado
+- Prisma Client gerado
+- primeira migration criada
+- models do MVP criados
+- `prisma.config.ts` carregando `.env.local`
+- scripts Prisma criados
 
 Critério de aceite:
 
-- `npx prisma generate` executa com sucesso
-- migration aplica no banco Supabase
-- schema segue `docs/architecture/DATA_MODEL.md`
+- `npx prisma generate` executa com sucesso: concluído
+- schema segue `docs/architecture/DATA_MODEL.md`: concluído
+- migration aplica no banco Supabase: pendente por conexão `DATABASE_URL` direta IPv6-only
+
+Bloqueio atual:
+
+O endpoint direto do Supabase (`db.<project-ref>.supabase.co:5432`) resolve apenas para IPv6 neste ambiente e retorna `P1001` no Prisma. Para concluir a aplicação remota, configurar `DIRECT_URL` com a Session Pooler do Supabase ou usar a Direct Connection em um ambiente com IPv6.
 
 ---
 

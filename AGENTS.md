@@ -116,6 +116,12 @@ Variável:
 DATABASE_URL=
 ```
 
+Variável opcional para Prisma CLI/migrations:
+
+```env
+DIRECT_URL=
+```
+
 Regras:
 
 - utilizar Prisma
@@ -123,6 +129,7 @@ Regras:
 - não utilizar Supabase Client no frontend
 - toda comunicação deve passar pelo backend
 - nunca expor DATABASE_URL
+- nunca expor DIRECT_URL
 
 ---
 

@@ -181,22 +181,27 @@ Criar `.env.example` com:
 ```env
 WAKATIME_API_KEY=
 DATABASE_URL=
+DIRECT_URL=
 ```
 
 Criar `.env.local` com:
 
 ```env
 WAKATIME_API_KEY=sua_api_key_aqui
-DATABASE_URL="postgresql://postgres:SUA_SENHA@db.seu-projeto.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://usuario:senha@host:porta/postgres"
+DIRECT_URL="postgresql://usuario:senha@host:porta/postgres"
 ```
 
 Regras:
 
 - a API Key real deve ficar apenas no `.env.local`
+- a DATABASE_URL real deve ficar apenas no `.env.local`
+- a DIRECT_URL real deve ficar apenas no `.env.local`
 - nunca commitar `.env.local`
 - nunca expor a API Key no frontend
 - usar a API Key apenas no backend/server-side
 - usar DATABASE_URL apenas no backend/server-side
+- usar DIRECT_URL apenas no backend/server-side e comandos Prisma
 
 ---
 

@@ -469,3 +469,79 @@ Projeto Geral:
 ```txt
 █████░░░░░░░░░░░░░░░ 27%
 ```
+
+---
+
+## 2026-06-04
+
+### Prisma e Banco
+
+Concluído:
+
+- `prisma/schema.prisma` validado contra o modelo do MVP
+- Prisma Client gerado com sucesso
+- migration inicial criada em `prisma/migrations/20260604231000_init/migration.sql`
+- `prisma.config.ts` criado para carregar `.env.local` nos comandos Prisma
+- `.env.example` atualizado com `DIRECT_URL` opcional para Prisma CLI/migrations
+- scripts `prisma:validate`, `prisma:generate`, `prisma:migrate` e `prisma:deploy` disponíveis
+
+Validação Prisma:
+
+```bash
+npm run prisma:validate
+npm run prisma:generate
+```
+
+Resultado:
+
+```txt
+sucesso
+```
+
+Bloqueio:
+
+```txt
+npm run prisma:deploy
+```
+
+falhou porque a `DATABASE_URL` atual aponta para o endpoint direto do Supabase:
+
+```txt
+db.djuyxaznecfkwcjzkwlh.supabase.co:5432
+```
+
+Esse host não possui registro IPv4 neste ambiente, apenas IPv6, e o Prisma retorna:
+
+```txt
+P1001 Can't reach database server
+```
+
+Ação necessária:
+
+Configurar `DIRECT_URL` no `.env.local` com a Session Pooler do Supabase ou executar a migration em ambiente com IPv6.
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+75%
+```
+
+Implementação:
+
+```txt
+15%
+```
+
+Projeto Geral:
+
+```txt
+██████░░░░░░░░░░░░░░ 30%
+```

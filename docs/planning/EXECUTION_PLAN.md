@@ -59,6 +59,7 @@ Criar `.env.example` com:
 ```env
 WAKATIME_API_KEY=
 DATABASE_URL=
+DIRECT_URL=
 ```
 
 Usar `.env.local` para as variáveis reais.
@@ -68,6 +69,7 @@ Variáveis reais necessárias:
 ```env
 WAKATIME_API_KEY=
 DATABASE_URL=
+DIRECT_URL=
 ```
 
 Regras:
@@ -92,6 +94,7 @@ Utilize a variável:
 
 ```env
 DATABASE_URL=
+DIRECT_URL=
 ```
 
 Implemente Prisma.
@@ -385,21 +388,24 @@ Usar a connection string PostgreSQL no `.env.local`.
 Adicionar no `.env.local`:
 
 ```env
-DATABASE_URL="postgresql://postgres:SUA_SENHA@db.djuyxaznecfkwcjzkwlh.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://usuario:senha@host:porta/postgres"
+DIRECT_URL="postgresql://usuario:senha@host:porta/postgres"
 ```
 
 Adicionar no `.env.example`:
 
 ```env
 DATABASE_URL=
+DIRECT_URL=
 ```
 
 Regras:
 
-- trocar `SUA_SENHA` pela senha real do banco Supabase
 - manter a `DATABASE_URL` real apenas no `.env.local`
+- manter a `DIRECT_URL` real apenas no `.env.local`
 - nunca commitar `.env.local`
 - usar Prisma para conectar no Supabase
+- usar `DIRECT_URL` para migrations quando a `DATABASE_URL` direta não for acessível no ambiente local
 
 ---
 

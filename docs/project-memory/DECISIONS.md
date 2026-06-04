@@ -261,6 +261,31 @@ Mocks devem ser utilizados apenas como fallback temporário.
 
 ---
 
+## 2026-06-04
+
+### DECISION-011
+
+#### Título
+
+URL de Migration Prisma
+
+#### Decisão
+
+O WorkLog poderá usar `DIRECT_URL` como variável opcional para comandos Prisma CLI e migrations, mantendo `DATABASE_URL` como URL principal usada pelo app.
+
+#### Motivo
+
+O endpoint direto do Supabase pode ser IPv6-only. Em ambientes locais ou CI sem IPv6, a migration precisa usar a Session Pooler do Supabase ou uma conexão direta executada em ambiente compatível.
+
+#### Impacto
+
+- `prisma.config.ts` carrega `.env.local`
+- Prisma CLI usa `DIRECT_URL` quando definida
+- `.env.example` documenta `DIRECT_URL`
+- `.env.local` continua fora do Git
+
+---
+
 ### DECISION-011
 
 #### Título

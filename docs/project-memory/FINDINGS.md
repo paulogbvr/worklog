@@ -219,6 +219,40 @@ Versionar a imagem social para:
 public/og-worklog-v3.png
 ```
 
+---
+
+## 2026-06-04
+
+### Descoberta
+
+O Prisma CLI não carregava `.env.local` automaticamente e a `DATABASE_URL` atual do Supabase usa o endpoint direto IPv6-only.
+
+### Evidência
+
+`npx prisma validate` falhou inicialmente por ausência de `DATABASE_URL` quando executado sem carregar `.env.local`.
+
+Após criar `prisma.config.ts`, `npx prisma validate` e `npx prisma generate` passaram, mas `npx prisma migrate deploy` e `npx prisma db execute` falharam com:
+
+```txt
+P1001 Can't reach database server at db.djuyxaznecfkwcjzkwlh.supabase.co:5432
+```
+
+Diagnóstico DNS local:
+
+```txt
+A record: ausente
+AAAA record: presente
+TCP: ECONNREFUSED
+```
+
+### Impacto
+
+A migration inicial existe e está validada, mas não pode ser aplicada ao Supabase a partir deste ambiente enquanto a conexão usar apenas o endpoint direto IPv6-only.
+
+### Ação
+
+Usar `DIRECT_URL` com a Session Pooler do Supabase para Prisma CLI/migrations em ambiente IPv4-only, ou aplicar a migration em ambiente com IPv6 disponível.
+
 e apontar a metadata exclusivamente para:
 
 ```txt

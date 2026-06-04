@@ -135,11 +135,18 @@ WAKATIME_API_KEY=
 DATABASE_URL=
 ```
 
+Opcional para Prisma CLI/migrations:
+
+```env
+DIRECT_URL=
+```
+
 Regras:
 
 - utilizar `.env.local`
 - nunca commitar `.env.local`
 - manter `.env.example` atualizado
+- usar `DIRECT_URL` quando a `DATABASE_URL` de runtime não for adequada para migrations
 
 ---
 

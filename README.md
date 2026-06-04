@@ -15,7 +15,7 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Supabase              | ✅ Configurado  |
 | WakaTime              | ✅ Configurado  |
 | Estrutura Inicial     | ✅ Concluído    |
-| Banco (Prisma)        | ⏳ Em andamento |
+| Banco (Prisma)        | ⚠️ Conexão pendente |
 | Integração WakaTime   | ⏳ Em andamento |
 | Dashboard             | ⏳ Em andamento |
 | Projetos              | ⏳ Em andamento |
@@ -33,7 +33,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-█████░░░░░░░░░░░░░░░ 27%
+██████░░░░░░░░░░░░░░ 30%
 ```
 
 ---
@@ -51,6 +51,7 @@ https://worklog-projects.vercel.app/
 ├── tsconfig.json
 ├── postcss.config.mjs
 ├── eslint.config.mjs
+├── prisma.config.ts
 ├── .env.local
 ├── .env.example
 ├── .gitignore
@@ -77,6 +78,10 @@ https://worklog-projects.vercel.app/
 │       └── LINKS.md
 │
 ├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+│       └── 20260604231000_init/
+│           └── migration.sql
 ├── src/
 │   ├── app/
 │   │   ├── globals.css
@@ -85,7 +90,8 @@ https://worklog-projects.vercel.app/
 │   ├── components/
 │   │   └── app-shell.tsx
 │   └── lib/
-│       └── env.ts
+│       ├── env.ts
+│       └── prisma.ts
 └── public/
     ├── favicon.ico
     └── og-worklog-v3.png
@@ -416,6 +422,16 @@ Regras:
 - autenticação Supabase não será utilizada inicialmente
 - toda comunicação deverá passar pelo backend
 
+Estado atual:
+
+- schema inicial criado em `prisma/schema.prisma`
+- primeira migration criada em `prisma/migrations/20260604231000_init/migration.sql`
+- Prisma Client gerado com sucesso
+- Prisma CLI configurado em `prisma.config.ts` para carregar `.env.local`
+- aplicação da migration no Supabase pendente porque a `DATABASE_URL` atual usa o endpoint direto IPv6-only
+
+Para aplicar a migration a partir de ambiente IPv4-only, configurar `DIRECT_URL` com a connection string Session Pooler do Supabase ou usar uma Direct Connection em ambiente com IPv6.
+
 ---
 
 # Variáveis de Ambiente
@@ -428,8 +444,11 @@ Exemplo:
 # API Key do WakaTime
 WAKATIME_API_KEY=sua_api_key_aqui
 
-# Banco Supabase PostgreSQL
-DATABASE_URL="postgresql://postgres:SUA_SENHA@db.djuyxaznecfkwcjzkwlh.supabase.co:5432/postgres"
+# Banco Supabase PostgreSQL usado pelo app
+DATABASE_URL="postgresql://usuario:senha@host:porta/postgres"
+
+# Opcional para Prisma CLI/migrations
+DIRECT_URL="postgresql://usuario:senha@host:porta/postgres"
 ```
 
 Criar também um `.env.example`:
@@ -437,12 +456,14 @@ Criar também um `.env.example`:
 ```env
 WAKATIME_API_KEY=
 DATABASE_URL=
+DIRECT_URL=
 ```
 
 Regras:
 
 - a API Key real deve ficar apenas no `.env.local`
 - a DATABASE_URL real deve ficar apenas no `.env.local`
+- a DIRECT_URL real deve ficar apenas no `.env.local`
 - nunca commitar `.env.local`
 
 ---
@@ -521,6 +542,11 @@ Assets de identidade:
 - imagem de preview social monochrome versionada em `public/og-worklog-v3.png`
 - metadata Open Graph e Twitter Card configurados no App Router com imagem absoluta, `secureUrl`, tipo MIME e dimensões
 - navegação desktop/mobile refinada sem logo visual no app
+- schema Prisma inicial criado
+- primeira migration Prisma criada
+- Prisma Client gerado
+- `prisma.config.ts` configurado para carregar `.env.local`
+- aplicação da migration no Supabase pendente de `DIRECT_URL`/pooler IPv4
 
 ---
 
@@ -541,12 +567,10 @@ Assets de identidade:
 
 Implementar:
 
-- Prisma
-- Supabase
-- schema inicial
-- conexão com o banco real
-- primeira migration
-- Prisma Client
+- configurar `DIRECT_URL` com a Session Pooler do Supabase
+- aplicar `npm run prisma:deploy`
+- validar conexão real com Supabase
+- iniciar M3 — sincronização WakaTime manual
 
 Após conclusão de cada etapa importante, atualizar:
 
