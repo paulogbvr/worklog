@@ -289,3 +289,37 @@ Implementar:
 3. conexão Supabase PostgreSQL
 4. Prisma Client
 5. primeira migration
+
+---
+
+## 2026-06-04
+
+### Deploy Inicial Vercel
+
+Concluído:
+
+- deploy inicial publicado na Vercel
+- URL pública registrada na documentação
+- resposta HTTP validada com sucesso
+
+URL:
+
+```txt
+https://worklog-projects.vercel.app/
+```
+
+Resposta HTTP:
+
+```txt
+200 OK
+```
+
+---
+
+### Próximo Passo
+
+Continuar:
+
+1. diagnosticar migration Prisma no Supabase
+2. aplicar primeira migration
+3. concluir M2 — Prisma e Banco

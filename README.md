@@ -24,6 +24,12 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Portal Compartilhável | ⏳ Em andamento |
 | Deploy                | ⏳ Em andamento |
 
+Site publicado:
+
+```txt
+https://worklog-projects.vercel.app/
+```
+
 ### Progresso Geral
 
 ```txt

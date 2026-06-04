@@ -32,6 +32,7 @@ Aplicacao inicializada:
 - scripts `lint`, `typecheck` e `build`
 - `src/app`
 - `src/lib/env.ts`
+- deploy inicial em `https://worklog-projects.vercel.app/`
 
 Ainda pendente:
 
@@ -276,6 +277,12 @@ Entregaveis:
 - build validado
 - variaveis configuradas na Vercel
 - protecao administrativa antes de deploy publico
+
+Deploy inicial ja disponivel:
+
+```txt
+https://worklog-projects.vercel.app/
+```
 
 Criterio de aceite:
 

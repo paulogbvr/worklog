@@ -19,6 +19,12 @@ Sistema para acompanhamento de:
 - valores pendentes
 - links compartilháveis
 
+Site publicado:
+
+```txt
+https://worklog-projects.vercel.app/
+```
+
 ---
 
 # Referências Técnicas
@@ -109,6 +115,12 @@ https://vercel.com/
 Uso no projeto:
 
 - deploy
+
+Deploy atual:
+
+```txt
+https://worklog-projects.vercel.app/
+```
 
 ---
 
