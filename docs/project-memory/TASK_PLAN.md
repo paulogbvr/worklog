@@ -31,10 +31,13 @@ Aplicacao inicializada:
 - TailwindCSS
 - scripts `lint`, `typecheck` e `build`
 - `src/app`
+- `src/components/app-shell.tsx`
 - `src/lib/env.ts`
 - deploy inicial em `https://worklog-projects.vercel.app/`
-- favicon e metadata social configurados
-- imagem de preview social em `public/og-image.png`
+- favicon monochrome minimalista em `public/favicon.ico`
+- metadata social configurada com imagem Open Graph absoluta
+- imagem de preview social monochrome em `public/og-image.png`
+- navegacao desktop/mobile refinada sem logo visual no app
 
 Ainda pendente:
 
@@ -80,6 +83,7 @@ Entregaveis:
 - TypeScript
 - TailwindCSS
 - estrutura inicial de `src/`
+- shell visual com sidebar desktop e drawer mobile
 - scripts `lint`, `typecheck` e `build`
 - validacao inicial de variaveis de ambiente
 

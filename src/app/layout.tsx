@@ -4,10 +4,11 @@ import "./globals.css";
 const title = "WorkLog — Controle de horas e pagamentos";
 const description =
   "Acompanhe horas trabalhadas, projetos, pagamentos e valores pendentes com integração WakaTime.";
-const url = "https://worklog-projects.vercel.app/";
+const siteUrl = "https://worklog-projects.vercel.app";
+const ogImageUrl = `${siteUrl}/og-image.png`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(url),
+  metadataBase: new URL(siteUrl),
   applicationName: "WorkLog",
   title,
   description,
@@ -15,22 +16,18 @@ export const metadata: Metadata = {
     canonical: "/"
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "256x256" },
-      { url: "/icon.png", type: "image/png", sizes: "512x512" }
-    ],
-    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }]
+    icon: [{ url: "/favicon.ico", sizes: "256x256" }]
   },
   openGraph: {
     title,
     description,
-    url: "/",
+    url: siteUrl,
     siteName: "WorkLog",
     locale: "pt_BR",
     type: "website",
     images: [
       {
-        url: "/og-image.png",
+        url: ogImageUrl,
         width: 1200,
         height: 630,
         alt: "WorkLog — Controle de horas e pagamentos"
@@ -41,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: ["/og-image.png"]
+    images: [ogImageUrl]
   }
 };
 

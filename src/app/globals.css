@@ -28,7 +28,11 @@ a {
   text-decoration: none;
 }
 
+button {
+  font: inherit;
+}
+
 ::selection {
-  background: rgba(165, 243, 252, 0.28);
+  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
 }

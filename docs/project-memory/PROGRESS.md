@@ -353,3 +353,62 @@ public/apple-icon.png
 public/og-image.png
 src/app/layout.tsx
 ```
+
+---
+
+## 2026-06-04
+
+### Refinamento de Branding e Navegação
+
+Concluído:
+
+- logo visual removida do app
+- texto `MVP pessoal` removido da interface
+- `public/icon.png` removido
+- `public/apple-icon.png` removido
+- favicon recriado em estilo monochrome minimalista
+- `public/og-image.png` recriado em estilo graphite/monochrome
+- metadata social corrigida com URL absoluta para a imagem Open Graph
+- navegação desktop refeita com sidebar recolhível
+- navegação mobile refeita com drawer leve
+- tooltips adicionados aos ícones da sidebar recolhida
+
+Objetivo:
+
+Manter uma identidade própria do WorkLog, sem logo quadrada, sem visual azul forte e com preview compartilhável mais profissional.
+
+Arquivos:
+
+```txt
+public/favicon.ico
+public/og-image.png
+src/app/layout.tsx
+src/app/page.tsx
+src/components/app-shell.tsx
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+70%
+```
+
+Implementação:
+
+```txt
+12%
+```
+
+Projeto Geral:
+
+```txt
+█████░░░░░░░░░░░░░░░ 26%
+```

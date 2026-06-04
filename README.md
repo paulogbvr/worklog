@@ -33,7 +33,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-█████░░░░░░░░░░░░░░░ 25%
+█████░░░░░░░░░░░░░░░ 26%
 ```
 
 ---
@@ -82,12 +82,12 @@ https://worklog-projects.vercel.app/
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
+│   ├── components/
+│   │   └── app-shell.tsx
 │   └── lib/
 │       └── env.ts
 └── public/
     ├── favicon.ico
-    ├── icon.png
-    ├── apple-icon.png
     └── og-image.png
 ```
 
@@ -517,11 +517,10 @@ Priorizar:
 
 Assets de identidade:
 
-- favicon próprio do WorkLog
-- ícone web/app em `public/icon.png`
-- ícone Apple em `public/apple-icon.png`
-- imagem de preview social em `public/og-image.png`
-- metadata Open Graph e Twitter Card configurados no App Router
+- favicon monochrome minimalista em `public/favicon.ico`
+- imagem de preview social monochrome em `public/og-image.png`
+- metadata Open Graph e Twitter Card configurados no App Router com imagem absoluta
+- navegação desktop/mobile refinada sem logo visual no app
 
 ---
 
