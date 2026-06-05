@@ -15,10 +15,10 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Supabase              | ✅ Configurado  |
 | WakaTime              | ✅ Configurado  |
 | Estrutura Inicial     | ✅ Concluído    |
-| Banco (Prisma)        | ⚠️ Conexão pendente |
-| Integração WakaTime   | ⏳ Em andamento |
-| Dashboard             | ⏳ Em andamento |
-| Projetos              | ⏳ Em andamento |
+| Banco (Prisma)        | ✅ Concluído    |
+| Integração WakaTime   | ✅ Sync manual  |
+| Dashboard             | ⚙️ Dados reais iniciais |
+| Projetos              | ⚙️ Listagem inicial |
 | Registros de Trabalho | ⏳ Em andamento |
 | Pagamentos            | ⏳ Em andamento |
 | Portal Compartilhável | ⏳ Em andamento |
@@ -33,7 +33,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-██████░░░░░░░░░░░░░░ 30%
+████████░░░░░░░░░░░░ 38%
 ```
 
 ---
@@ -84,14 +84,26 @@ https://worklog-projects.vercel.app/
 │           └── migration.sql
 ├── src/
 │   ├── app/
+│   │   ├── api/
+│   │   │   └── wakatime/
+│   │   │       └── sync/
+│   │   │           └── route.ts
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
 │   ├── components/
-│   │   └── app-shell.tsx
-│   └── lib/
-│       ├── env.ts
-│       └── prisma.ts
+│   │   ├── app-shell.tsx
+│   │   └── wakatime/
+│   │       └── sync-now-button.tsx
+│   ├── lib/
+│   │   ├── env.ts
+│   │   └── prisma.ts
+│   └── server/
+│       ├── dashboard/
+│       │   └── summary.ts
+│       └── wakatime/
+│           ├── client.ts
+│           └── sync.ts
 └── public/
     ├── favicon.ico
     └── og-worklog-v3.png
@@ -428,9 +440,8 @@ Estado atual:
 - primeira migration criada em `prisma/migrations/20260604231000_init/migration.sql`
 - Prisma Client gerado com sucesso
 - Prisma CLI configurado em `prisma.config.ts` para carregar `.env.local`
-- aplicação da migration no Supabase pendente porque a `DATABASE_URL` atual usa o endpoint direto IPv6-only
-
-Para aplicar a migration a partir de ambiente IPv4-only, configurar `DIRECT_URL` com a connection string Session Pooler do Supabase ou usar uma Direct Connection em ambiente com IPv6.
+- migration `20260604231000_init` aplicada com sucesso no Supabase
+- sincronização real validada usando Prisma e Supabase
 
 ---
 
@@ -546,7 +557,15 @@ Assets de identidade:
 - primeira migration Prisma criada
 - Prisma Client gerado
 - `prisma.config.ts` configurado para carregar `.env.local`
-- aplicação da migration no Supabase pendente de `DIRECT_URL`/pooler IPv4
+- migration `20260604231000_init` aplicada no Supabase
+- cliente WakaTime server-side criado
+- rota `POST /api/wakatime/sync` criada
+- botão manual `Atualizar agora` conectado ao backend
+- dashboard inicial lendo resumo real do banco
+- listagem inicial de projetos sincronizados adicionada ao dashboard
+- sidebar minimizada com tooltip acima do conteúdo
+- estado da sidebar persistido em `localStorage`
+- alternância dark/light mode com persistência em `localStorage`
 
 ---
 
@@ -567,10 +586,10 @@ Assets de identidade:
 
 Implementar:
 
-- configurar `DIRECT_URL` com a Session Pooler do Supabase
-- aplicar `npm run prisma:deploy`
-- validar conexão real com Supabase
-- iniciar M3 — sincronização WakaTime manual
+- M4 — Dashboard Real
+- início do fluxo de configuração de cliente e valor/hora
+- CRUD de registros de trabalho
+- pagamentos por projeto
 
 Após conclusão de cada etapa importante, atualizar:
 

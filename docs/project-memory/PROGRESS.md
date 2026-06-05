@@ -545,3 +545,152 @@ Projeto Geral:
 ```txt
 ██████░░░░░░░░░░░░░░ 30%
 ```
+
+---
+
+## 2026-06-04
+
+### Prisma Aplicado e Sincronização WakaTime Manual
+
+Concluído:
+
+- migration `20260604231000_init` aplicada com sucesso no Supabase
+- `npm run prisma:deploy` validado com sucesso
+- cliente server-side WakaTime criado
+- rota `POST /api/wakatime/sync` criada
+- serviço de sincronização manual criado
+- projetos WakaTime criados automaticamente como ativos e pendentes de configuração
+- horas WakaTime salvas por projeto e dia em `WakaTimeProjectDay`
+- tentativas de sync registradas em `SyncLog`
+- dashboard inicial passou a ler resumo real do banco
+- botão `Atualizar agora` conectado ao backend
+- painel de ambiente da sidebar passou a exibir `DIRECT_URL`
+
+Validação real:
+
+```txt
+6 projetos encontrados
+6 projetos criados
+15 registros diários sincronizados
+84954 segundos importados
+```
+
+Validação técnica:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Resultado:
+
+```txt
+sucesso
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+85%
+```
+
+Implementação:
+
+```txt
+22%
+```
+
+Projeto Geral:
+
+```txt
+███████░░░░░░░░░░░░░ 35%
+```
+
+---
+
+### Próximo Passo
+
+Implementar:
+
+1. Dashboard real completo
+2. Listagem de projetos sincronizados
+3. Destaque para projetos pendentes de configuração
+4. Configuração de cliente e valor/hora por projeto
+
+---
+
+## 2026-06-04
+
+### Correções de Sidebar, Tema e Dashboard Real Inicial
+
+Concluído:
+
+- tooltip da sidebar minimizada corrigido com z-index mais alto, sidebar em camada própria e containers sem clip
+- estado da sidebar persistido em `localStorage`
+- chave usada: `worklog-sidebar-state`
+- alternância dark/light mode adicionada
+- tema persistido em `localStorage`
+- chave usada: `worklog-theme`
+- dark mode mantido como padrão
+- light mode desenhado com variáveis próprias de superfície, texto, borda e profundidade
+- `DIRECT_URL` exibida no painel de ambiente da sidebar
+- dashboard passou a exibir listagem inicial de projetos sincronizados
+- projetos pendentes de configuração destacados na listagem inicial
+
+Validação técnica:
+
+```bash
+npm run lint
+npm run typecheck
+```
+
+Resultado:
+
+```txt
+sucesso
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+85%
+```
+
+Implementação:
+
+```txt
+25%
+```
+
+Projeto Geral:
+
+```txt
+████████░░░░░░░░░░░░ 38%
+```
+
+---
+
+### Próximo Passo
+
+Implementar:
+
+1. Configuração de cliente e valor/hora por projeto
+2. CRUD de registros de trabalho
+3. Pagamentos por projeto

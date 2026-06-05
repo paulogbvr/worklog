@@ -1,6 +1,6 @@
-type ServerEnvKey = "DATABASE_URL" | "WAKATIME_API_KEY";
+type ServerEnvKey = "DATABASE_URL" | "DIRECT_URL" | "WAKATIME_API_KEY";
 
-const serverEnvKeys: ServerEnvKey[] = ["DATABASE_URL", "WAKATIME_API_KEY"];
+const serverEnvKeys: ServerEnvKey[] = ["DATABASE_URL", "DIRECT_URL", "WAKATIME_API_KEY"];
 
 export type ServerEnvStatus = {
   configured: boolean;

@@ -84,6 +84,28 @@ Passos:
 7. Atualizar `Project.lastSyncAt`.
 8. Finalizar `SyncLog` com sucesso ou erro.
 
+Estado atual:
+
+```txt
+Implementado
+```
+
+Arquivos:
+
+- `src/server/wakatime/client.ts`
+- `src/server/wakatime/sync.ts`
+- `src/app/api/wakatime/sync/route.ts`
+- `src/components/wakatime/sync-now-button.tsx`
+
+Validação real:
+
+```txt
+6 projetos encontrados
+6 projetos criados
+15 registros diários sincronizados
+84954 segundos importados
+```
+
 ---
 
 # Projetos Automaticos

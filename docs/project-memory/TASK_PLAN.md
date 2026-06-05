@@ -44,11 +44,22 @@ Aplicação inicializada:
 - `src/lib/prisma.ts`
 - migration inicial em `prisma/migrations/20260604231000_init/migration.sql`
 - scripts `prisma:validate`, `prisma:generate`, `prisma:migrate` e `prisma:deploy`
+- migration `20260604231000_init` aplicada no Supabase
+- cliente WakaTime server-side em `src/server/wakatime/client.ts`
+- sincronização manual em `src/server/wakatime/sync.ts`
+- rota `POST /api/wakatime/sync`
+- botão `Atualizar agora`
+- dashboard inicial lendo resumo real do banco
+- sidebar com estado persistido em `localStorage`
+- alternância dark/light mode persistida em `localStorage`
+- listagem inicial de projetos sincronizados no dashboard
 
 Ainda pendente:
 
-- aplicar migration no Supabase via `DIRECT_URL`/pooler
-- integração WakaTime real
+- configuração de cliente e valor/hora em projetos sincronizados
+- registros de trabalho
+- pagamentos
+- portal compartilhável
 
 ---
 
@@ -105,7 +116,7 @@ Critério de aceite:
 Status:
 
 ```txt
-Parcialmente concluído
+Concluído
 ```
 
 Objetivo:
@@ -125,11 +136,11 @@ Critério de aceite:
 
 - `npx prisma generate` executa com sucesso: concluído
 - schema segue `docs/architecture/DATA_MODEL.md`: concluído
-- migration aplica no banco Supabase: pendente por conexão `DATABASE_URL` direta IPv6-only
+- migration aplica no banco Supabase: concluído
 
-Bloqueio atual:
+Resultado:
 
-O endpoint direto do Supabase (`db.<project-ref>.supabase.co:5432`) resolve apenas para IPv6 neste ambiente e retorna `P1001` no Prisma. Para concluir a aplicação remota, configurar `DIRECT_URL` com a Session Pooler do Supabase ou usar a Direct Connection em um ambiente com IPv6.
+`npm run prisma:deploy` aplicou a migration `20260604231000_init` com sucesso no Supabase.
 
 ---
 
@@ -138,7 +149,7 @@ O endpoint direto do Supabase (`db.<project-ref>.supabase.co:5432`) resolve apen
 Status:
 
 ```txt
-Pendente
+Concluído
 ```
 
 Objetivo:
@@ -152,12 +163,22 @@ Entregáveis:
 - criação automática de projetos
 - persistencia de horas por projeto e dia
 - `SyncLog`
+- botão manual `Atualizar agora`
 
 Critério de aceite:
 
-- projetos reais aparecem no banco
-- projeto novo nasce ativo e pendente de configuração
-- erro de API não derruba o dashboard
+- projetos reais aparecem no banco: concluído
+- projeto novo nasce ativo e pendente de configuração: concluído
+- erro de API não derruba o dashboard: concluído
+
+Validação real:
+
+```txt
+6 projetos encontrados
+6 projetos criados
+15 registros diários sincronizados
+84954 segundos importados
+```
 
 ---
 
@@ -166,7 +187,7 @@ Critério de aceite:
 Status:
 
 ```txt
-Pendente
+Em andamento
 ```
 
 Objetivo:
@@ -183,12 +204,19 @@ Entregáveis:
 - valor pendente
 - projetos pendentes
 - última sincronização
+- botão manual de sincronização
+- listagem inicial de projetos sincronizados
+- destaque para projetos pendentes de configuração
+- dark/light mode no shell
+- persistência de estado da sidebar
 
 Critério de aceite:
 
 - dashboard funciona com banco vazio
 - dashboard funciona após sincronização real
 - valores financeiros usam horas dedicadas
+- sidebar mantém estado após atualizar a página
+- tema mantém estado após atualizar a página
 
 ---
 

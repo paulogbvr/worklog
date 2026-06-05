@@ -253,11 +253,34 @@ A migration inicial existe e está validada, mas não pode ser aplicada ao Supab
 
 Usar `DIRECT_URL` com a Session Pooler do Supabase para Prisma CLI/migrations em ambiente IPv4-only, ou aplicar a migration em ambiente com IPv6 disponível.
 
-e apontar a metadata exclusivamente para:
+---
+
+## 2026-06-04
+
+### Descoberta
+
+A sincronização manual real do WakaTime funcionou de ponta a ponta.
+
+### Evidência
+
+A rota `POST /api/wakatime/sync` foi executada localmente contra WakaTime e Supabase com sucesso.
+
+Resultado:
 
 ```txt
-https://worklog-projects.vercel.app/og-worklog-v3.png
+6 projetos encontrados
+6 projetos criados
+15 registros diários sincronizados
+84954 segundos importados
 ```
+
+### Impacto
+
+O WorkLog já consegue criar projetos automaticamente e persistir horas reais agregadas por projeto e dia.
+
+### Ação
+
+Avançar para dashboard real completo e tela de projetos pendentes de configuração.
 
 ---
 
