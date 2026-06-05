@@ -62,6 +62,13 @@ Horas Dedicadas x Valor Hora = Valor Total
 Valor Total - Pagamentos Recebidos = Valor Pendente
 ```
 
+Fallback do MVP:
+
+```txt
+se não houver WorkLogEntry:
+Horas WakaTime x Valor Hora = Valor Total
+```
+
 ---
 
 # Models Iniciais
@@ -89,6 +96,7 @@ Campos:
 - id
 - clientId opcional
 - name
+- notes opcional
 - hourlyRate opcional
 - wakatimeProjectId opcional
 - wakatimeProjectName opcional
@@ -104,6 +112,8 @@ Regras:
 - projeto vindo do WakaTime pode nascer sem valor por hora
 - projeto incompleto deve ficar como `PENDING`
 - projeto configurado deve ficar como `CONFIGURED`
+- projeto WakaTime ausente da lista atual deve ficar com `active = false`
+- inativar não remove horas, pagamentos ou configuração
 
 ## WorkLogEntry
 
@@ -222,7 +232,10 @@ soma de WakaTimeProjectDay.totalSeconds
 ## Valor Total
 
 ```txt
-Horas Dedicadas x Project.hourlyRate
+se Horas Dedicadas > 0:
+  Horas Dedicadas x Project.hourlyRate
+senão:
+  Horas WakaTime x Project.hourlyRate
 ```
 
 ## Valor Recebido

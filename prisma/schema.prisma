@@ -32,6 +32,7 @@ model Project {
   clientId            String?
   client              Client?                    @relation(fields: [clientId], references: [id], onDelete: SetNull)
   name                String
+  notes               String?
   hourlyRate          Decimal?                   @db.Decimal(10, 2)
   wakatimeProjectId   String?                    @unique
   wakatimeProjectName String?                    @unique

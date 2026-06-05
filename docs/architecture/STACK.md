@@ -44,6 +44,18 @@ Componentes:
 Shadcn UI
 ```
 
+Ícones:
+
+```txt
+Lucide React
+React Icons
+```
+
+Uso:
+
+- Lucide para ações e navegação
+- `FaCode` de React Icons como marca oficial do WorkLog
+
 ---
 
 # Backend

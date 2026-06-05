@@ -694,3 +694,103 @@ Implementar:
 1. Configuração de cliente e valor/hora por projeto
 2. CRUD de registros de trabalho
 3. Pagamentos por projeto
+
+---
+
+## 2026-06-05
+
+### Operação Financeira, Branding e UX Persistente
+
+Concluído:
+
+- marca oficial do WorkLog baseada no `FaCode`
+- logo aplicada na sidebar desktop, drawer mobile, favicon, ícone do app e preview social
+- Open Graph atualizado para `og-worklog-v4.png`
+- preferências de tema e sidebar aplicadas antes da hidratação
+- tooltip da sidebar validado com containers sem clip e camada acima do conteúdo
+- dark/light mode persistente e light mode com paleta própria
+- `StatusPulse` reutilizável para sucesso, erro, aviso e estado neutro
+- toasts para sincronização e operações
+- painel de ambiente validando `DATABASE_URL`, `DIRECT_URL` e `WAKATIME_API_KEY`
+- sincronização WakaTime otimizada com buscas paralelas e persistência em lote
+- CRUD básico de clientes
+- configuração de projetos com cliente, valor/hora, nome, status e observações
+- cadastro, histórico e remoção de pagamentos
+- dashboard financeiro usando horas manuais como prioridade e WakaTime como fallback
+- migration `20260605011210_project_notes` aplicada e registrada no Supabase
+- projetos removidos da lista atual do WakaTime arquivados com `active = false`
+- histórico dos projetos arquivados preservado no banco
+- dashboard e contadores filtrados para projetos ativos
+
+Validação real:
+
+```txt
+Sincronização repetida: 2 projetos retornados pela API
+5 registros diários persistidos
+0 novos projetos
+4 projetos antigos arquivados
+HTTP 200
+```
+
+Validação técnica:
+
+```bash
+npm run lint
+npm run typecheck
+npm run prisma:validate
+npm run prisma:generate
+npm run build
+```
+
+Resultado:
+
+```txt
+sucesso
+```
+
+Validação funcional:
+
+- sidebar e tema persistem após recarregar
+- tema claro aplica `color-scheme: light` e paleta própria
+- atalhos da navegação abrem a aba operacional correta
+- layout móvel validado em 390 × 844 sem rolagem horizontal
+- criação, edição e remoção temporária de cliente validadas contra o Supabase
+- validações inválidas de projeto e pagamento retornam HTTP 400
+- sincronização real exibe toasts de início e conclusão
+- dashboard passou de 6 para 2 projetos ativos
+- lista principal mostra somente `worklog` e `core`
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+90%
+```
+
+Implementação:
+
+```txt
+55%
+```
+
+Projeto Geral:
+
+```txt
+█████████████░░░░░░░ 65%
+```
+
+### Próximo Passo
+
+Implementar:
+
+1. CRUD de registros de trabalho
+2. registros atravessando meia-noite
+3. filtros por período
+4. portal compartilhável somente leitura

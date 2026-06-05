@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   getWakaTimeProjects,
   getWakaTimeSummaries,
-  WakaTimeApiError,
-  type WakaTimeProject
+  WakaTimeApiError
 } from "@/server/wakatime/client";
 
 const INITIAL_SYNC_DAYS = 30;
@@ -15,6 +14,7 @@ export type WakaTimeSyncResult = {
   syncLogId: string;
   start: string;
   end: string;
+  projectsArchived: number;
   projectsFound: number;
   projectsCreated: number;
   projectsUpdated: number;
@@ -52,12 +52,8 @@ function toDatabaseDate(date: string) {
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof WakaTimeApiError) {
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
+  if (error instanceof WakaTimeApiError || error instanceof Error) {
+    return error.message.slice(0, 500);
   }
 
   return "Erro inesperado ao sincronizar WakaTime.";
@@ -88,76 +84,6 @@ async function getSyncWindow() {
   };
 }
 
-async function upsertProjectFromWakaTime(project: WakaTimeProject) {
-  const existingProject = await prisma.project.findFirst({
-    where: {
-      OR: [{ wakatimeProjectId: project.id }, { wakatimeProjectName: project.name }]
-    }
-  });
-
-  if (existingProject) {
-    const updatedProject = await prisma.project.update({
-      data: {
-        active: true,
-        wakatimeProjectId: project.id,
-        wakatimeProjectName: project.name
-      },
-      where: {
-        id: existingProject.id
-      }
-    });
-
-    return {
-      created: false,
-      project: updatedProject
-    };
-  }
-
-  const createdProject = await prisma.project.create({
-    data: {
-      active: true,
-      configurationStatus: ProjectConfigurationStatus.PENDING,
-      name: project.name,
-      wakatimeProjectId: project.id,
-      wakatimeProjectName: project.name
-    }
-  });
-
-  return {
-    created: true,
-    project: createdProject
-  };
-}
-
-async function getOrCreateProjectByWakaTimeName(name: string) {
-  const existingProject = await prisma.project.findUnique({
-    where: {
-      wakatimeProjectName: name
-    }
-  });
-
-  if (existingProject) {
-    return {
-      created: false,
-      project: existingProject
-    };
-  }
-
-  const createdProject = await prisma.project.create({
-    data: {
-      active: true,
-      configurationStatus: ProjectConfigurationStatus.PENDING,
-      name,
-      wakatimeProjectName: name
-    }
-  });
-
-  return {
-    created: true,
-    project: createdProject
-  };
-}
-
 export async function syncWakaTime() {
   const syncWindow = await getSyncWindow();
   const syncLog = await prisma.syncLog.create({
@@ -167,109 +93,204 @@ export async function syncWakaTime() {
   });
 
   try {
-    const projects = await getWakaTimeProjects();
-    const projectByWakaTimeName = new Map<string, { id: string }>();
-    const touchedProjectIds = new Set<string>();
-    let projectsCreated = 0;
-    let projectsUpdated = 0;
+    const [wakatimeProjects, summaries] = await Promise.all([
+      getWakaTimeProjects(),
+      getWakaTimeSummaries({
+        end: syncWindow.end,
+        start: syncWindow.start,
+        timezone: WAKATIME_TIMEZONE
+      })
+    ]);
 
-    for (const wakatimeProject of projects) {
-      const result = await upsertProjectFromWakaTime(wakatimeProject);
+    const apiProjectByName = new Map(
+      wakatimeProjects.map((project) => [project.name, project] as const)
+    );
+    const apiProjectNames = wakatimeProjects.map((project) => project.name);
+    const apiProjectIds = wakatimeProjects.map((project) => project.id);
 
-      if (result.created) {
-        projectsCreated += 1;
-      } else {
-        projectsUpdated += 1;
-      }
-
-      projectByWakaTimeName.set(wakatimeProject.name, { id: result.project.id });
-      touchedProjectIds.add(result.project.id);
-    }
-
-    const summaries = await getWakaTimeSummaries({
-      end: syncWindow.end,
-      start: syncWindow.start,
-      timezone: WAKATIME_TIMEZONE
-    });
-
-    let daysSynced = 0;
-    let totalSeconds = 0;
-
-    for (const day of summaries) {
-      for (const summaryProject of day.projects) {
-        if (summaryProject.totalSeconds <= 0) {
-          continue;
-        }
-
-        let project = projectByWakaTimeName.get(summaryProject.name);
-
-        if (!project) {
-          const result = await getOrCreateProjectByWakaTimeName(summaryProject.name);
-
-          if (result.created) {
-            projectsCreated += 1;
-          }
-
-          project = { id: result.project.id };
-          projectByWakaTimeName.set(summaryProject.name, project);
-        }
-
-        await prisma.wakaTimeProjectDay.upsert({
-          create: {
-            date: toDatabaseDate(day.date),
-            projectId: project.id,
-            totalSeconds: summaryProject.totalSeconds
+    const existingProjects = await prisma.project.findMany({
+      where: {
+        OR: [
+          {
+            wakatimeProjectName: {
+              not: null
+            }
           },
-          update: {
-            syncedAt: new Date(),
-            totalSeconds: summaryProject.totalSeconds
-          },
-          where: {
-            projectId_date: {
-              date: toDatabaseDate(day.date),
-              projectId: project.id
+          {
+            wakatimeProjectId: {
+              not: null
             }
           }
-        });
-
-        daysSynced += 1;
-        totalSeconds += summaryProject.totalSeconds;
-        touchedProjectIds.add(project.id);
+        ]
       }
+    });
+
+    const existingNames = new Set(existingProjects.map((project) => project.wakatimeProjectName));
+    const existingIds = new Set(existingProjects.map((project) => project.wakatimeProjectId));
+    const missingProjects = apiProjectNames.filter((name) => {
+      const apiProject = apiProjectByName.get(name);
+      return !existingNames.has(name) && Boolean(apiProject && !existingIds.has(apiProject.id));
+    });
+
+    const createResult =
+      missingProjects.length > 0
+        ? await prisma.project.createMany({
+            data: missingProjects.map((name) => ({
+              active: true,
+              configurationStatus: ProjectConfigurationStatus.PENDING,
+              name,
+              wakatimeProjectId: apiProjectByName.get(name)?.id,
+              wakatimeProjectName: name
+            })),
+            skipDuplicates: true
+          })
+        : { count: 0 };
+
+    const activeProjectUpdates = existingProjects.flatMap((project) => {
+      const apiProject =
+        (project.wakatimeProjectName && apiProjectByName.get(project.wakatimeProjectName)) ||
+        wakatimeProjects.find((item) => item.id === project.wakatimeProjectId);
+
+      if (!apiProject) {
+        return [];
+      }
+
+      return [
+        prisma.project.update({
+          data: {
+            active: true,
+            wakatimeProjectId: apiProject.id,
+            wakatimeProjectName: apiProject.name
+          },
+          where: {
+            id: project.id
+          }
+        })
+      ];
+    });
+    const archivedProjectIds = existingProjects
+      .filter(
+        (project) =>
+          project.active &&
+          !apiProjectNames.includes(project.wakatimeProjectName ?? "") &&
+          !apiProjectIds.includes(project.wakatimeProjectId ?? "")
+      )
+      .map((project) => project.id);
+    const statusUpdates = [
+      ...activeProjectUpdates,
+      ...(archivedProjectIds.length > 0
+        ? [
+            prisma.project.updateMany({
+              data: {
+                active: false
+              },
+              where: {
+                id: {
+                  in: archivedProjectIds
+                }
+              }
+            })
+          ]
+        : [])
+    ];
+
+    if (statusUpdates.length > 0) {
+      await prisma.$transaction(statusUpdates);
     }
 
-    const finishedAt = new Date();
+    const databaseProjects = await prisma.project.findMany({
+      select: {
+        id: true,
+        wakatimeProjectName: true
+      },
+      where: {
+        active: true,
+        wakatimeProjectName: {
+          in: apiProjectNames
+        }
+      }
+    });
+    const projectIdByName = new Map(
+      databaseProjects.flatMap((project) =>
+        project.wakatimeProjectName
+          ? ([[project.wakatimeProjectName, project.id]] as Array<[string, string]>)
+          : []
+      )
+    );
 
-    if (touchedProjectIds.size > 0) {
-      await prisma.project.updateMany({
+    const dailyRows = summaries.flatMap((day) =>
+      day.projects.flatMap((summaryProject) => {
+        const projectId = projectIdByName.get(summaryProject.name);
+
+        if (!projectId || summaryProject.totalSeconds <= 0) {
+          return [];
+        }
+
+        return [
+          {
+            date: toDatabaseDate(day.date),
+            projectId,
+            syncedAt: new Date(),
+            totalSeconds: summaryProject.totalSeconds
+          }
+        ];
+      })
+    );
+    const touchedProjectIds = [...new Set(databaseProjects.map((project) => project.id))];
+    const finishedAt = new Date();
+    const totalSeconds = dailyRows.reduce((total, row) => total + row.totalSeconds, 0);
+
+    const persistenceOperations = [
+      prisma.wakaTimeProjectDay.deleteMany({
+        where: {
+          date: {
+            gte: toDatabaseDate(syncWindow.start),
+            lte: toDatabaseDate(syncWindow.end)
+          },
+          projectId: {
+            in: touchedProjectIds
+          }
+        }
+      }),
+      ...(dailyRows.length > 0
+        ? [
+            prisma.wakaTimeProjectDay.createMany({
+              data: dailyRows,
+              skipDuplicates: true
+            })
+          ]
+        : []),
+      prisma.project.updateMany({
         data: {
           lastSyncAt: finishedAt
         },
         where: {
           id: {
-            in: [...touchedProjectIds]
+            in: touchedProjectIds
           }
         }
-      });
-    }
+      }),
+      prisma.syncLog.update({
+        data: {
+          finishedAt,
+          message: `${wakatimeProjects.length} projetos ativos; ${archivedProjectIds.length} arquivados; ${dailyRows.length} registros diarios sincronizados.`,
+          success: true
+        },
+        where: {
+          id: syncLog.id
+        }
+      })
+    ];
 
-    await prisma.syncLog.update({
-      data: {
-        finishedAt,
-        message: `${projects.length} projetos encontrados; ${daysSynced} registros diarios sincronizados.`,
-        success: true
-      },
-      where: {
-        id: syncLog.id
-      }
-    });
+    await prisma.$transaction(persistenceOperations);
 
     return {
-      daysSynced,
+      daysSynced: dailyRows.length,
       end: syncWindow.end,
-      projectsCreated,
-      projectsFound: projects.length,
-      projectsUpdated,
+      projectsArchived: archivedProjectIds.length,
+      projectsCreated: createResult.count,
+      projectsFound: wakatimeProjects.length,
+      projectsUpdated: activeProjectUpdates.length,
       start: syncWindow.start,
       syncLogId: syncLog.id,
       totalSeconds

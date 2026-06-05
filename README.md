@@ -17,12 +17,13 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Estrutura Inicial     | ✅ Concluído    |
 | Banco (Prisma)        | ✅ Concluído    |
 | Integração WakaTime   | ✅ Sync manual  |
-| Dashboard             | ⚙️ Dados reais iniciais |
-| Projetos              | ⚙️ Listagem inicial |
+| Dashboard             | ✅ Dados reais e financeiro |
+| Projetos              | ✅ Configuração básica |
+| Clientes              | ✅ CRUD básico |
 | Registros de Trabalho | ⏳ Em andamento |
-| Pagamentos            | ⏳ Em andamento |
+| Pagamentos            | ✅ Controle básico |
 | Portal Compartilhável | ⏳ Em andamento |
-| Deploy                | ⏳ Em andamento |
+| Deploy                | ⚙️ Publicado, proteção pendente |
 
 Site publicado:
 
@@ -33,7 +34,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-████████░░░░░░░░░░░░ 38%
+█████████████░░░░░░░ 65%
 ```
 
 ---
@@ -80,19 +81,25 @@ https://worklog-projects.vercel.app/
 ├── prisma/
 │   ├── schema.prisma
 │   └── migrations/
-│       └── 20260604231000_init/
-│           └── migration.sql
+│       ├── 20260604231000_init/
+│       └── 20260605011210_project_notes/
 ├── src/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── clients/
+│   │   │   ├── payments/
+│   │   │   ├── projects/
 │   │   │   └── wakatime/
-│   │   │       └── sync/
-│   │   │           └── route.ts
 │   │   ├── globals.css
 │   │   ├── layout.tsx
+│   │   ├── manifest.ts
 │   │   └── page.tsx
 │   ├── components/
 │   │   ├── app-shell.tsx
+│   │   ├── brand-logo.tsx
+│   │   ├── operations-panel.tsx
+│   │   ├── status-pulse.tsx
+│   │   ├── toast-provider.tsx
 │   │   └── wakatime/
 │   │       └── sync-now-button.tsx
 │   ├── lib/
@@ -106,7 +113,10 @@ https://worklog-projects.vercel.app/
 │           └── sync.ts
 └── public/
     ├── favicon.ico
-    └── og-worklog-v3.png
+    ├── icon-worklog.png
+    ├── og-worklog-v4.png
+    ├── og-worklog-v4.svg
+    └── worklog-mark.svg
 ```
 
 ---
@@ -283,6 +293,13 @@ O usuário deverá apenas definir:
 - cliente
 - valor por hora
 
+Quando um projeto deixa de existir na lista atual do WakaTime:
+
+- `active` passa para `false`
+- horas, pagamentos e configuração são preservados
+- o projeto deixa de aparecer no dashboard principal
+- uma visualização de arquivados poderá ser adicionada futuramente
+
 ---
 
 ## Registros de Trabalho
@@ -403,9 +420,8 @@ Importar automaticamente:
 
 Atualização:
 
-- ao abrir dashboard
 - atualização manual
-- atualização agendada
+- atualização agendada futura
 
 Regras:
 
@@ -441,7 +457,9 @@ Estado atual:
 - Prisma Client gerado com sucesso
 - Prisma CLI configurado em `prisma.config.ts` para carregar `.env.local`
 - migration `20260604231000_init` aplicada com sucesso no Supabase
+- migration `20260605011210_project_notes` registrada e aplicada no Supabase
 - sincronização real validada usando Prisma e Supabase
+- projetos removidos do WakaTime são arquivados sem perda de histórico
 
 ---
 
@@ -500,7 +518,7 @@ Permitindo identificar tempo gasto em atividades fora da programação.
 
 ## Valor Financeiro
 
-Horas Dedicadas
+Horas Dedicadas, quando existirem
 
 ×
 
@@ -509,6 +527,8 @@ Valor Hora
 =
 
 Valor Total
+
+Enquanto um projeto ainda não possuir registros manuais, as horas WakaTime são usadas como fallback para o cálculo. Assim que houver registros manuais, eles passam a ser a base financeira prioritária.
 
 ---
 
@@ -549,10 +569,12 @@ Priorizar:
 
 Assets de identidade:
 
-- favicon monochrome minimalista em `public/favicon.ico`
-- imagem de preview social monochrome versionada em `public/og-worklog-v3.png`
+- marca oficial baseada no ícone `FaCode`, aplicada na sidebar desktop/mobile
+- favicon e ícone do app em `public/favicon.ico` e `public/icon-worklog.png`
+- imagem de preview social versionada em `public/og-worklog-v4.png`
 - metadata Open Graph e Twitter Card configurados no App Router com imagem absoluta, `secureUrl`, tipo MIME e dimensões
-- navegação desktop/mobile refinada sem logo visual no app
+- manifest do app configurado
+- navegação desktop/mobile refinada com identidade visual oficial
 - schema Prisma inicial criado
 - primeira migration Prisma criada
 - Prisma Client gerado
@@ -566,6 +588,13 @@ Assets de identidade:
 - sidebar minimizada com tooltip acima do conteúdo
 - estado da sidebar persistido em `localStorage`
 - alternância dark/light mode com persistência em `localStorage`
+- preferências aplicadas antes da hidratação para evitar flash de tema ou sidebar
+- status reutilizável para ambiente e notificações
+- toasts premium para sincronização e operações
+- CRUD básico de clientes
+- configuração de nome, cliente, valor/hora, status e observações de projetos
+- cadastro e remoção de pagamentos
+- cálculo financeiro real com prioridade manual e fallback WakaTime
 
 ---
 
@@ -586,10 +615,11 @@ Assets de identidade:
 
 Implementar:
 
-- M4 — Dashboard Real
-- início do fluxo de configuração de cliente e valor/hora
 - CRUD de registros de trabalho
-- pagamentos por projeto
+- suporte a registros atravessando meia-noite
+- filtros por período no dashboard
+- portal compartilhável somente leitura
+- proteção administrativa antes de ampliar o uso público
 
 Após conclusão de cada etapa importante, atualizar:
 

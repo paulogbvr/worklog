@@ -25,6 +25,8 @@ https://api.wakatime.com/api/v1/
 - nunca commitar `.env.local`
 - salvar dados no Supabase via Prisma
 - criar projetos automaticamente quando aparecerem no WakaTime
+- marcar como inativos os projetos que desaparecerem da lista atual
+- preservar todo o histórico de projetos inativos
 - nao bloquear o dashboard quando a API falhar
 - registrar cada tentativa em `SyncLog`
 
@@ -76,13 +78,14 @@ Dashboard
 Passos:
 
 1. Criar `SyncLog` com inicio da tentativa.
-2. Buscar projetos reais no WakaTime.
-3. Para cada projeto, verificar se ja existe pelo identificador ou nome WakaTime.
-4. Criar projeto ausente como ativo e `PENDING`.
-5. Buscar horas por periodo.
-6. Salvar horas agregadas por projeto e dia em `WakaTimeProjectDay`.
-7. Atualizar `Project.lastSyncAt`.
-8. Finalizar `SyncLog` com sucesso ou erro.
+2. Buscar projetos e resumos do WakaTime em paralelo.
+3. Consultar em lote todos os projetos vinculados ao WakaTime.
+4. Criar projetos ausentes em lote como ativos e `PENDING`.
+5. Reativar projetos presentes e atualizar seus identificadores.
+6. Marcar com `active = false` os projetos ausentes da lista atual.
+7. Substituir o intervalo sincronizado dos projetos ativos com operacoes agregadas.
+8. Atualizar `Project.lastSyncAt`.
+9. Finalizar `SyncLog` com sucesso ou erro.
 
 Estado atual:
 
@@ -105,6 +108,37 @@ Validação real:
 15 registros diários sincronizados
 84954 segundos importados
 ```
+
+Validação após otimização:
+
+```txt
+2 projetos retornados pela API
+5 registros diários sincronizados
+0 novos projetos
+4 projetos antigos arquivados
+HTTP 200
+```
+
+As escritas em lote reduzem round trips e são preferíveis para uso com o Transaction Pooler do Supabase.
+
+---
+
+# Arquivamento de Projetos
+
+A fonte do estado ativo é:
+
+```txt
+GET /users/current/projects
+```
+
+Regras:
+
+- presente na lista atual: `active = true`
+- ausente da lista atual: `active = false`
+- nunca apagar automaticamente
+- dashboard principal consulta apenas `active = true`
+- horas e pagamentos de inativos permanecem no banco
+- tela de arquivados pode ser criada futuramente
 
 ---
 

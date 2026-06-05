@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { useToast } from "@/components/toast-provider";
 
 type SyncResponse = {
   ok: boolean;
   error?: string;
   result?: {
     daysSynced: number;
+    projectsArchived: number;
     projectsCreated: number;
     projectsFound: number;
     projectsUpdated: number;
@@ -19,17 +22,26 @@ function formatResult(result: NonNullable<SyncResponse["result"]>) {
   const projectText = result.projectsFound === 1 ? "1 projeto" : `${result.projectsFound} projetos`;
   const dayText =
     result.daysSynced === 1 ? "1 registro diário" : `${result.daysSynced} registros diários`;
+  const archiveText =
+    result.projectsArchived === 1
+      ? "1 arquivado"
+      : `${result.projectsArchived} arquivados`;
 
-  return `${projectText}; ${dayText}; ${result.projectsCreated} novos.`;
+  return `${projectText}; ${dayText}; ${result.projectsCreated} novos; ${archiveText}.`;
 }
 
 export function SyncNowButton() {
-  const [message, setMessage] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   async function handleSync() {
     setIsSyncing(true);
-    setMessage(null);
+    toast({
+      message: "Buscando projetos e horas recentes.",
+      title: "Sincronização iniciada",
+      tone: "neutral"
+    });
 
     try {
       const response = await fetch("/api/wakatime/sync", {
@@ -41,10 +53,19 @@ export function SyncNowButton() {
         throw new Error(payload.error ?? "Não foi possível sincronizar agora.");
       }
 
-      setMessage(formatResult(payload.result));
-      window.location.reload();
+      toast({
+        message: formatResult(payload.result),
+        title: "Sincronização concluída",
+        tone: "success"
+      });
+      router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível sincronizar agora.");
+      toast({
+        message:
+          error instanceof Error ? error.message : "Não foi possível sincronizar o WakaTime agora.",
+        title: "Falha na sincronização",
+        tone: "error"
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -63,12 +84,6 @@ export function SyncNowButton() {
         </span>
         <span className="pr-4">{isSyncing ? "Sincronizando" : "Atualizar agora"}</span>
       </button>
-
-      {message ? (
-        <p className="max-w-xs text-left text-xs text-[color:var(--text-soft)] sm:text-right">
-          {message}
-        </p>
-      ) : null}
     </div>
   );
 }

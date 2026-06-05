@@ -286,7 +286,7 @@ O endpoint direto do Supabase pode ser IPv6-only. Em ambientes locais ou CI sem 
 
 ---
 
-### DECISION-011
+### DECISION-012
 
 #### Título
 
@@ -308,7 +308,7 @@ Mudanças de processo devem ser feitas em `AGENTS.md`.
 
 ---
 
-### DECISION-012
+### DECISION-013
 
 #### Título
 
@@ -336,7 +336,7 @@ Horas WakaTime devem ser exibidas para comparação e transparência.
 
 ---
 
-### DECISION-013
+### DECISION-014
 
 #### Título
 
@@ -358,7 +358,7 @@ Linguagens, editores e atividades detalhadas ficam fora do MVP.
 
 ---
 
-### DECISION-014
+### DECISION-015
 
 #### Título
 
@@ -383,3 +383,83 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+---
+
+## 2026-06-05
+
+### DECISION-016
+
+#### Título
+
+Prioridade das Horas no Cálculo Financeiro
+
+#### Decisão
+
+Quando um projeto possuir registros manuais, a soma de `WorkLogEntry.durationSeconds` será a base financeira. Enquanto não houver registros manuais, a soma de `WakaTimeProjectDay.totalSeconds` será usada como fallback.
+
+#### Motivo
+
+Permitir cálculo financeiro útil desde o início sem perder a distinção entre tempo automático e tempo dedicado informado manualmente.
+
+#### Impacto
+
+```txt
+horas manuais > 0
+  ? horas manuais × valor/hora
+  : horas WakaTime × valor/hora
+```
+
+O dashboard deve indicar qual fonte está sendo usada.
+
+---
+
+### DECISION-017
+
+#### Título
+
+Preferências Visuais Locais
+
+#### Decisão
+
+Tema e estado da sidebar serão preferências locais, persistidas no navegador e aplicadas antes da hidratação.
+
+#### Motivo
+
+Evitar flash visual, manter a escolha do usuário após recarregar e não introduzir conta ou autenticação no MVP.
+
+#### Impacto
+
+- tema padrão: dark
+- chave do tema: `worklog-theme`
+- chave da sidebar: `worklog-sidebar-state`
+- script inicial no layout aplica as preferências antes do React
+
+---
+
+### DECISION-018
+
+#### Título
+
+Estado Ativo dos Projetos WakaTime
+
+#### Decisão
+
+A lista atual retornada por `/users/current/projects` será a fonte do estado ativo dos projetos vinculados ao WakaTime.
+
+Projetos que não estiverem mais nessa lista serão mantidos no banco com:
+
+```txt
+active = false
+```
+
+#### Motivo
+
+Refletir o estado atual do WakaTime sem apagar horas, pagamentos ou configurações históricas.
+
+#### Impacto
+
+- projetos atuais são reativados durante o sync
+- projetos ausentes são arquivados
+- dashboard, contadores e operação principal usam apenas projetos ativos
+- visualização de arquivados fica como melhoria futura

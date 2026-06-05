@@ -21,11 +21,15 @@ function getStatusCode(error: unknown) {
 
 function getPublicErrorMessage(error: unknown) {
   if (error instanceof WakaTimeApiError) {
-    return error.message;
-  }
+    if (error.status === 401 || error.status === 403) {
+      return "A chave do WakaTime não foi aceita.";
+    }
 
-  if (error instanceof Error) {
-    return error.message;
+    if (error.status === 429) {
+      return "O WakaTime limitou temporariamente as requisições. Tente novamente em instantes.";
+    }
+
+    return "O WakaTime não respondeu como esperado.";
   }
 
   return "Não foi possível sincronizar o WakaTime agora.";

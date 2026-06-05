@@ -284,6 +284,92 @@ Avançar para dashboard real completo e tela de projetos pendentes de configura�
 
 ---
 
+## 2026-06-05
+
+### Descoberta
+
+O Prisma Client de runtime acessa o Supabase pelo Transaction Pooler, mas o schema engine usado por alguns comandos de migration não se comportou de forma confiável neste ambiente.
+
+### Evidência
+
+- a aplicação consultou e atualizou o banco normalmente
+- a porta direta respondeu em teste de rede
+- `prisma migrate deploy` pelo Transaction Pooler ficou sem concluir
+- a conexão direta pelo schema engine retornou erro genérico
+- a migration de `Project.notes` foi aplicada com o SQL exato e registrada em `_prisma_migrations` dentro de uma transação Prisma
+- a coluna foi consultada com sucesso pela aplicação depois da operação
+
+### Impacto
+
+Falha do schema engine não significa necessariamente indisponibilidade do banco para o runtime. Migrations futuras precisam ser verificadas separadamente do tráfego normal da aplicação.
+
+### Ação
+
+Preferir uma URL de migration compatível com Prisma CLI. Caso o schema engine continue falhando, investigar a conexão do Supabase antes de aplicar qualquer procedimento manual e manter o histórico `_prisma_migrations` consistente.
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+A sincronização WakaTime pode ser persistida em lote sem consultas repetidas por projeto e dia.
+
+### Evidência
+
+A implementação passou a:
+
+- buscar projetos e resumos em paralelo
+- consultar projetos existentes uma vez
+- criar projetos ausentes com `createMany`
+- substituir o intervalo diário com `deleteMany` e `createMany`
+- finalizar projetos e `SyncLog` em transação
+
+Uma sincronização repetida concluiu com HTTP 200 em aproximadamente 3,4 segundos.
+
+### Impacto
+
+Menos round trips e menor risco de esgotar conexões no Transaction Pooler do Supabase.
+
+### Ação
+
+Manter operações de sincronização agregadas e evitar `upsert` individual em loops.
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+A API atual de projetos do WakaTime retornou apenas `worklog` e `core`, mas quatro projetos antigos continuavam ativos no WorkLog.
+
+### Evidência
+
+Antes da correção:
+
+```txt
+API WakaTime: 2 projetos
+Dashboard WorkLog: 6 projetos ativos
+```
+
+Depois da comparação e arquivamento:
+
+```txt
+2 projetos ativos
+4 projetos arquivados
+lista principal: worklog e core
+```
+
+### Impacto
+
+Sincronizar horas sem reconciliar o estado dos projetos deixa itens removidos aparecendo indefinidamente.
+
+### Ação
+
+Usar a lista atual de `/users/current/projects` como fonte do estado `active`, preservando projetos ausentes como histórico inativo.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

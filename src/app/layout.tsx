@@ -5,8 +5,27 @@ const title = "WorkLog — Controle de horas e pagamentos";
 const description =
   "Acompanhe horas trabalhadas, projetos, pagamentos e valores pendentes com integração WakaTime.";
 const siteUrl = "https://worklog-projects.vercel.app";
-const ogImageUrl = `${siteUrl}/og-worklog-v3.png`;
-const ogImageAlt = "WorkLog — Controle de horas e pagamentos";
+const ogImageUrl = `${siteUrl}/og-worklog-v4.png`;
+const ogImageAlt = "WorkLog — Controle real do tempo trabalhado";
+
+const preferenceScript = `
+  (() => {
+    try {
+      const theme = localStorage.getItem("worklog-theme") === "light" ? "light" : "dark";
+      const sidebar = localStorage.getItem("worklog-sidebar-state") === "collapsed"
+        ? "collapsed"
+        : "expanded";
+      const root = document.documentElement;
+      root.dataset.theme = theme;
+      root.dataset.sidebar = sidebar;
+      root.style.colorScheme = theme;
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+      document.documentElement.dataset.sidebar = "expanded";
+      document.documentElement.style.colorScheme = "dark";
+    }
+  })();
+`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -17,7 +36,12 @@ export const metadata: Metadata = {
     canonical: "/"
   },
   icons: {
-    icon: [{ url: "/favicon.ico", sizes: "256x256" }]
+    apple: [{ url: "/icon-worklog.png", sizes: "512x512", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
+      { url: "/icon-worklog.png", sizes: "512x512", type: "image/png" }
+    ],
+    shortcut: ["/favicon.ico"]
   },
   openGraph: {
     title,
@@ -60,7 +84,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html data-sidebar="expanded" data-theme="dark" lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: preferenceScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

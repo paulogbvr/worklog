@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { OperationsPanel } from "@/components/operations-panel";
 import { SyncNowButton } from "@/components/wakatime/sync-now-button";
 import { getServerEnvStatus } from "@/lib/env";
 import { getDashboardSummary } from "@/server/dashboard/summary";
@@ -29,8 +30,11 @@ const workflow = [
 ];
 
 export default async function Home() {
-  const envStatus = getServerEnvStatus();
   const dashboard = await getDashboardSummary();
+  const envStatus = getServerEnvStatus({
+    databaseAvailable: dashboard.databaseAvailable,
+    wakaTimeSyncSuccessful: dashboard.latestSyncSuccessful
+  });
 
   return (
     <AppShell envStatus={envStatus}>
@@ -55,7 +59,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {dashboard.metrics.map((metric) => (
           <article
             className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-soft)] p-5 shadow-[var(--card-shadow)]"
@@ -118,12 +122,12 @@ export default async function Home() {
               <p className="mt-2 text-2xl font-semibold">{dashboard.pendingProjects}</p>
             </div>
             <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
-              <p className="text-xs text-[color:var(--text-soft)]">Clientes</p>
-              <p className="mt-2 text-2xl font-semibold">{dashboard.clients}</p>
+              <p className="text-xs text-[color:var(--text-soft)]">Configurados</p>
+              <p className="mt-2 text-2xl font-semibold">{dashboard.configuredProjects}</p>
             </div>
             <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
-              <p className="text-xs text-[color:var(--text-soft)]">M3</p>
-              <p className="mt-2 text-2xl font-semibold">Sync</p>
+              <p className="text-xs text-[color:var(--text-soft)]">Clientes</p>
+              <p className="mt-2 text-2xl font-semibold">{dashboard.clients.length}</p>
             </div>
           </div>
           <div className="mt-6 h-2 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
@@ -133,53 +137,11 @@ export default async function Home() {
         </section>
       </div>
 
-      <section className="mt-4 rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Projetos sincronizados</h2>
-            <p className="mt-1 text-sm text-[color:var(--text-soft)]">
-              Projetos reais detectados pelo WakaTime.
-            </p>
-          </div>
-          <span className="rounded-full border border-[color:var(--border-strong)] px-3 py-1 text-xs text-[color:var(--text-muted)]">
-            {dashboard.pendingProjects} pendentes
-          </span>
-        </div>
-
-        <div className="mt-5 divide-y divide-[color:var(--border)]">
-          {dashboard.projects.length > 0 ? (
-            dashboard.projects.map((project) => (
-              <div
-                className="grid gap-3 py-4 text-sm sm:grid-cols-[1fr_auto_auto_auto] sm:items-center"
-                key={project.id}
-              >
-                <div>
-                  <p className="font-medium text-[color:var(--app-text-strong)]">{project.name}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Última sync: {project.lastSyncLabel}
-                  </p>
-                </div>
-                <span
-                  className={[
-                    "w-fit rounded-full border px-2.5 py-1 text-xs",
-                    project.statusTone === "warning"
-                      ? "border-[color:var(--warning-border)] bg-[var(--warning-bg)] text-[color:var(--warning-text)]"
-                      : "border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)]"
-                  ].join(" ")}
-                >
-                  {project.statusLabel}
-                </span>
-                <span className="text-[color:var(--text-muted)]">{project.wakatimeLabel}</span>
-                <span className="text-xs text-[color:var(--text-faint)]">WakaTime</span>
-              </div>
-            ))
-          ) : (
-            <div className="py-6 text-sm text-[color:var(--text-soft)]">
-              Nenhum projeto sincronizado ainda.
-            </div>
-          )}
-        </div>
-      </section>
+      <OperationsPanel
+        clients={dashboard.clients}
+        payments={dashboard.payments}
+        projects={dashboard.projects}
+      />
     </AppShell>
   );
 }

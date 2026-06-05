@@ -36,8 +36,9 @@ Aplicação inicializada:
 - deploy inicial em `https://worklog-projects.vercel.app/`
 - favicon monochrome minimalista em `public/favicon.ico`
 - metadata social configurada com imagem Open Graph absoluta
-- imagem de preview social monochrome versionada em `public/og-worklog-v3.png`
-- navegação desktop/mobile refinada sem logo visual no app
+- marca oficial baseada no `FaCode`
+- imagem de preview social versionada em `public/og-worklog-v4.png`
+- navegação desktop/mobile com logo oficial
 - acentuação PT-BR revisada nos textos visíveis do app
 - `prisma/schema.prisma`
 - `prisma.config.ts`
@@ -52,13 +53,18 @@ Aplicação inicializada:
 - dashboard inicial lendo resumo real do banco
 - sidebar com estado persistido em `localStorage`
 - alternância dark/light mode persistida em `localStorage`
-- listagem inicial de projetos sincronizados no dashboard
+- preferências aplicadas antes da hidratação
+- dashboard financeiro com dados reais
+- configuração de projetos
+- CRUD básico de clientes
+- cadastro e histórico básico de pagamentos
+- toasts e status reutilizáveis
+- sincronização WakaTime em lote, adequada ao Transaction Pooler
+- arquivamento automático de projetos removidos do WakaTime
 
 Ainda pendente:
 
-- configuração de cliente e valor/hora em projetos sincronizados
 - registros de trabalho
-- pagamentos
 - portal compartilhável
 
 ---
@@ -169,6 +175,7 @@ Critério de aceite:
 
 - projetos reais aparecem no banco: concluído
 - projeto novo nasce ativo e pendente de configuração: concluído
+- projeto removido da lista atual fica inativo sem perder histórico: concluído
 - erro de API não derruba o dashboard: concluído
 
 Validação real:
@@ -180,6 +187,14 @@ Validação real:
 84954 segundos importados
 ```
 
+Validação de arquivamento:
+
+```txt
+2 projetos ativos retornados
+4 projetos antigos arquivados
+dashboard exibindo apenas worklog e core
+```
+
 ---
 
 # M4 — Dashboard Real
@@ -187,7 +202,7 @@ Validação real:
 Status:
 
 ```txt
-Em andamento
+Concluído
 ```
 
 Objetivo:
@@ -218,6 +233,13 @@ Critério de aceite:
 - sidebar mantém estado após atualizar a página
 - tema mantém estado após atualizar a página
 
+Resultado:
+
+- resumo real de horas e valores concluído
+- listagem operacional de projetos concluída
+- estados vazio e indisponível preservados
+- cálculo financeiro usa registros manuais como prioridade e WakaTime como fallback
+
 ---
 
 # M5 — Projetos, Clientes e Registros
@@ -225,7 +247,7 @@ Critério de aceite:
 Status:
 
 ```txt
-Pendente
+Em andamento
 ```
 
 Objetivo:
@@ -246,6 +268,12 @@ Critério de aceite:
 - registros alteram horas dedicadas
 - valor total recalcula corretamente
 
+Estado:
+
+- cadastro, edição e remoção de clientes: concluído
+- configuração de projeto: concluído
+- CRUD de registros de trabalho: pendente
+
 ---
 
 # M6 — Pagamentos
@@ -253,7 +281,7 @@ Critério de aceite:
 Status:
 
 ```txt
-Pendente
+Concluído
 ```
 
 Objetivo:
@@ -271,6 +299,12 @@ Critério de aceite:
 
 - pagamento reduz valor pendente
 - histórico aparece no dashboard e no projeto
+
+Resultado:
+
+- cadastro e remoção de pagamentos concluídos
+- histórico recente disponível no painel
+- valor recebido e saldo pendente recalculados no resumo
 
 ---
 
@@ -308,7 +342,7 @@ Critério de aceite:
 Status:
 
 ```txt
-Pendente
+Em andamento
 ```
 
 Objetivo:
@@ -323,6 +357,12 @@ Entregáveis:
 - build validado
 - variáveis configuradas na Vercel
 - proteção administrativa antes de deploy público
+
+Estado:
+
+- branding, favicon, manifest e preview social concluídos
+- tema, sidebar, tooltips, estados e responsividade validados
+- proteção administrativa continua pendente
 
 Deploy inicial já disponível:
 
