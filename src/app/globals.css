@@ -159,6 +159,37 @@ html[data-sidebar="collapsed"] .worklog-sidebar .sidebar-compact-control:hover .
   display: block;
 }
 
+.theme-light-only {
+  display: none;
+}
+
+.theme-toggle-track {
+  left: 0;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.theme-toggle-knob {
+  left: 3px;
+}
+
+html[data-theme="light"] .theme-dark-only {
+  display: none;
+}
+
+html[data-theme="light"] .theme-light-only {
+  display: inline-block;
+}
+
+html[data-theme="light"] .theme-toggle-track {
+  border-color: rgba(4, 120, 87, 0.25);
+  background: rgba(16, 185, 129, 0.2);
+}
+
+html[data-theme="light"] .theme-toggle-knob {
+  left: 17px;
+}
+
 body {
   min-height: 100vh;
   margin: 0;

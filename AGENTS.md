@@ -207,10 +207,16 @@ Regras:
 
 # Cálculo Financeiro
 
+Cada projeto define a fonte de horas usada no faturamento:
+
+```txt
+WAKATIME ou DEDICATED
+```
+
 Fórmula:
 
 ```txt
-Horas Dedicadas × Valor Hora = Valor Total
+Horas da fonte selecionada × Valor Hora = Valor Total
 ```
 
 Depois:

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   Clock3,
   CreditCard,
@@ -24,7 +24,6 @@ import type { ServerEnvStatus } from "@/lib/env";
 const SIDEBAR_STORAGE_KEY = "worklog-sidebar-state";
 const THEME_STORAGE_KEY = "worklog-theme";
 
-type Theme = "dark" | "light";
 type SidebarState = "collapsed" | "expanded";
 
 type NavItem = {
@@ -71,9 +70,7 @@ function getPreference(key: string, fallback: string) {
   return window.localStorage.getItem(key) ?? fallback;
 }
 
-function setPreference(key: string, value: string) {
-  window.localStorage.setItem(key, value);
-
+function applyPreference(key: string, value: string) {
   if (key === SIDEBAR_STORAGE_KEY) {
     document.documentElement.dataset.sidebar = value;
     document.documentElement.style.setProperty(
@@ -85,7 +82,15 @@ function setPreference(key: string, value: string) {
   if (key === THEME_STORAGE_KEY) {
     document.documentElement.dataset.theme = value;
     document.documentElement.style.colorScheme = value;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", value === "light" ? "#f4f6f8" : "#090909");
   }
+}
+
+function setPreference(key: string, value: string) {
+  window.localStorage.setItem(key, value);
+  applyPreference(key, value);
 
   window.dispatchEvent(new Event(`worklog-storage:${key}`));
 }
@@ -96,7 +101,8 @@ function subscribeToPreference(key: string, callback: () => void) {
   }
 
   function handleStorage(event: StorageEvent) {
-    if (event.key === key) {
+    if (event.key === key && event.newValue) {
+      applyPreference(key, event.newValue);
       callback();
     }
   }
@@ -179,12 +185,12 @@ function EnvPanel({ envStatus }: { envStatus: ServerEnvStatus }) {
         <div className="mt-4 min-w-0 space-y-2.5">
           {Object.entries(envStatus.keys).map(([key, check]) => (
             <div
-              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-xs"
+              className="grid min-w-0 grid-cols-[12px_minmax(0,1fr)_max-content] items-center gap-2.5 text-xs"
               key={key}
             >
-              <span className="flex min-w-0 items-center gap-2.5 text-[color:var(--text-muted)]">
-                <StatusPulse tone={check.tone} />
-                <span className="truncate">{key}</span>
+              <StatusPulse tone={check.tone} />
+              <span className="min-w-0 truncate font-mono text-[11px] text-[color:var(--text-muted)]">
+                {key}
               </span>
               <span className="shrink-0 text-right text-[color:var(--text-soft)]">
                 {check.label}
@@ -206,20 +212,14 @@ function EnvPanel({ envStatus }: { envStatus: ServerEnvStatus }) {
 
 function ThemeControl({
   className = "",
-  theme,
   onToggle
 }: {
   className?: string;
-  theme: Theme;
   onToggle: () => void;
 }) {
-  const isLight = theme === "light";
-  const Icon = isLight ? Sun : Moon;
-  const label = isLight ? "Ativar tema escuro" : "Ativar tema claro";
-
   return (
     <button
-      aria-label={label}
+      aria-label="Alternar tema"
       className={[
         "h-12 w-full items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 text-left text-[color:var(--text-muted)] transition-colors duration-200 hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]",
         className
@@ -228,52 +228,46 @@ function ThemeControl({
       type="button"
     >
       <span className="flex min-w-0 items-center gap-3">
-        <Icon className="size-[18px] shrink-0" strokeWidth={1.8} />
+        <Moon className="theme-dark-only size-[18px] shrink-0" strokeWidth={1.8} />
+        <Sun className="theme-light-only size-[18px] shrink-0" strokeWidth={1.8} />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-[color:var(--app-text-strong)]">
-            Tema {isLight ? "claro" : "escuro"}
+            Tema <span className="theme-dark-only">escuro</span>
+            <span className="theme-light-only">claro</span>
           </span>
           <span className="block text-[11px] text-[color:var(--text-faint)]">Ativo</span>
         </span>
       </span>
       <span
         aria-hidden
-        className={[
-          "relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-200",
-          isLight
-            ? "border-emerald-600/25 bg-emerald-500/20"
-            : "border-white/10 bg-white/10"
-        ].join(" ")}
+        className="theme-toggle-track relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-200"
       >
         <span
-          className={[
-            "absolute top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-[var(--app-text-strong)] shadow-sm transition-[left] duration-200",
-            isLight ? "left-[17px]" : "left-[3px]"
-          ].join(" ")}
+          className="theme-toggle-knob absolute top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-[var(--app-text-strong)] shadow-sm transition-[left] duration-200"
         />
       </span>
     </button>
   );
 }
 
-function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
-  const isLight = theme === "light";
-  const Icon = isLight ? Sun : Moon;
-  const label = isLight ? "Ativar tema escuro" : "Ativar tema claro";
-
+function ThemeToggle({ onToggle }: { onToggle: () => void }) {
   return (
     <>
-      <ThemeControl className="sidebar-expanded-only" onToggle={onToggle} theme={theme} />
+      <ThemeControl className="sidebar-expanded-only" onToggle={onToggle} />
 
       <button
-        aria-label={label}
+        aria-label="Alternar tema"
         className="sidebar-collapsed-only sidebar-compact-control group relative mx-auto size-11 items-center justify-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
         onClick={onToggle}
-        title={label}
+        title="Alternar tema"
         type="button"
       >
-        <Icon className="size-4" strokeWidth={1.8} />
-        <CompactTooltip>{isLight ? "Tema escuro" : "Tema claro"}</CompactTooltip>
+        <Moon className="theme-dark-only size-4" strokeWidth={1.8} />
+        <Sun className="theme-light-only size-4" strokeWidth={1.8} />
+        <CompactTooltip>
+          <span className="theme-dark-only">Tema claro</span>
+          <span className="theme-light-only">Tema escuro</span>
+        </CompactTooltip>
       </button>
     </>
   );
@@ -288,26 +282,16 @@ export function AppShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebarState = useStoredPreference(SIDEBAR_STORAGE_KEY, "expanded") as SidebarState;
-  const storedTheme = useStoredPreference(THEME_STORAGE_KEY, "dark");
   const collapsed = sidebarState === "collapsed";
-  const theme: Theme = storedTheme === "light" ? "light" : "dark";
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.dataset.sidebar = sidebarState;
-    document.documentElement.style.setProperty(
-      "--sidebar-width",
-      sidebarState === "collapsed" ? "84px" : "288px"
-    );
-    document.documentElement.style.colorScheme = theme;
-  }, [sidebarState, theme]);
 
   function handleSidebarToggle() {
     setPreference(SIDEBAR_STORAGE_KEY, collapsed ? "expanded" : "collapsed");
   }
 
   function handleThemeToggle() {
-    setPreference(THEME_STORAGE_KEY, theme === "dark" ? "light" : "dark");
+    const currentTheme =
+      document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    setPreference(THEME_STORAGE_KEY, currentTheme === "dark" ? "light" : "dark");
   }
 
   return (
@@ -365,24 +349,25 @@ export function AppShell({
           </nav>
 
           <div className="space-y-3 overflow-visible px-3 pb-4">
-            <ThemeToggle onToggle={handleThemeToggle} theme={theme} />
+            <ThemeToggle onToggle={handleThemeToggle} />
             <EnvPanel envStatus={envStatus} />
           </div>
         </aside>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[color:var(--border)] bg-[var(--header-bg)] px-5 backdrop-blur-xl lg:hidden">
+          <header className="sticky top-0 z-30 flex h-[calc(4rem+env(safe-area-inset-top))] items-center justify-between border-b border-[color:var(--border)] bg-[var(--header-bg)] px-5 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
             <Link aria-label="WorkLog" href="/">
               <BrandLogo />
             </Link>
             <div className="flex items-center gap-2">
               <button
-                aria-label={theme === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
+                aria-label="Alternar tema"
                 className="grid size-10 place-items-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
                 onClick={handleThemeToggle}
                 type="button"
               >
-                {theme === "light" ? <Moon className="size-5" /> : <Sun className="size-5" />}
+                <Sun className="theme-dark-only size-5" />
+                <Moon className="theme-light-only size-5" />
               </button>
               <button
                 aria-expanded={mobileOpen}
@@ -412,7 +397,7 @@ export function AppShell({
               mobileOpen ? "translate-x-0" : "-translate-x-full"
             ].join(" ")}
           >
-            <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-5">
+            <div className="flex h-[calc(4rem+env(safe-area-inset-top))] items-center justify-between border-b border-[color:var(--border)] px-5 pt-[env(safe-area-inset-top)]">
               <Link aria-label="WorkLog" href="/" onClick={() => setMobileOpen(false)}>
                 <BrandLogo />
               </Link>
@@ -436,7 +421,6 @@ export function AppShell({
               <ThemeControl
                 className="flex"
                 onToggle={handleThemeToggle}
-                theme={theme}
               />
               <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-faint)]">
@@ -445,14 +429,19 @@ export function AppShell({
                 <p className="mt-2 text-sm font-medium">
                   {envStatus.configured ? "Variáveis configuradas" : "Variáveis pendentes"}
                 </p>
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-2.5">
                   {Object.entries(envStatus.keys).map(([key, check]) => (
-                    <div className="flex items-center justify-between gap-3 text-xs" key={key}>
-                      <span className="flex min-w-0 items-center gap-2 text-[color:var(--text-muted)]">
-                        <StatusPulse tone={check.tone} />
-                        <span className="truncate">{key}</span>
+                    <div
+                      className="grid min-w-0 grid-cols-[12px_minmax(0,1fr)_max-content] items-center gap-2.5 text-xs"
+                      key={key}
+                    >
+                      <StatusPulse tone={check.tone} />
+                      <span className="min-w-0 truncate font-mono text-[11px] text-[color:var(--text-muted)]">
+                        {key}
                       </span>
-                      <span className="text-[color:var(--text-soft)]">{check.label}</span>
+                      <span className="shrink-0 text-right text-[color:var(--text-soft)]">
+                        {check.label}
+                      </span>
                     </div>
                   ))}
                 </div>

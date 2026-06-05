@@ -942,3 +942,92 @@ Implementar:
 1. filtros por período
 2. portal compartilhável somente leitura
 3. proteção administrativa antes de ampliar o uso público
+
+---
+
+## 2026-06-05
+
+### Modos de Faturamento, Operações e Filtro de Período
+
+Concluído:
+
+- `billingMode` por projeto com padrão WakaTime
+- escolha entre Horas WakaTime e Horas Dedicadas
+- remoção do fallback automático no cálculo financeiro
+- projeto vazio continua aceitando cliente e valor nulos
+- campo de projeto em nova operação sempre inicia e retorna vazio
+- selects com seta própria alinhada em desktop, mobile, dark e light
+- múltiplos intervalos agrupados na mesma operação
+- observação única por operação
+- criação, edição e exclusão transacional do agrupamento
+- total dos intervalos calculado em tempo real
+- migration com backfill preservando 16 registros reais existentes
+- tema mobile, safe-area e `theme-color` sincronizados
+- shell não sobrescreve mais o tema durante a hidratação
+- card de ambiente usa grade fixa sem sobreposição
+- filtros de 7 dias, 30 dias e todo o período no dashboard
+
+Migration aplicada:
+
+```txt
+20260605162000_billing_modes_and_work_operations
+```
+
+Validação funcional reversível:
+
+```txt
+3 intervalos: 2h30 + 2h10 + 2h00 = 6h40
+3 linhas persistidas com o mesmo operationId
+modo DEDICATED recalculou o total com horas manuais
+edição reduziu a operação para 2 intervalos e 3h30
+cliente/valor vazios salvaram como PENDING
+16 registros reais preservados; zero dados temporários restantes
+```
+
+Validação técnica:
+
+```bash
+npm run prisma:deploy
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Resultado:
+
+```txt
+sucesso
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+92%
+```
+
+Implementação:
+
+```txt
+76%
+```
+
+Projeto Geral:
+
+```txt
+████████████████░░░░ 80%
+```
+
+### Próximo Passo
+
+Implementar:
+
+1. portal compartilhável somente leitura
+2. proteção administrativa antes de ampliar o uso público

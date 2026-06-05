@@ -65,7 +65,6 @@ Aplicação inicializada:
 
 Ainda pendente:
 
-- filtros por período
 - portal compartilhável
 
 ---
@@ -227,12 +226,14 @@ Entregáveis:
 - persistência de estado da sidebar
 - revalidação e atualização do painel após sincronização
 - leitura resiliente para não zerar todo o resumo quando uma consulta auxiliar falhar
+- filtros de 7 dias, 30 dias e todo o período
+- modo de faturamento respeitado por projeto
 
 Critério de aceite:
 
 - dashboard funciona com banco vazio
 - dashboard funciona após sincronização real
-- valores financeiros usam horas dedicadas
+- valores financeiros usam a fonte escolhida no projeto
 - sidebar mantém estado após atualizar a página
 - tema mantém estado após atualizar a página
 
@@ -241,7 +242,8 @@ Resultado:
 - resumo real de horas e valores concluído
 - listagem operacional de projetos concluída
 - estados vazio e indisponível preservados
-- cálculo financeiro usa registros manuais como prioridade e WakaTime como fallback
+- cálculo financeiro usa exclusivamente o modo configurado no projeto
+- filtro de período recalcula horas, pagamentos e valores
 - sincronização atualiza métricas e lista de projetos imediatamente
 - erros auxiliares do banco não apagam projetos e horas já disponíveis
 
@@ -266,7 +268,9 @@ Entregáveis:
 - data de nascimento com idade derivada
 - telefone e endereço
 - configuração de cliente e valor/hora em projetos
+- configuração da fonte de faturamento
 - CRUD de registros de trabalho
+- múltiplos intervalos por operação
 - suporte a registros atravessando meia-noite
 - recálculo de duração
 
@@ -284,7 +288,9 @@ Estado:
 - projeto pessoal pode permanecer sem cliente e sem cobrança: concluído
 - mensagens específicas de validação e persistência: concluído
 - CRUD de registros de trabalho: concluído
+- agrupamento de múltiplos intervalos por operação: concluído
 - travessia de meia-noite e recálculo de duração: concluído
+- modo de faturamento WakaTime/Dedicadas: concluído
 
 ---
 
@@ -395,7 +401,7 @@ Critério de aceite:
 
 - relatórios PDF
 - exportação financeira
-- filtros avancados por periodo
+- filtros personalizados por datas
 - multiusuário
 - permissões
 - workspaces

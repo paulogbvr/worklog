@@ -1,8 +1,12 @@
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { OperationsPanel } from "@/components/operations-panel";
 import { SyncNowButton } from "@/components/wakatime/sync-now-button";
 import { getServerEnvStatus } from "@/lib/env";
-import { getDashboardSummary } from "@/server/dashboard/summary";
+import {
+  getDashboardSummary,
+  type DashboardPeriod
+} from "@/server/dashboard/summary";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,8 +34,23 @@ const workflow = [
   }
 ];
 
-export default async function Home() {
-  const dashboard = await getDashboardSummary();
+function parsePeriod(value: string | string[] | undefined): DashboardPeriod {
+  const period = Array.isArray(value) ? value[0] : value;
+
+  if (period === "7d" || period === "all") {
+    return period;
+  }
+
+  return "30d";
+}
+
+export default async function Home({
+  searchParams
+}: {
+  searchParams: Promise<{ period?: string | string[] }>;
+}) {
+  const period = parsePeriod((await searchParams).period);
+  const dashboard = await getDashboardSummary(period);
   const envStatus = getServerEnvStatus();
 
   return (
@@ -56,6 +75,39 @@ export default async function Home() {
           </div>
         </div>
       </header>
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-[color:var(--text-soft)]">
+          Período aplicado a horas, pagamentos e valores.
+        </p>
+        <div
+          aria-label="Filtrar dashboard por período"
+          className="grid grid-cols-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1"
+          role="navigation"
+        >
+          {(
+            [
+              ["7d", "7 dias"],
+              ["30d", "30 dias"],
+              ["all", "Todo período"]
+            ] as const
+          ).map(([value, label]) => (
+            <Link
+              aria-current={dashboard.period === value ? "page" : undefined}
+              className={[
+                "rounded px-3 py-2 text-center text-sm transition-colors",
+                dashboard.period === value
+                  ? "bg-[var(--active-bg)] font-medium text-[color:var(--app-text-strong)]"
+                  : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+              ].join(" ")}
+              href={`/?period=${value}#dashboard`}
+              key={value}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {dashboard.metrics.map((metric) => (
@@ -139,7 +191,7 @@ export default async function Home() {
         clients={dashboard.clients}
         payments={dashboard.payments}
         projects={dashboard.projects}
-        workEntries={dashboard.workEntries}
+        workOperations={dashboard.workOperations}
       />
     </AppShell>
   );

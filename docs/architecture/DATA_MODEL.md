@@ -51,23 +51,19 @@ Horas registradas no WorkLog por meio de `WorkLogEntry`.
 
 Uso:
 
-- calcular faturamento
+- calcular faturamento quando o projeto selecionar `DEDICATED`
 - registrar reunioes, suporte, planejamento, documentacao e revisao
 - complementar o que o WakaTime nao captura
 
 Formula financeira oficial:
 
 ```txt
-Horas Dedicadas x Valor Hora = Valor Total
+Horas da fonte selecionada x Valor Hora = Valor Total
 Valor Total - Pagamentos Recebidos = Valor Pendente
 ```
 
-Fallback do MVP:
-
-```txt
-se não houver WorkLogEntry:
-Horas WakaTime x Valor Hora = Valor Total
-```
+Cada projeto seleciona `WAKATIME` ou `DEDICATED`. O padrão é `WAKATIME` e não existe fallback
+automático.
 
 ---
 
@@ -107,6 +103,7 @@ Campos:
 - name
 - notes opcional
 - hourlyRate opcional
+- billingMode com padrão `WAKATIME`
 - wakatimeProjectId opcional
 - wakatimeProjectName opcional
 - active
@@ -123,6 +120,7 @@ Regras:
 - projeto pessoal pode permanecer como `PENDING` sem cliente e sem cobrança
 - projeto configurado deve ficar como `CONFIGURED`
 - limpar cliente ou valor por hora deve retornar o projeto para `PENDING`
+- faturamento deve usar somente a fonte definida em `billingMode`
 - projeto WakaTime ausente da lista atual deve ficar com `active = false`
 - inativar não remove horas, pagamentos ou configuração
 
@@ -133,6 +131,7 @@ Representa um registro manual de trabalho.
 Campos:
 
 - id
+- operationId
 - projectId
 - startedAt
 - endedAt
@@ -144,6 +143,7 @@ Campos:
 Regras:
 
 - permitir multiplos registros por dia
+- intervalos da mesma operação compartilham `operationId` e `note`
 - permitir atravessar meia-noite
 - exigir `endedAt` maior que `startedAt`
 - recalcular `durationSeconds` ao criar ou editar
@@ -243,10 +243,11 @@ soma de WakaTimeProjectDay.totalSeconds
 ## Valor Total
 
 ```txt
-se Horas Dedicadas > 0:
-  Horas Dedicadas x Project.hourlyRate
-senão:
+Project.billingMode = WAKATIME:
   Horas WakaTime x Project.hourlyRate
+
+Project.billingMode = DEDICATED:
+  Horas Dedicadas x Project.hourlyRate
 ```
 
 ## Valor Recebido

@@ -13,6 +13,11 @@ enum ProjectConfigurationStatus {
   CONFIGURED
 }
 
+enum ProjectBillingMode {
+  WAKATIME
+  DEDICATED
+}
+
 enum SyncProvider {
   WAKATIME
 }
@@ -40,6 +45,7 @@ model Project {
   hourlyRate          Decimal?                   @db.Decimal(10, 2)
   wakatimeProjectId   String?                    @unique
   wakatimeProjectName String?                    @unique
+  billingMode         ProjectBillingMode         @default(WAKATIME)
   active              Boolean                    @default(true)
   configurationStatus ProjectConfigurationStatus @default(PENDING)
   lastSyncAt          DateTime?
@@ -57,6 +63,7 @@ model Project {
 
 model WorkLogEntry {
   id              String   @id @default(cuid())
+  operationId     String   @default(cuid())
   projectId       String
   project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   startedAt       DateTime
@@ -67,6 +74,7 @@ model WorkLogEntry {
   updatedAt       DateTime @updatedAt
 
   @@index([projectId])
+  @@index([operationId])
   @@index([startedAt])
 }
 

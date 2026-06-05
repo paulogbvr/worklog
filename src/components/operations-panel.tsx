@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Clock3, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  Clock3,
+  Pencil,
+  Plus,
+  Settings2,
+  Trash2,
+  X
+} from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import {
   calculateAge,
@@ -14,13 +22,14 @@ import type {
   DashboardClient,
   DashboardPayment,
   DashboardProject,
-  DashboardWorkEntry
+  DashboardWorkOperation
 } from "@/server/dashboard/summary";
 
 type View = "clients" | "payments" | "projects" | "records";
 
 type ProjectDraft = {
   active: boolean;
+  billingMode: "DEDICATED" | "WAKATIME";
   clientId: string;
   hourlyRate: string;
   id: string;
@@ -39,12 +48,17 @@ type ClientDraft = {
   taxId: string;
 };
 
-type WorkEntryDraft = {
+type WorkIntervalDraft = {
   endedAt: string;
+  key: string;
+  startedAt: string;
+};
+
+type WorkOperationDraft = {
   id?: string;
+  intervals: WorkIntervalDraft[];
   note: string;
   projectId: string;
-  startedAt: string;
 };
 
 const emptyClient: ClientDraft = {
@@ -68,20 +82,27 @@ function dateTimeInputValue(date = new Date()) {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-function createWorkEntryDraft(projectId: string): WorkEntryDraft {
-  const startedAt = new Date();
+function createWorkInterval(key = "initial", start?: Date): WorkIntervalDraft {
+  const startedAt = start ? new Date(start) : new Date();
   startedAt.setSeconds(0, 0);
   const endedAt = new Date(startedAt.getTime() + 60 * 60 * 1000);
 
   return {
     endedAt: dateTimeInputValue(endedAt),
-    note: "",
-    projectId,
+    key,
     startedAt: dateTimeInputValue(startedAt)
   };
 }
 
-function formatDraftDuration(startedAt: string, endedAt: string) {
+function createWorkOperationDraft(): WorkOperationDraft {
+  return {
+    intervals: [createWorkInterval()],
+    note: "",
+    projectId: ""
+  };
+}
+
+function getIntervalDurationSeconds(startedAt: string, endedAt: string) {
   const start = new Date(startedAt);
   const end = new Date(endedAt);
 
@@ -93,7 +114,15 @@ function formatDraftDuration(startedAt: string, endedAt: string) {
     return null;
   }
 
-  const totalMinutes = Math.round((end.getTime() - start.getTime()) / 60_000);
+  return Math.round((end.getTime() - start.getTime()) / 1000);
+}
+
+function formatDraftDuration(totalSeconds: number | null) {
+  if (!totalSeconds) {
+    return null;
+  }
+
+  const totalMinutes = Math.round(totalSeconds / 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
@@ -149,6 +178,7 @@ function Modal({
 
 const fieldClass =
   "h-11 w-full rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]";
+const selectClass = `${fieldClass} appearance-none pr-10`;
 const textareaClass =
   "min-h-24 w-full resize-y rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]";
 
@@ -156,12 +186,12 @@ export function OperationsPanel({
   clients,
   payments,
   projects,
-  workEntries
+  workOperations
 }: {
   clients: DashboardClient[];
   payments: DashboardPayment[];
   projects: DashboardProject[];
-  workEntries: DashboardWorkEntry[];
+  workOperations: DashboardWorkOperation[];
 }) {
   const [view, setView] = useState<View>("projects");
   const [projectDraft, setProjectDraft] = useState<ProjectDraft | null>(null);
@@ -171,8 +201,8 @@ export function OperationsPanel({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayInputValue());
   const [paymentNote, setPaymentNote] = useState("");
-  const [workEntryDraft, setWorkEntryDraft] = useState<WorkEntryDraft>(() =>
-    createWorkEntryDraft(projects[0]?.id ?? "")
+  const [workOperationDraft, setWorkOperationDraft] = useState<WorkOperationDraft>(
+    createWorkOperationDraft
   );
   const router = useRouter();
   const { toast } = useToast();
@@ -187,6 +217,9 @@ export function OperationsPanel({
         requestedView === "projects" ||
         requestedView === "records"
       ) {
+        if (requestedView === "records") {
+          setWorkOperationDraft(createWorkOperationDraft());
+        }
         setView(requestedView);
       }
     }
@@ -210,14 +243,24 @@ export function OperationsPanel({
     () => (clientDraft?.birthDate ? calculateAge(clientDraft.birthDate) : null),
     [clientDraft]
   );
-  const workEntryDuration = useMemo(
-    () => formatDraftDuration(workEntryDraft.startedAt, workEntryDraft.endedAt),
-    [workEntryDraft.endedAt, workEntryDraft.startedAt]
-  );
+  const workOperationDuration = useMemo(() => {
+    const durations = workOperationDraft.intervals.map((interval) =>
+      getIntervalDurationSeconds(interval.startedAt, interval.endedAt)
+    );
+
+    if (durations.some((duration) => duration === null)) {
+      return null;
+    }
+
+    return formatDraftDuration(
+      durations.reduce<number>((total, duration) => total + (duration ?? 0), 0)
+    );
+  }, [workOperationDraft.intervals]);
 
   function openProject(project: DashboardProject) {
     setProjectDraft({
       active: project.active,
+      billingMode: project.billingMode,
       clientId: project.clientId ?? "",
       hourlyRate: project.hourlyRate?.toString() ?? "",
       id: project.id,
@@ -416,25 +459,48 @@ export function OperationsPanel({
     }
   }
 
-  function editWorkEntry(entry: DashboardWorkEntry) {
-    setWorkEntryDraft({
-      endedAt: dateTimeInputValue(new Date(entry.endedAt)),
-      id: entry.id,
-      note: entry.note ?? "",
-      projectId: entry.projectId,
-      startedAt: dateTimeInputValue(new Date(entry.startedAt))
+  function editWorkOperation(operation: DashboardWorkOperation) {
+    setWorkOperationDraft({
+      id: operation.id,
+      intervals: operation.intervals.map((interval) => ({
+        endedAt: dateTimeInputValue(new Date(interval.endedAt)),
+        key: interval.id,
+        startedAt: dateTimeInputValue(new Date(interval.startedAt))
+      })),
+      note: operation.note ?? "",
+      projectId: operation.projectId
     });
     setView("records");
   }
 
-  function resetWorkEntry() {
-    setWorkEntryDraft(createWorkEntryDraft(projects[0]?.id ?? ""));
+  function resetWorkOperation() {
+    setWorkOperationDraft(createWorkOperationDraft());
   }
 
-  async function saveWorkEntry(event: FormEvent<HTMLFormElement>) {
+  function addWorkInterval() {
+    setWorkOperationDraft((current) => ({
+      ...current,
+      intervals: [
+        ...current.intervals,
+        createWorkInterval(
+          `interval-${Date.now()}-${current.intervals.length}`,
+          new Date(current.intervals.at(-1)?.endedAt ?? Date.now())
+        )
+      ]
+    }));
+  }
+
+  function removeWorkInterval(key: string) {
+    setWorkOperationDraft((current) => ({
+      ...current,
+      intervals: current.intervals.filter((interval) => interval.key !== key)
+    }));
+  }
+
+  async function saveWorkOperation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workEntryDraft.projectId) {
+    if (!workOperationDraft.projectId) {
       toast({
         message: "Escolha o projeto relacionado ao período trabalhado.",
         title: "Projeto necessário",
@@ -443,16 +509,20 @@ export function OperationsPanel({
       return;
     }
 
-    const startedAt = new Date(workEntryDraft.startedAt);
-    const endedAt = new Date(workEntryDraft.endedAt);
+    const intervals = workOperationDraft.intervals.map((interval) => ({
+      endedAt: new Date(interval.endedAt),
+      startedAt: new Date(interval.startedAt)
+    }));
+    const invalidIntervalIndex = intervals.findIndex(
+      (interval) =>
+        Number.isNaN(interval.startedAt.getTime()) ||
+        Number.isNaN(interval.endedAt.getTime()) ||
+        interval.endedAt <= interval.startedAt
+    );
 
-    if (
-      Number.isNaN(startedAt.getTime()) ||
-      Number.isNaN(endedAt.getTime()) ||
-      endedAt <= startedAt
-    ) {
+    if (invalidIntervalIndex >= 0) {
       toast({
-        message: "O término precisa acontecer depois do início.",
+        message: `Revise o início e o término do intervalo ${invalidIntervalIndex + 1}.`,
         title: "Período inválido",
         tone: "error"
       });
@@ -464,27 +534,31 @@ export function OperationsPanel({
     try {
       await readResponse(
         await fetch(
-          workEntryDraft.id ? `/api/work-entries/${workEntryDraft.id}` : "/api/work-entries",
+          workOperationDraft.id
+            ? `/api/work-entries/${workOperationDraft.id}`
+            : "/api/work-entries",
           {
             body: JSON.stringify({
-              endedAt: endedAt.toISOString(),
-              note: workEntryDraft.note,
-              projectId: workEntryDraft.projectId,
-              startedAt: startedAt.toISOString()
+              intervals: intervals.map((interval) => ({
+                endedAt: interval.endedAt.toISOString(),
+                startedAt: interval.startedAt.toISOString()
+              })),
+              note: workOperationDraft.note,
+              projectId: workOperationDraft.projectId
             }),
             headers: {
               "Content-Type": "application/json"
             },
-            method: workEntryDraft.id ? "PATCH" : "POST"
+            method: workOperationDraft.id ? "PATCH" : "POST"
           }
         )
       );
       toast({
         message: "Horas dedicadas e valores financeiros foram recalculados.",
-        title: workEntryDraft.id ? "Registro atualizado" : "Registro criado",
+        title: workOperationDraft.id ? "Operação atualizada" : "Operação criada",
         tone: "success"
       });
-      resetWorkEntry();
+      resetWorkOperation();
       router.refresh();
     } catch (error) {
       toast({
@@ -497,19 +571,23 @@ export function OperationsPanel({
     }
   }
 
-  async function deleteWorkEntry(entry: DashboardWorkEntry) {
-    if (!window.confirm(`Remover o registro de ${entry.durationLabel} em ${entry.projectName}?`)) {
+  async function deleteWorkOperation(operation: DashboardWorkOperation) {
+    if (
+      !window.confirm(
+        `Remover a operação de ${operation.durationLabel} em ${operation.projectName}?`
+      )
+    ) {
       return;
     }
 
     try {
       await readResponse(
-        await fetch(`/api/work-entries/${entry.id}`, {
+        await fetch(`/api/work-entries/${operation.id}`, {
           method: "DELETE"
         })
       );
-      if (workEntryDraft.id === entry.id) {
-        resetWorkEntry();
+      if (workOperationDraft.id === operation.id) {
+        resetWorkOperation();
       }
       toast({
         message: "Horas dedicadas e valores financeiros foram recalculados.",
@@ -557,7 +635,13 @@ export function OperationsPanel({
                       : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
                   ].join(" ")}
                   key={item}
-                  onClick={() => setView(item)}
+                  onClick={() => {
+                    if (item === "records" && view !== "records") {
+                      resetWorkOperation();
+                    }
+
+                    setView(item);
+                  }}
                   type="button"
                 >
                   {labels[item]}
@@ -597,7 +681,9 @@ export function OperationsPanel({
                           currency: "BRL",
                           style: "currency"
                         }).format(project.hourlyRate)}/h`
-                      : "Sem cobrança"}
+                      : "Sem cobrança"}{" "}
+                    · Base:{" "}
+                    {project.billingMode === "DEDICATED" ? "Horas dedicadas" : "WakaTime"}
                   </p>
                 </div>
                 <div>
@@ -638,22 +724,22 @@ export function OperationsPanel({
             <form
               className="grid gap-4 border-b border-[color:var(--border)] pb-5"
               noValidate
-              onSubmit={saveWorkEntry}
+              onSubmit={saveWorkOperation}
             >
-              <div className="grid gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(190px,1fr)_minmax(190px,1fr)]">
-                <label className="block">
-                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
-                    Projeto
-                  </span>
+              <label className="block max-w-md">
+                <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                  Projeto
+                </span>
+                <span className="relative block">
                   <select
-                    className={fieldClass}
+                    className={selectClass}
                     onChange={(event) =>
-                      setWorkEntryDraft((current) => ({
+                      setWorkOperationDraft((current) => ({
                         ...current,
                         projectId: event.target.value
                       }))
                     }
-                    value={workEntryDraft.projectId}
+                    value={workOperationDraft.projectId}
                   >
                     <option value="">Selecione o projeto</option>
                     {projects.map((project) => (
@@ -662,46 +748,118 @@ export function OperationsPanel({
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
-                    Início
-                  </span>
-                  <input
-                    className={fieldClass}
-                    onChange={(event) =>
-                      setWorkEntryDraft((current) => ({
-                        ...current,
-                        startedAt: event.target.value
-                      }))
-                    }
-                    type="datetime-local"
-                    value={workEntryDraft.startedAt}
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
                   />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
-                    <span>Término</span>
-                    {workEntryDuration ? (
-                      <span className="inline-flex items-center gap-1.5 text-[color:var(--app-text-strong)]">
-                        <Clock3 className="size-3.5" />
-                        {workEntryDuration}
-                      </span>
-                    ) : null}
-                  </span>
-                  <input
-                    className={fieldClass}
-                    onChange={(event) =>
-                      setWorkEntryDraft((current) => ({
-                        ...current,
-                        endedAt: event.target.value
-                      }))
-                    }
-                    type="datetime-local"
-                    value={workEntryDraft.endedAt}
-                  />
-                </label>
+                </span>
+              </label>
+
+              <div>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
+                      Intervalos
+                    </p>
+                    <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                      Pausas ficam separadas, mas a operação é salva como uma unidade.
+                    </p>
+                  </div>
+                  {workOperationDuration ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs text-[color:var(--app-text-strong)]">
+                      <Clock3 className="size-3.5" />
+                      Total {workOperationDuration}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="space-y-3">
+                  {workOperationDraft.intervals.map((interval, index) => {
+                    const intervalDuration = formatDraftDuration(
+                      getIntervalDurationSeconds(interval.startedAt, interval.endedAt)
+                    );
+
+                    return (
+                      <div
+                        className="grid gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                        key={interval.key}
+                      >
+                        <label className="block">
+                          <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                            Início {index + 1}
+                          </span>
+                          <input
+                            className={fieldClass}
+                            onChange={(event) =>
+                              setWorkOperationDraft((current) => ({
+                                ...current,
+                                intervals: current.intervals.map((currentInterval) =>
+                                  currentInterval.key === interval.key
+                                    ? {
+                                        ...currentInterval,
+                                        startedAt: event.target.value
+                                      }
+                                    : currentInterval
+                                )
+                              }))
+                            }
+                            type="datetime-local"
+                            value={interval.startedAt}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
+                            <span>Término {index + 1}</span>
+                            {intervalDuration ? (
+                              <span className="text-[color:var(--app-text-strong)]">
+                                {intervalDuration}
+                              </span>
+                            ) : null}
+                          </span>
+                          <input
+                            className={fieldClass}
+                            onChange={(event) =>
+                              setWorkOperationDraft((current) => ({
+                                ...current,
+                                intervals: current.intervals.map((currentInterval) =>
+                                  currentInterval.key === interval.key
+                                    ? {
+                                        ...currentInterval,
+                                        endedAt: event.target.value
+                                      }
+                                    : currentInterval
+                                )
+                              }))
+                            }
+                            type="datetime-local"
+                            value={interval.endedAt}
+                          />
+                        </label>
+                        <button
+                          aria-label={`Remover intervalo ${index + 1}`}
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+                          disabled={workOperationDraft.intervals.length === 1}
+                          onClick={() => removeWorkInterval(interval.key)}
+                          type="button"
+                        >
+                          <Trash2 className="size-4" />
+                          <span className="sm:hidden">Remover</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                  onClick={addWorkInterval}
+                  type="button"
+                >
+                  <Plus className="size-4" />
+                  Adicionar intervalo
+                </button>
               </div>
+
               <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
                 <label className="block">
                   <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
@@ -710,20 +868,20 @@ export function OperationsPanel({
                   <input
                     className={fieldClass}
                     onChange={(event) =>
-                      setWorkEntryDraft((current) => ({
+                      setWorkOperationDraft((current) => ({
                         ...current,
                         note: event.target.value
                       }))
                     }
-                    placeholder="O que foi feito neste período?"
-                    value={workEntryDraft.note}
+                    placeholder="O que foi feito nesta operação?"
+                    value={workOperationDraft.note}
                   />
                 </label>
                 <div className="flex gap-2">
-                  {workEntryDraft.id ? (
+                  {workOperationDraft.id ? (
                     <button
                       className="h-11 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
-                      onClick={resetWorkEntry}
+                      onClick={resetWorkOperation}
                       type="button"
                     >
                       Cancelar
@@ -736,51 +894,57 @@ export function OperationsPanel({
                   >
                     {isSaving
                       ? "Salvando"
-                      : workEntryDraft.id
-                        ? "Atualizar registro"
-                        : "Adicionar registro"}
+                      : workOperationDraft.id
+                        ? "Atualizar operação"
+                        : "Adicionar operação"}
                   </button>
                 </div>
               </div>
             </form>
 
             <div className="divide-y divide-[color:var(--border)]">
-              {workEntries.length > 0 ? (
-                workEntries.map((entry) => (
+              {workOperations.length > 0 ? (
+                workOperations.map((operation) => (
                   <div
                     className="grid gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
-                    key={entry.id}
+                    key={operation.id}
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium text-[color:var(--app-text-strong)]">
-                          {entry.projectName}
+                          {operation.projectName}
                         </p>
                         <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
-                          {entry.durationLabel}
+                          {operation.durationLabel}
+                        </span>
+                        <span className="text-xs text-[color:var(--text-faint)]">
+                          {operation.intervals.length}{" "}
+                          {operation.intervals.length === 1 ? "intervalo" : "intervalos"}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                        {entry.periodLabel}
-                      </p>
-                      {entry.note ? (
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[color:var(--text-soft)]">
+                        {operation.intervals.map((interval) => (
+                          <span key={interval.id}>{interval.periodLabel}</span>
+                        ))}
+                      </div>
+                      {operation.note ? (
                         <p className="mt-2 truncate text-sm text-[color:var(--text-muted)]">
-                          {entry.note}
+                          {operation.note}
                         </p>
                       ) : null}
                     </div>
                     <button
-                      aria-label={`Editar registro de ${entry.projectName}`}
+                      aria-label={`Editar operação de ${operation.projectName}`}
                       className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
-                      onClick={() => editWorkEntry(entry)}
+                      onClick={() => editWorkOperation(operation)}
                       type="button"
                     >
                       <Pencil className="size-4" />
                     </button>
                     <button
-                      aria-label={`Remover registro de ${entry.projectName}`}
+                      aria-label={`Remover operação de ${operation.projectName}`}
                       className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-red-500/10 hover:text-red-400"
-                      onClick={() => deleteWorkEntry(entry)}
+                      onClick={() => deleteWorkOperation(operation)}
                       type="button"
                     >
                       <Trash2 className="size-4" />
@@ -860,19 +1024,27 @@ export function OperationsPanel({
               className="grid gap-3 border-b border-[color:var(--border)] pb-5 md:grid-cols-[1fr_160px_160px_1fr_auto]"
               onSubmit={savePayment}
             >
-              <select
-                className={fieldClass}
-                onChange={(event) => setPaymentProjectId(event.target.value)}
-                required
-                value={paymentProjectId}
-              >
-                <option value="">Selecione o projeto</option>
-                {(configuredProjects.length > 0 ? configuredProjects : projects).map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+              <span className="relative block">
+                <select
+                  className={selectClass}
+                  onChange={(event) => setPaymentProjectId(event.target.value)}
+                  required
+                  value={paymentProjectId}
+                >
+                  <option value="">Selecione o projeto</option>
+                  {(configuredProjects.length > 0 ? configuredProjects : projects).map(
+                    (project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    )
+                  )}
+                </select>
+                <ChevronDown
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                />
+              </span>
               <input
                 className={fieldClass}
                 inputMode="decimal"
@@ -969,22 +1141,28 @@ export function OperationsPanel({
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                   Cliente
                 </span>
-                <select
-                  className={fieldClass}
-                  onChange={(event) =>
-                    setProjectDraft((current) =>
-                      current ? { ...current, clientId: event.target.value } : current
-                    )
-                  }
-                  value={projectDraft.clientId}
-                >
-                  <option value="">Sem cliente</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
+                <span className="relative block">
+                  <select
+                    className={selectClass}
+                    onChange={(event) =>
+                      setProjectDraft((current) =>
+                        current ? { ...current, clientId: event.target.value } : current
+                      )
+                    }
+                    value={projectDraft.clientId}
+                  >
+                    <option value="">Nenhum cliente</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                  />
+                </span>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
@@ -1007,6 +1185,41 @@ export function OperationsPanel({
                 </span>
               </label>
             </div>
+            <fieldset>
+              <legend className="mb-2 text-xs text-[color:var(--text-muted)]">
+                Horas usadas no cálculo financeiro
+              </legend>
+              <div className="grid grid-cols-2 gap-1 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
+                {(
+                  [
+                    ["WAKATIME", "Horas WakaTime"],
+                    ["DEDICATED", "Horas dedicadas"]
+                  ] as const
+                ).map(([mode, label]) => (
+                  <button
+                    aria-pressed={projectDraft.billingMode === mode}
+                    className={[
+                      "min-h-10 rounded px-3 text-sm transition-colors",
+                      projectDraft.billingMode === mode
+                        ? "bg-[var(--active-bg)] font-medium text-[color:var(--app-text-strong)] shadow-sm"
+                        : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+                    ].join(" ")}
+                    key={mode}
+                    onClick={() =>
+                      setProjectDraft((current) =>
+                        current ? { ...current, billingMode: mode } : current
+                      )
+                    }
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--text-faint)]">
+                O projeto usa somente a fonte selecionada, sem fallback automático.
+              </p>
+            </fieldset>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                 Observações

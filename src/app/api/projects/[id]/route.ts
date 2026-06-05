@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { Prisma, ProjectConfigurationStatus } from "@prisma/client";
+import {
+  Prisma,
+  ProjectBillingMode,
+  ProjectConfigurationStatus
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logPrismaError } from "@/lib/prisma-error";
 
@@ -36,6 +40,10 @@ export async function PATCH(
     const clientId = optionalText(body.clientId);
     const hourlyRate = parseHourlyRate(body.hourlyRate);
     const active = body.active !== false;
+    const billingMode =
+      body.billingMode === ProjectBillingMode.DEDICATED
+        ? ProjectBillingMode.DEDICATED
+        : ProjectBillingMode.WAKATIME;
 
     if (!name) {
       return NextResponse.json(
@@ -105,6 +113,7 @@ export async function PATCH(
     await prisma.project.update({
       data: {
         active,
+        billingMode,
         clientId,
         configurationStatus,
         hourlyRate,
@@ -118,6 +127,7 @@ export async function PATCH(
     revalidatePath("/", "page");
 
     return NextResponse.json({
+      billingMode,
       configurationStatus,
       ok: true
     });

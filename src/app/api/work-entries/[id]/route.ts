@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logPrismaError } from "@/lib/prisma-error";
-import { parseWorkEntryInput } from "@/server/work-entries/validation";
+import { parseWorkOperationInput } from "@/server/work-entries/validation";
 
 export const runtime = "nodejs";
 
@@ -14,7 +13,7 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const body = (await request.json()) as Record<string, unknown>;
-    const parsed = parseWorkEntryInput(body);
+    const parsed = parseWorkOperationInput(body);
 
     if (!parsed.ok) {
       return NextResponse.json(
@@ -46,27 +45,45 @@ export async function PATCH(
       );
     }
 
-    await prisma.workLogEntry.update({
-      data: parsed.data,
+    const existingOperation = await prisma.workLogEntry.findFirst({
+      select: {
+        operationId: true
+      },
       where: {
-        id
+        operationId: id
       }
     });
-    revalidatePath("/", "page");
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    logPrismaError("work entry update", error);
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+    if (!existingOperation) {
       return NextResponse.json(
         {
-          error: "Registro de trabalho não encontrado.",
+          error: "Operação de trabalho não encontrada.",
           ok: false
         },
         { status: 404 }
       );
     }
+
+    await prisma.$transaction([
+      prisma.workLogEntry.deleteMany({
+        where: {
+          operationId: id
+        }
+      }),
+      prisma.workLogEntry.createMany({
+        data: parsed.data.intervals.map((interval) => ({
+          ...interval,
+          note: parsed.data.note,
+          operationId: id,
+          projectId: parsed.data.projectId
+        }))
+      })
+    ]);
+    revalidatePath("/", "page");
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    logPrismaError("work entry update", error);
 
     return NextResponse.json(
       {
@@ -85,26 +102,27 @@ export async function DELETE(
   try {
     const { id } = await context.params;
 
-    await prisma.workLogEntry.delete({
+    const result = await prisma.workLogEntry.deleteMany({
       where: {
-        id
+        operationId: id
       }
     });
-    revalidatePath("/", "page");
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    logPrismaError("work entry delete", error);
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+    if (result.count === 0) {
       return NextResponse.json(
         {
-          error: "Registro de trabalho não encontrado.",
+          error: "Operação de trabalho não encontrada.",
           ok: false
         },
         { status: 404 }
       );
     }
+
+    revalidatePath("/", "page");
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    logPrismaError("work entry delete", error);
 
     return NextResponse.json(
       {

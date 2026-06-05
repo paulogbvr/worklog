@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { logPrismaError } from "@/lib/prisma-error";
-import { parseWorkEntryInput } from "@/server/work-entries/validation";
+import { parseWorkOperationInput } from "@/server/work-entries/validation";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
-    const parsed = parseWorkEntryInput(body);
+    const parsed = parseWorkOperationInput(body);
 
     if (!parsed.ok) {
       return NextResponse.json(
@@ -41,16 +42,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const entry = await prisma.workLogEntry.create({
-      data: parsed.data,
-      select: {
-        id: true
-      }
+    const operationId = randomUUID();
+
+    await prisma.workLogEntry.createMany({
+      data: parsed.data.intervals.map((interval) => ({
+        ...interval,
+        note: parsed.data.note,
+        operationId,
+        projectId: parsed.data.projectId
+      }))
     });
     revalidatePath("/", "page");
 
     return NextResponse.json({
-      entry,
+      operationId,
       ok: true
     });
   } catch (error) {

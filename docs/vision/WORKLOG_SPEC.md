@@ -27,6 +27,7 @@ Campos:
 - nome
 - cliente
 - valor_hora
+- modo_faturamento
 - wakatime_project_name
 - ativo
 
@@ -71,13 +72,14 @@ Projetos pendentes devem ser destacados no dashboard e não devem gerar valor fi
 Campos:
 
 - projeto
-- data_inicio
-- data_fim
+- intervalos de data_inicio e data_fim
 - observacao
 
 Regras:
 
 - permitir múltiplos registros no mesmo dia
+- permitir múltiplos intervalos dentro da mesma operação
+- manter uma observação única por operação
 - permitir edição posterior
 - permitir exclusão
 - permitir registros atravessando meia-noite
@@ -321,7 +323,7 @@ Tempo não registrado pelo WakaTime
 
 ## Valor Total
 
-Horas Dedicadas
+Horas da fonte escolhida no projeto
 
 ×
 
@@ -330,6 +332,13 @@ Valor Hora
 =
 
 Valor Total
+
+Fontes permitidas:
+
+- WakaTime
+- Horas Dedicadas
+
+Não usar fallback automático entre fontes.
 
 ---
 

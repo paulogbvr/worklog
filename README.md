@@ -17,7 +17,7 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Estrutura Inicial     | ✅ Concluído    |
 | Banco (Prisma)        | ✅ Concluído    |
 | Integração WakaTime   | ✅ Sync manual  |
-| Dashboard             | ✅ Dados reais e financeiro |
+| Dashboard             | ✅ Dados reais, financeiro e filtros |
 | Projetos              | ✅ Configuração validada |
 | Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ✅ CRUD concluído |
@@ -34,7 +34,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-███████████████░░░░░ 73%
+████████████████░░░░ 80%
 ```
 
 ---
@@ -256,6 +256,7 @@ Cada projeto possui:
 - nome
 - cliente opcional
 - valor por hora opcional
+- modo de faturamento: WakaTime ou horas dedicadas
 - nome do projeto no WakaTime
 - horas acumuladas pelo WakaTime
 - horas dedicadas manualmente
@@ -309,9 +310,8 @@ Quando um projeto deixa de existir na lista atual do WakaTime:
 
 Um registro contém:
 
-- data
-- horário de início
-- horário de término
+- projeto
+- um ou mais intervalos de início e término
 - observação opcional
 
 Exemplos:
@@ -327,9 +327,8 @@ Exemplos:
 
 O usuário poderá adicionar múltiplos registros no mesmo dia.
 
-Os registros podem ser criados, editados e removidos. A duração é derivada do início e término,
-inclusive quando o período atravessa a meia-noite, e o dashboard recalcula horas e valores após
-cada alteração.
+Uma operação pode agrupar vários intervalos separados por pausas. Os intervalos podem atravessar a
+meia-noite e são somados automaticamente. A operação inteira pode ser criada, editada e removida.
 
 Exemplo:
 
@@ -527,17 +526,16 @@ Permitindo identificar tempo gasto em atividades fora da programação.
 
 ## Valor Financeiro
 
-Horas Dedicadas, quando existirem
+Cada projeto escolhe explicitamente a fonte do faturamento:
 
-×
+- Horas WakaTime
+- Horas Dedicadas
 
-Valor Hora
+```txt
+Horas da fonte selecionada × Valor Hora = Valor Total
+```
 
-=
-
-Valor Total
-
-Enquanto um projeto ainda não possuir registros manuais, as horas WakaTime são usadas como fallback para o cálculo. Assim que houver registros manuais, eles passam a ser a base financeira prioritária.
+Não existe fallback automático entre as duas fontes.
 
 ---
 
@@ -589,6 +587,7 @@ Assets de identidade:
 - Prisma Client gerado
 - `prisma.config.ts` configurado para carregar `.env.local`
 - migration `20260604231000_init` aplicada no Supabase
+- migration `20260605162000_billing_modes_and_work_operations` aplicada no Supabase
 - cliente WakaTime server-side criado
 - rota `POST /api/wakatime/sync` criada
 - botão manual `Atualizar agora` conectado ao backend
@@ -609,8 +608,12 @@ Assets de identidade:
 - erros específicos para cliente, valor/hora e projeto inexistente
 - cadastro e remoção de pagamentos
 - CRUD de registros de trabalho com edição, exclusão e travessia de meia-noite
-- cálculo financeiro real com prioridade manual e fallback WakaTime
+- operações de trabalho com múltiplos intervalos e observação única
+- modo de faturamento explícito por projeto
+- filtros de dashboard para 7 dias, 30 dias e todo o período
+- cálculo financeiro usando exclusivamente a fonte escolhida no projeto
 - card de variáveis alinhado na sidebar expandida do desktop
+- header móvel, safe-area e `theme-color` sincronizados com o tema antes da hidratação
 
 ---
 
@@ -631,7 +634,6 @@ Assets de identidade:
 
 Implementar:
 
-- filtros por período no dashboard
 - portal compartilhável somente leitura
 - proteção administrativa antes de ampliar o uso público
 

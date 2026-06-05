@@ -1,5 +1,7 @@
-import { SyncProvider } from "@prisma/client";
+import { ProjectBillingMode, SyncProvider } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+export type DashboardPeriod = "7d" | "30d" | "all";
 
 export type DashboardMetric = {
   label: string;
@@ -31,6 +33,7 @@ export type DashboardPayment = {
 
 export type DashboardProject = {
   active: boolean;
+  billingMode: ProjectBillingMode;
   billingSource: "manual" | "wakatime";
   billableSeconds: number;
   clientId: string | null;
@@ -52,11 +55,20 @@ export type DashboardProject = {
   wakatimeProjectName: string | null;
 };
 
-export type DashboardWorkEntry = {
+export type DashboardWorkInterval = {
   durationLabel: string;
   durationSeconds: number;
   endedAt: string;
   id: string;
+  periodLabel: string;
+  startedAt: string;
+};
+
+export type DashboardWorkOperation = {
+  durationLabel: string;
+  durationSeconds: number;
+  id: string;
+  intervals: DashboardWorkInterval[];
   note: string | null;
   periodLabel: string;
   projectId: string;
@@ -74,8 +86,9 @@ export type DashboardSummary = {
   metrics: DashboardMetric[];
   payments: DashboardPayment[];
   pendingProjects: number;
+  period: DashboardPeriod;
   projects: DashboardProject[];
-  workEntries: DashboardWorkEntry[];
+  workOperations: DashboardWorkOperation[];
 };
 
 export function formatDuration(totalSeconds: number) {
@@ -124,7 +137,10 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
-function getEmptySummary(databaseAvailable: boolean): DashboardSummary {
+function getEmptySummary(
+  databaseAvailable: boolean,
+  period: DashboardPeriod
+): DashboardSummary {
   return {
     activeProjects: 0,
     clients: [],
@@ -141,8 +157,9 @@ function getEmptySummary(databaseAvailable: boolean): DashboardSummary {
     ],
     payments: [],
     pendingProjects: 0,
+    period,
     projects: [],
-    workEntries: []
+    workOperations: []
   };
 }
 
@@ -170,7 +187,41 @@ async function readOptional<T>(
   }
 }
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
+function getPeriodRange(period: DashboardPeriod) {
+  if (period === "all") {
+    return null;
+  }
+
+  const todayParts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+    year: "numeric"
+  })
+    .formatToParts(new Date())
+    .reduce<Record<string, number>>((parts, part) => {
+      if (part.type === "day" || part.type === "month" || part.type === "year") {
+        parts[part.type] = Number(part.value);
+      }
+
+      return parts;
+    }, {});
+  const days = period === "7d" ? 7 : 30;
+  const startDate = new Date(
+    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day - (days - 1))
+  );
+  const startInstant = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+
+  return {
+    startDate,
+    startInstant
+  };
+}
+
+export async function getDashboardSummary(
+  period: DashboardPeriod = "30d"
+): Promise<DashboardSummary> {
+  const periodRange = getPeriodRange(period);
   let projects;
 
   try {
@@ -185,6 +236,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
           }
         },
         clientId: true,
+        billingMode: true,
         configurationStatus: true,
         hourlyRate: true,
         id: true,
@@ -193,12 +245,26 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
         payments: {
           select: {
             amount: true
-          }
+          },
+          where: periodRange
+            ? {
+                paidAt: {
+                  gte: periodRange.startDate
+                }
+              }
+            : undefined
         },
         wakatimeDays: {
           select: {
             totalSeconds: true
-          }
+          },
+          where: periodRange
+            ? {
+                date: {
+                  gte: periodRange.startDate
+                }
+              }
+            : undefined
         },
         wakatimeProjectName: true,
         workLogEntries: {
@@ -207,8 +273,16 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
             endedAt: true,
             id: true,
             note: true,
+            operationId: true,
             startedAt: true
-          }
+          },
+          where: periodRange
+            ? {
+                startedAt: {
+                  gte: periodRange.startInstant
+                }
+              }
+            : undefined
         }
       },
       where: {
@@ -217,7 +291,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     });
   } catch (error) {
     logDashboardError("active projects", error);
-    return getEmptySummary(false);
+    return getEmptySummary(false, period);
   }
 
   const activeProjectIds = projects.map((project) => project.id);
@@ -292,6 +366,11 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
         },
         take: 10,
         where: {
+          paidAt: periodRange
+            ? {
+                gte: periodRange.startDate
+              }
+            : undefined,
           projectId: {
             in: activeProjectIds
           }
@@ -314,7 +393,10 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       (total, entry) => total + entry.durationSeconds,
       0
     );
-    const billableSeconds = dedicatedSeconds > 0 ? dedicatedSeconds : wakatimeSeconds;
+    const billableSeconds =
+      project.billingMode === ProjectBillingMode.DEDICATED
+        ? dedicatedSeconds
+        : wakatimeSeconds;
     const hourlyRate = project.hourlyRate ? Number(project.hourlyRate) : null;
     const isConfigured =
       project.configurationStatus === "CONFIGURED" &&
@@ -334,7 +416,9 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
     return {
       active: project.active,
-      billingSource: dedicatedSeconds > 0 ? "manual" : "wakatime",
+      billingMode: project.billingMode,
+      billingSource:
+        project.billingMode === ProjectBillingMode.DEDICATED ? "manual" : "wakatime",
       billableSeconds,
       clientId: project.clientId,
       clientName: project.client?.name ?? null,
@@ -361,20 +445,48 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     (project) => project.statusLabel === "Pendente"
   ).length;
   const configuredProjects = projectSummaries.length - pendingProjects;
-  const workEntries = projects
-    .flatMap((project) =>
-      project.workLogEntries.map<DashboardWorkEntry>((entry) => ({
-        durationLabel: formatDuration(entry.durationSeconds),
-        durationSeconds: entry.durationSeconds,
-        endedAt: entry.endedAt.toISOString(),
-        id: entry.id,
-        note: entry.note,
-        periodLabel: `${formatDateTime(entry.startedAt)} → ${formatDateTime(entry.endedAt)}`,
-        projectId: project.id,
-        projectName: project.name,
-        startedAt: entry.startedAt.toISOString()
-      }))
-    )
+  const workOperations = projects
+    .flatMap((project) => {
+      const operations = new Map<string, typeof project.workLogEntries>();
+
+      for (const entry of project.workLogEntries) {
+        const operation = operations.get(entry.operationId) ?? [];
+        operation.push(entry);
+        operations.set(entry.operationId, operation);
+      }
+
+      return [...operations.entries()].map<DashboardWorkOperation>(
+        ([operationId, entries]) => {
+          const sortedEntries = [...entries].sort(
+            (a, b) => a.startedAt.getTime() - b.startedAt.getTime()
+          );
+          const durationSeconds = sortedEntries.reduce(
+            (total, entry) => total + entry.durationSeconds,
+            0
+          );
+          const intervals = sortedEntries.map<DashboardWorkInterval>((entry) => ({
+            durationLabel: formatDuration(entry.durationSeconds),
+            durationSeconds: entry.durationSeconds,
+            endedAt: entry.endedAt.toISOString(),
+            id: entry.id,
+            periodLabel: `${formatDateTime(entry.startedAt)} → ${formatDateTime(entry.endedAt)}`,
+            startedAt: entry.startedAt.toISOString()
+          }));
+
+          return {
+            durationLabel: formatDuration(durationSeconds),
+            durationSeconds,
+            id: operationId,
+            intervals,
+            note: sortedEntries[0]?.note ?? null,
+            periodLabel: intervals.map((interval) => interval.periodLabel).join(" · "),
+            projectId: project.id,
+            projectName: project.name,
+            startedAt: sortedEntries[0].startedAt.toISOString()
+          };
+        }
+      );
+    })
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   const activeProjectCountByClient = projects.reduce((counts, project) => {
     if (project.clientId) {
@@ -413,8 +525,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       {
         detail:
           totalDedicatedSeconds > 0
-            ? "Tempo manual usado como prioridade"
-            : "WakaTime será usado como base",
+            ? "Tempo manual registrado no período"
+            : "Nenhum registro manual no período",
         label: "Horas Dedicadas",
         value: formatDuration(totalDedicatedSeconds)
       },
@@ -444,7 +556,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       projectName: payment.project.name
     })),
     pendingProjects,
+    period,
     projects: projectSummaries,
-    workEntries
+    workOperations
   };
 }

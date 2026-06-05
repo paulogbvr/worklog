@@ -542,3 +542,67 @@ sem gerar valor financeiro.
 - projetos sem configuração financeira continuam sincronizados
 - identidade WakaTime e histórico não são removidos
 - dashboard calcula valor somente para projetos configurados
+
+---
+
+### DECISION-022
+
+#### Título
+
+Fonte de Faturamento Explícita por Projeto
+
+#### Decisão
+
+Cada projeto possui `billingMode` com os valores `WAKATIME` ou `DEDICATED`. O padrão para projetos
+novos é `WAKATIME`. O cálculo usa somente a fonte selecionada, sem fallback automático.
+
+Esta decisão substitui a regra de fallback registrada na `DECISION-016`.
+
+#### Impacto
+
+- a configuração fica no modal do projeto
+- horas manuais continuam visíveis mesmo quando não são faturáveis
+- ausência de registros dedicados em modo `DEDICATED` resulta em valor zero
+
+---
+
+### DECISION-023
+
+#### Título
+
+Operações com Múltiplos Intervalos
+
+#### Decisão
+
+Uma operação de trabalho é persistida como múltiplos `WorkLogEntry` compartilhando o mesmo
+`operationId` e a mesma observação.
+
+#### Motivo
+
+Manter o schema simples, preservar os cálculos existentes e permitir pausas sem criar um novo
+subsistema de apontamento.
+
+#### Impacto
+
+- criação, edição e exclusão atuam sobre o agrupamento inteiro
+- registros antigos recebem `operationId = id`
+- duração da operação é a soma dos intervalos
+
+---
+
+### DECISION-024
+
+#### Título
+
+Período do Dashboard
+
+#### Decisão
+
+O dashboard oferece períodos de 7 dias, 30 dias e todo o histórico. A seleção filtra horas
+WakaTime, horas dedicadas, pagamentos e valores financeiros na mesma consulta.
+
+#### Impacto
+
+- período padrão: 30 dias
+- filtro via query string `period`
+- contadores estruturais de projetos e clientes permanecem globais

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const title = "WorkLog — Controle de horas e pagamentos";
@@ -20,14 +20,25 @@ const preferenceScript = `
       root.dataset.sidebar = sidebar;
       root.style.setProperty("--sidebar-width", sidebar === "collapsed" ? "84px" : "288px");
       root.style.colorScheme = theme;
+      document.querySelector('meta[name="theme-color"]')?.setAttribute(
+        "content",
+        theme === "light" ? "#f4f6f8" : "#090909"
+      );
     } catch {
       document.documentElement.dataset.theme = "dark";
       document.documentElement.dataset.sidebar = "expanded";
       document.documentElement.style.setProperty("--sidebar-width", "288px");
       document.documentElement.style.colorScheme = "dark";
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#090909");
     }
   })();
 `;
+
+export const viewport: Viewport = {
+  initialScale: 1,
+  viewportFit: "cover",
+  width: "device-width"
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -88,6 +99,7 @@ export default function RootLayout({
   return (
     <html data-sidebar="expanded" data-theme="dark" lang="pt-BR" suppressHydrationWarning>
       <head>
+        <meta content="#090909" name="theme-color" />
         <script dangerouslySetInnerHTML={{ __html: preferenceScript }} />
       </head>
       <body>{children}</body>

@@ -508,6 +508,42 @@ status fixo à direita.
 
 ---
 
+## 2026-06-05
+
+### Descoberta
+
+O model `WorkLogEntry` já suportava cada intervalo individual, mas não possuía uma identidade para
+editar vários intervalos como uma única operação.
+
+### Evidência
+
+O banco continha 16 registros reais independentes. A migration adicionou `operationId`, usando o
+próprio `id` como agrupamento inicial para todos os registros existentes.
+
+### Impacto
+
+O histórico foi preservado sem criar uma nova tabela e novas operações podem agrupar pausas.
+
+### Ação
+
+Persistir intervalos com `operationId` compartilhado e realizar criação/edição em transação.
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+O flicker do tema podia acontecer porque o script inicial aplicava a preferência correta, mas um
+`useEffect` do shell reescrevia o DOM com o snapshot escuro usado na hidratação.
+
+### Ação
+
+Manter o script de pre-hydration como autoridade inicial, aplicar mudanças diretamente nos eventos
+de storage e sincronizar também a meta `theme-color` e a safe-area móvel.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:
