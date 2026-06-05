@@ -370,6 +370,56 @@ Usar a lista atual de `/users/current/projects` como fonte do estado `active`, p
 
 ---
 
+## 2026-06-05
+
+### Descoberta
+
+A sincronização de produção gravava corretamente no Supabase, mas o dashboard convertia qualquer falha de uma das consultas concorrentes em um resumo totalmente vazio.
+
+### Evidência
+
+- `POST /api/wakatime/sync` em produção retornou 2 projetos e 5 registros diários
+- o `SyncLog` retornado existia no mesmo banco consultado localmente
+- `worklog` e `core` estavam ativos e com horas persistidas
+- a página continuava exibindo zero porque quatro leituras Prisma estavam agrupadas em um `Promise.all`
+- o `catch` externo descartava todos os resultados e retornava o estado de banco indisponível
+
+### Impacto
+
+Uma falha transitória ou contenção do Transaction Pooler em uma consulta auxiliar escondia dados válidos e fazia uma sincronização bem-sucedida parecer ineficaz.
+
+### Ação
+
+- normalizar os parâmetros de runtime do Transaction Pooler
+- executar a consulta crítica de projetos ativos separadamente
+- tratar clientes, observações, pagamentos e último sync com fallback isolado
+- registrar apenas o código/tipo seguro do erro, sem URL ou segredo
+- revalidar e atualizar a página depois da sincronização
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+O Open Graph publicado já apontava para uma imagem absoluta de 1200 × 630, separada do favicon. A permanência de previews antigos é compatível com cache dos indexadores sociais.
+
+### Evidência
+
+- tags `openGraph.images` e `twitter.images` estavam presentes
+- imagem e favicon respondiam com HTTP 200
+- o arquivo publicado correspondia ao asset local
+
+### Impacto
+
+Alterar somente a imagem mantendo a mesma URL pode não renovar imediatamente o preview em serviços externos.
+
+### Ação
+
+Versionar a URL do asset como `og-worklog-v5.png`, preservando dimensões e identidade visual.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

@@ -29,26 +29,14 @@ function isPlausibleWakaTimeKey(value: string | undefined) {
   return Boolean(value && value.trim().length >= 20 && !value.includes(" "));
 }
 
-function getCheck({
-  exists,
-  healthy,
-  valid
-}: {
-  exists: boolean;
-  healthy?: boolean;
-  valid: boolean;
-}): EnvironmentCheck {
-  if (!exists || !valid) {
+function getCheck(
+  value: string | undefined,
+  isValid: (value: string | undefined) => boolean
+): EnvironmentCheck {
+  if (!value || !isValid(value)) {
     return {
       label: "error",
       tone: "error"
-    };
-  }
-
-  if (healthy === false || healthy === undefined) {
-    return {
-      label: "warning",
-      tone: "warning"
     };
   }
 
@@ -58,33 +46,15 @@ function getCheck({
   };
 }
 
-export function getServerEnvStatus({
-  databaseAvailable,
-  wakaTimeSyncSuccessful
-}: {
-  databaseAvailable: boolean;
-  wakaTimeSyncSuccessful: boolean;
-}): ServerEnvStatus {
+export function getServerEnvStatus(): ServerEnvStatus {
   const databaseUrl = process.env.DATABASE_URL;
   const directUrl = process.env.DIRECT_URL;
   const wakaTimeApiKey = process.env.WAKATIME_API_KEY;
 
   const keys: Record<ServerEnvKey, EnvironmentCheck> = {
-    DATABASE_URL: getCheck({
-      exists: Boolean(databaseUrl),
-      healthy: databaseAvailable,
-      valid: isPostgresUrl(databaseUrl)
-    }),
-    DIRECT_URL: getCheck({
-      exists: Boolean(directUrl),
-      healthy: isPostgresUrl(directUrl),
-      valid: isPostgresUrl(directUrl)
-    }),
-    WAKATIME_API_KEY: getCheck({
-      exists: Boolean(wakaTimeApiKey),
-      healthy: wakaTimeSyncSuccessful,
-      valid: isPlausibleWakaTimeKey(wakaTimeApiKey)
-    })
+    DATABASE_URL: getCheck(databaseUrl, isPostgresUrl),
+    DIRECT_URL: getCheck(directUrl, isPostgresUrl),
+    WAKATIME_API_KEY: getCheck(wakaTimeApiKey, isPlausibleWakaTimeKey)
   };
 
   return {

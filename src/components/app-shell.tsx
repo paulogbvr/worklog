@@ -71,6 +71,10 @@ function setPreference(key: string, value: string) {
 
   if (key === SIDEBAR_STORAGE_KEY) {
     document.documentElement.dataset.sidebar = value;
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      value === "collapsed" ? "84px" : "288px"
+    );
   }
 
   if (key === THEME_STORAGE_KEY) {
@@ -183,7 +187,7 @@ function EnvPanel({ envStatus }: { envStatus: ServerEnvStatus }) {
       </div>
 
       <div className="sidebar-collapsed-only sidebar-compact-control group relative z-[90] mx-auto size-11 items-center justify-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)]">
-        <StatusPulse tone={envStatus.configured ? "success" : "warning"} />
+        <StatusPulse tone={envStatus.configured ? "success" : "error"} />
         <CompactTooltip>
           {envStatus.configured ? "Variáveis configuradas" : "Variáveis pendentes"}
         </CompactTooltip>
@@ -192,24 +196,66 @@ function EnvPanel({ envStatus }: { envStatus: ServerEnvStatus }) {
   );
 }
 
+function ThemeControl({
+  className = "",
+  theme,
+  onToggle
+}: {
+  className?: string;
+  theme: Theme;
+  onToggle: () => void;
+}) {
+  const isLight = theme === "light";
+  const Icon = isLight ? Sun : Moon;
+  const label = isLight ? "Ativar tema escuro" : "Ativar tema claro";
+
+  return (
+    <button
+      aria-label={label}
+      className={[
+        "h-12 w-full items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 text-left text-[color:var(--text-muted)] transition-colors duration-200 hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]",
+        className
+      ].join(" ")}
+      onClick={onToggle}
+      type="button"
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <Icon className="size-[18px] shrink-0" strokeWidth={1.8} />
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-medium text-[color:var(--app-text-strong)]">
+            Tema {isLight ? "claro" : "escuro"}
+          </span>
+          <span className="block text-[11px] text-[color:var(--text-faint)]">Ativo</span>
+        </span>
+      </span>
+      <span
+        aria-hidden
+        className={[
+          "relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-200",
+          isLight
+            ? "border-emerald-600/25 bg-emerald-500/20"
+            : "border-white/10 bg-white/10"
+        ].join(" ")}
+      >
+        <span
+          className={[
+            "absolute top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-[var(--app-text-strong)] shadow-sm transition-[left] duration-200",
+            isLight ? "left-[17px]" : "left-[3px]"
+          ].join(" ")}
+        />
+      </span>
+    </button>
+  );
+}
+
 function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
   const isLight = theme === "light";
-  const Icon = isLight ? Moon : Sun;
+  const Icon = isLight ? Sun : Moon;
   const label = isLight ? "Ativar tema escuro" : "Ativar tema claro";
 
   return (
     <>
-      <button
-        className="sidebar-expanded-only h-11 w-full items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
-        onClick={onToggle}
-        type="button"
-      >
-        <span className="flex items-center gap-3">
-          <Icon className="size-4" strokeWidth={1.8} />
-          {isLight ? "Tema escuro" : "Tema claro"}
-        </span>
-        <span className="text-xs text-[color:var(--text-faint)]">{isLight ? "light" : "dark"}</span>
-      </button>
+      <ThemeControl className="sidebar-expanded-only" onToggle={onToggle} theme={theme} />
 
       <button
         aria-label={label}
@@ -241,6 +287,10 @@ export function AppShell({
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.sidebar = sidebarState;
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      sidebarState === "collapsed" ? "84px" : "288px"
+    );
     document.documentElement.style.colorScheme = theme;
   }, [sidebarState, theme]);
 
@@ -259,15 +309,19 @@ export function AppShell({
       <div className="pointer-events-none fixed inset-0 bg-[var(--grid-pattern)] bg-[size:72px_72px]" />
 
       <div className="relative flex min-h-screen">
-        <aside className="worklog-sidebar sticky top-0 z-[70] hidden h-screen shrink-0 flex-col overflow-visible border-r border-[color:var(--border)] bg-[var(--sidebar-bg)] backdrop-blur-xl transition-[width] duration-300 ease-out lg:flex">
-          <div className="group flex h-[72px] items-center border-b border-[color:var(--border)] px-4">
-            <div className="sidebar-expanded-only w-full items-center justify-between">
-              <Link aria-label="WorkLog" href="/">
-                <BrandLogo />
+        <aside className="worklog-sidebar sticky top-0 z-[70] hidden h-screen shrink-0 isolate flex-col overflow-visible border-r border-[color:var(--border)] bg-[var(--sidebar-bg)] backdrop-blur-xl transition-[width] duration-300 ease-out lg:flex">
+          <div className="group flex h-[72px] items-center border-b border-[color:var(--border)] px-3">
+            <div className="sidebar-expanded-only min-w-0 flex-1 items-center gap-3">
+              <Link
+                aria-label="WorkLog"
+                className="flex min-w-0 flex-1 items-center px-1"
+                href="/"
+              >
+                <BrandLogo className="min-w-0" />
               </Link>
               <button
                 aria-label="Recolher navegação"
-                className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                className="grid size-10 shrink-0 place-items-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)] transition-colors duration-200 hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
                 onClick={handleSidebarToggle}
                 title="Recolher"
                 type="button"
@@ -282,7 +336,7 @@ export function AppShell({
                 className="grid size-11 place-items-center transition-opacity duration-200 group-hover:opacity-0"
                 href="/"
               >
-                <BrandLogo iconClassName="size-5" showName={false} />
+                <BrandLogo iconClassName="size-[22px]" showName={false} />
               </Link>
               <button
                 aria-label="Expandir navegação"
@@ -371,21 +425,11 @@ export function AppShell({
             </nav>
 
             <div className="mt-auto space-y-3 px-4 pb-5">
-              <button
-                className="flex h-11 w-full items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 text-sm text-[color:var(--text-muted)]"
-                onClick={handleThemeToggle}
-                type="button"
-              >
-                <span className="flex items-center gap-3">
-                  {theme === "light" ? (
-                    <Moon className="size-4" strokeWidth={1.8} />
-                  ) : (
-                    <Sun className="size-4" strokeWidth={1.8} />
-                  )}
-                  {theme === "light" ? "Tema escuro" : "Tema claro"}
-                </span>
-                <span className="text-xs text-[color:var(--text-faint)]">{theme}</span>
-              </button>
+              <ThemeControl
+                className="flex"
+                onToggle={handleThemeToggle}
+                theme={theme}
+              />
               <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-faint)]">
                   Ambiente

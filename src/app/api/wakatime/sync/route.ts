@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { WakaTimeApiError } from "@/server/wakatime/client";
 import { syncWakaTime } from "@/server/wakatime/sync";
 
@@ -38,11 +39,19 @@ function getPublicErrorMessage(error: unknown) {
 export async function POST() {
   try {
     const result = await syncWakaTime();
+    revalidatePath("/", "page");
 
-    return NextResponse.json({
-      ok: true,
-      result
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        result
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store"
+        }
+      }
+    );
   } catch (error) {
     return NextResponse.json(
       {

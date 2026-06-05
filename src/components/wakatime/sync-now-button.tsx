@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
@@ -32,6 +32,7 @@ function formatResult(result: NonNullable<SyncResponse["result"]>) {
 
 export function SyncNowButton() {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRefreshing, startRefresh] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -58,7 +59,9 @@ export function SyncNowButton() {
         title: "Sincronização concluída",
         tone: "success"
       });
-      router.refresh();
+      startRefresh(() => {
+        router.refresh();
+      });
     } catch (error) {
       toast({
         message:
@@ -75,14 +78,18 @@ export function SyncNowButton() {
     <div className="flex flex-col items-start gap-2 sm:items-end">
       <button
         className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[color:var(--border-strong)] bg-[var(--primary-bg)] text-sm font-medium text-[color:var(--primary-text)] transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isSyncing}
+        disabled={isSyncing || isRefreshing}
         onClick={handleSync}
         type="button"
       >
         <span className="grid size-10 place-items-center">
-          <RefreshCw className={["size-4", isSyncing ? "animate-spin" : ""].join(" ")} />
+          <RefreshCw
+            className={["size-4", isSyncing || isRefreshing ? "animate-spin" : ""].join(" ")}
+          />
         </span>
-        <span className="pr-4">{isSyncing ? "Sincronizando" : "Atualizar agora"}</span>
+        <span className="pr-4">
+          {isSyncing ? "Sincronizando" : isRefreshing ? "Atualizando painel" : "Atualizar agora"}
+        </span>
       </button>
     </div>
   );

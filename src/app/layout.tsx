@@ -5,7 +5,7 @@ const title = "WorkLog — Controle de horas e pagamentos";
 const description =
   "Acompanhe horas trabalhadas, projetos, pagamentos e valores pendentes com integração WakaTime.";
 const siteUrl = "https://worklog-projects.vercel.app";
-const ogImageUrl = `${siteUrl}/og-worklog-v4.png`;
+const ogImageUrl = `${siteUrl}/og-worklog-v5.png`;
 const ogImageAlt = "WorkLog — Controle real do tempo trabalhado";
 
 const preferenceScript = `
@@ -18,10 +18,12 @@ const preferenceScript = `
       const root = document.documentElement;
       root.dataset.theme = theme;
       root.dataset.sidebar = sidebar;
+      root.style.setProperty("--sidebar-width", sidebar === "collapsed" ? "84px" : "288px");
       root.style.colorScheme = theme;
     } catch {
       document.documentElement.dataset.theme = "dark";
       document.documentElement.dataset.sidebar = "expanded";
+      document.documentElement.style.setProperty("--sidebar-width", "288px");
       document.documentElement.style.colorScheme = "dark";
     }
   })();

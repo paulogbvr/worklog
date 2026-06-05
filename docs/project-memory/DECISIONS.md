@@ -463,3 +463,28 @@ Refletir o estado atual do WakaTime sem apagar horas, pagamentos ou configuraç�
 - projetos ausentes são arquivados
 - dashboard, contadores e operação principal usam apenas projetos ativos
 - visualização de arquivados fica como melhoria futura
+
+---
+
+### DECISION-019
+
+#### Título
+
+Leitura Resiliente do Dashboard no Transaction Pooler
+
+#### Decisão
+
+O dashboard terá uma consulta crítica para projetos ativos e leituras auxiliares isoladas. Uma falha em clientes, observações, pagamentos ou último sync não poderá zerar horas e projetos válidos.
+
+No runtime, URLs do Supabase Transaction Pooler na porta `6543` serão normalizadas com parâmetros compatíveis com Prisma, sem alterar ou expor credenciais.
+
+#### Motivo
+
+Em produção, a sincronização gravou corretamente, mas uma falha dentro de consultas concorrentes fez o fallback global retornar todos os indicadores como zero.
+
+#### Impacto
+
+- projetos e horas permanecem visíveis quando uma leitura auxiliar falhar
+- erros são registrados sem segredos
+- o número de conexões simultâneas é reduzido
+- a sincronização revalida e atualiza o dashboard ao concluir

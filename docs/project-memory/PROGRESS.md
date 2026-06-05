@@ -760,6 +760,40 @@ Validação funcional:
 - dashboard passou de 6 para 2 projetos ativos
 - lista principal mostra somente `worklog` e `core`
 
+### Correção Crítica do Dashboard e Polimento da Sidebar
+
+Concluído:
+
+- fluxo de sincronização investigado em produção e confirmado gravando no Supabase
+- leitura do dashboard deixou de depender de consultas concorrentes em um único `Promise.all`
+- consulta de projetos ativos tornou-se a leitura crítica; consultas auxiliares possuem fallback isolado
+- configuração de runtime do Prisma normaliza parâmetros seguros do Transaction Pooler
+- rota de sincronização invalida a página e o frontend atualiza o resumo após concluir
+- status de `DATABASE_URL`, `DIRECT_URL` e `WAKATIME_API_KEY` usa presença e formato válido
+- header da sidebar expandida alinhado com logo e botão de recolher na mesma linha
+- logo oficial `FaCode` validada nos estados expandido, minimizado e mobile
+- controle de tema redesenhado com estado atual coerente
+- largura da sidebar aplicada antes da hidratação e sincronizada por variável CSS
+- tooltip compacto mantido acima do conteúdo com camada própria e sem recorte
+- preview social atualizado para `og-worklog-v5.png` para renovar caches externos
+
+Evidência:
+
+```txt
+Sync de produção: 2 projetos, 5 registros diários, HTTP 200
+Banco: worklog e core ativos; 4 projetos históricos inativos
+Dashboard local após sync: 2 projetos ativos e horas WakaTime atualizadas
+Variáveis na sidebar: DATABASE_URL ok, DIRECT_URL ok, WAKATIME_API_KEY ok
+```
+
+Validação visual:
+
+- desktop em 1440 × 900
+- mobile em 390 × 844 sem rolagem horizontal
+- sidebar expandida e minimizada sem sobreposição
+- tema light persistido após recarregar
+- sincronização atualizou métricas e projetos sem recarregamento manual
+
 ### Status Atual
 
 Documentação:

@@ -12,12 +12,12 @@ export function BrandLogo({
   return (
     <span
       className={[
-        "inline-flex items-center gap-2.5 text-[color:var(--app-text-strong)]",
+        "inline-flex min-w-0 items-center gap-2.5 leading-none text-[color:var(--app-text-strong)]",
         className
       ].join(" ")}
     >
-      <FaCode aria-hidden className={iconClassName} />
-      {showName ? <span className="font-semibold">WorkLog</span> : null}
+      <FaCode aria-hidden className={["shrink-0", iconClassName].join(" ")} />
+      {showName ? <span className="truncate font-semibold leading-none">WorkLog</span> : null}
     </span>
   );
 }

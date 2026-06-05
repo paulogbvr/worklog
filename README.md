@@ -114,7 +114,7 @@ https://worklog-projects.vercel.app/
 └── public/
     ├── favicon.ico
     ├── icon-worklog.png
-    ├── og-worklog-v4.png
+    ├── og-worklog-v5.png
     ├── og-worklog-v4.svg
     └── worklog-mark.svg
 ```
@@ -571,7 +571,7 @@ Assets de identidade:
 
 - marca oficial baseada no ícone `FaCode`, aplicada na sidebar desktop/mobile
 - favicon e ícone do app em `public/favicon.ico` e `public/icon-worklog.png`
-- imagem de preview social versionada em `public/og-worklog-v4.png`
+- imagem de preview social versionada em `public/og-worklog-v5.png`
 - metadata Open Graph e Twitter Card configurados no App Router com imagem absoluta, `secureUrl`, tipo MIME e dimensões
 - manifest do app configurado
 - navegação desktop/mobile refinada com identidade visual oficial
@@ -584,12 +584,14 @@ Assets de identidade:
 - rota `POST /api/wakatime/sync` criada
 - botão manual `Atualizar agora` conectado ao backend
 - dashboard inicial lendo resumo real do banco
+- dashboard com leitura resiliente ao Transaction Pooler e atualização imediata após sincronização
 - listagem inicial de projetos sincronizados adicionada ao dashboard
 - sidebar minimizada com tooltip acima do conteúdo
 - estado da sidebar persistido em `localStorage`
 - alternância dark/light mode com persistência em `localStorage`
 - preferências aplicadas antes da hidratação para evitar flash de tema ou sidebar
 - status reutilizável para ambiente e notificações
+- status das variáveis baseado apenas em presença e formato válido, sem expor valores
 - toasts premium para sincronização e operações
 - CRUD básico de clientes
 - configuração de nome, cliente, valor/hora, status e observações de projetos

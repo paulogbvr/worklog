@@ -5,6 +5,7 @@ import { getServerEnvStatus } from "@/lib/env";
 import { getDashboardSummary } from "@/server/dashboard/summary";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const workflow = [
   {
@@ -31,10 +32,7 @@ const workflow = [
 
 export default async function Home() {
   const dashboard = await getDashboardSummary();
-  const envStatus = getServerEnvStatus({
-    databaseAvailable: dashboard.databaseAvailable,
-    wakaTimeSyncSuccessful: dashboard.latestSyncSuccessful
-  });
+  const envStatus = getServerEnvStatus();
 
   return (
     <AppShell envStatus={envStatus}>

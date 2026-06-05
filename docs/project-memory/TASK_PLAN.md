@@ -37,7 +37,7 @@ Aplicação inicializada:
 - favicon monochrome minimalista em `public/favicon.ico`
 - metadata social configurada com imagem Open Graph absoluta
 - marca oficial baseada no `FaCode`
-- imagem de preview social versionada em `public/og-worklog-v4.png`
+- imagem de preview social versionada em `public/og-worklog-v5.png`
 - navegação desktop/mobile com logo oficial
 - acentuação PT-BR revisada nos textos visíveis do app
 - `prisma/schema.prisma`
@@ -61,6 +61,7 @@ Aplicação inicializada:
 - toasts e status reutilizáveis
 - sincronização WakaTime em lote, adequada ao Transaction Pooler
 - arquivamento automático de projetos removidos do WakaTime
+- dashboard com leituras sequenciais/resilientes e atualização após sincronização
 
 Ainda pendente:
 
@@ -224,6 +225,8 @@ Entregáveis:
 - destaque para projetos pendentes de configuração
 - dark/light mode no shell
 - persistência de estado da sidebar
+- revalidação e atualização do painel após sincronização
+- leitura resiliente para não zerar todo o resumo quando uma consulta auxiliar falhar
 
 Critério de aceite:
 
@@ -239,6 +242,8 @@ Resultado:
 - listagem operacional de projetos concluída
 - estados vazio e indisponível preservados
 - cálculo financeiro usa registros manuais como prioridade e WakaTime como fallback
+- sincronização atualiza métricas e lista de projetos imediatamente
+- erros auxiliares do banco não apagam projetos e horas já disponíveis
 
 ---
 
@@ -360,8 +365,8 @@ Entregáveis:
 
 Estado:
 
-- branding, favicon, manifest e preview social concluídos
-- tema, sidebar, tooltips, estados e responsividade validados
+- branding, favicon, manifest e preview social v5 concluídos
+- tema, sidebar, tooltips, estados, pre-hydration e responsividade validados
 - proteção administrativa continua pendente
 
 Deploy inicial já disponível:

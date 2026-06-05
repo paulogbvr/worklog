@@ -129,61 +129,102 @@ function getEmptySummary(databaseAvailable: boolean): DashboardSummary {
   };
 }
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
+function logDashboardError(scope: string, error: unknown) {
+  const code =
+    typeof error === "object" && error && "code" in error && typeof error.code === "string"
+      ? error.code
+      : error instanceof Error
+        ? error.name
+        : "unknown";
+
+  console.error(`[dashboard] ${scope} failed (${code})`);
+}
+
+async function readOptional<T>(
+  scope: string,
+  read: () => Promise<T>,
+  fallback: T
+): Promise<T> {
   try {
-    const [projects, clients, latestSync, recentPayments] = await Promise.all([
-      prisma.project.findMany({
-        orderBy: [{ configurationStatus: "asc" }, { updatedAt: "desc" }],
-        select: {
-          active: true,
-          client: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
-          clientId: true,
-          configurationStatus: true,
-          hourlyRate: true,
-          id: true,
-          lastSyncAt: true,
-          name: true,
-          notes: true,
-          payments: {
-            select: {
-              amount: true
-            }
-          },
-          wakatimeDays: {
-            select: {
-              totalSeconds: true
-            }
-          },
-          wakatimeProjectName: true,
-          workLogEntries: {
-            select: {
-              durationSeconds: true
-            }
+    return await read();
+  } catch (error) {
+    logDashboardError(scope, error);
+    return fallback;
+  }
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  let projects;
+
+  try {
+    projects = await prisma.project.findMany({
+      orderBy: [{ configurationStatus: "asc" }, { updatedAt: "desc" }],
+      select: {
+        active: true,
+        client: {
+          select: {
+            id: true,
+            name: true
           }
         },
+        clientId: true,
+        configurationStatus: true,
+        hourlyRate: true,
+        id: true,
+        lastSyncAt: true,
+        name: true,
+        payments: {
+          select: {
+            amount: true
+          }
+        },
+        wakatimeDays: {
+          select: {
+            totalSeconds: true
+          }
+        },
+        wakatimeProjectName: true,
+        workLogEntries: {
+          select: {
+            durationSeconds: true
+          }
+        }
+      },
+      where: {
+        active: true
+      }
+    });
+  } catch (error) {
+    logDashboardError("active projects", error);
+    return getEmptySummary(false);
+  }
+
+  const activeProjectIds = projects.map((project) => project.id);
+  const projectNotes = await readOptional(
+    "project notes",
+    () =>
+      prisma.project.findMany({
+        select: {
+          id: true,
+          notes: true
+        },
         where: {
-          active: true
+          id: {
+            in: activeProjectIds
+          }
         }
       }),
+    []
+  );
+  const notesByProjectId = new Map(projectNotes.map((project) => [project.id, project.notes]));
+  const clients = await readOptional(
+    "clients",
+    () =>
       prisma.client.findMany({
         orderBy: {
           name: "asc"
         },
         select: {
-          _count: {
-            select: {
-              projects: {
-                where: {
-                  active: true
-                }
-              }
-            }
-          },
           email: true,
           id: true,
           name: true,
@@ -191,6 +232,11 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
           phone: true
         }
       }),
+    []
+  );
+  const latestSync = await readOptional(
+    "latest sync",
+    () =>
       prisma.syncLog.findFirst({
         orderBy: {
           startedAt: "desc"
@@ -199,6 +245,11 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
           provider: SyncProvider.WAKATIME
         }
       }),
+    null
+  );
+  const recentPayments = await readOptional(
+    "recent payments",
+    () =>
       prisma.payment.findMany({
         orderBy: {
           paidAt: "desc"
@@ -217,135 +268,140 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
         },
         take: 10,
         where: {
-          project: {
-            active: true
+          projectId: {
+            in: activeProjectIds
           }
         }
-      })
-    ]);
+      }),
+    []
+  );
 
-    let totalWakaTimeSeconds = 0;
-    let totalDedicatedSeconds = 0;
-    let totalGeneratedValue = 0;
-    let totalReceivedValue = 0;
+  let totalWakaTimeSeconds = 0;
+  let totalDedicatedSeconds = 0;
+  let totalGeneratedValue = 0;
+  let totalReceivedValue = 0;
 
-    const projectSummaries = projects.map<DashboardProject>((project) => {
-      const wakatimeSeconds = project.wakatimeDays.reduce(
-        (total, day) => total + day.totalSeconds,
-        0
-      );
-      const dedicatedSeconds = project.workLogEntries.reduce(
-        (total, entry) => total + entry.durationSeconds,
-        0
-      );
-      const billableSeconds = dedicatedSeconds > 0 ? dedicatedSeconds : wakatimeSeconds;
-      const hourlyRate = project.hourlyRate ? Number(project.hourlyRate) : null;
-      const isConfigured =
-        project.configurationStatus === "CONFIGURED" &&
-        Boolean(project.clientId) &&
-        Boolean(hourlyRate && hourlyRate > 0);
-      const totalValue = isConfigured && hourlyRate ? (billableSeconds / 3600) * hourlyRate : 0;
-      const receivedValue = project.payments.reduce(
-        (total, payment) => total + Number(payment.amount),
-        0
-      );
-      const pendingValue = totalValue - receivedValue;
+  const projectSummaries = projects.map<DashboardProject>((project) => {
+    const wakatimeSeconds = project.wakatimeDays.reduce(
+      (total, day) => total + day.totalSeconds,
+      0
+    );
+    const dedicatedSeconds = project.workLogEntries.reduce(
+      (total, entry) => total + entry.durationSeconds,
+      0
+    );
+    const billableSeconds = dedicatedSeconds > 0 ? dedicatedSeconds : wakatimeSeconds;
+    const hourlyRate = project.hourlyRate ? Number(project.hourlyRate) : null;
+    const isConfigured =
+      project.configurationStatus === "CONFIGURED" &&
+      Boolean(project.clientId) &&
+      Boolean(hourlyRate && hourlyRate > 0);
+    const totalValue = isConfigured && hourlyRate ? (billableSeconds / 3600) * hourlyRate : 0;
+    const receivedValue = project.payments.reduce(
+      (total, payment) => total + Number(payment.amount),
+      0
+    );
+    const pendingValue = totalValue - receivedValue;
 
-      totalWakaTimeSeconds += wakatimeSeconds;
-      totalDedicatedSeconds += dedicatedSeconds;
-      totalGeneratedValue += totalValue;
-      totalReceivedValue += receivedValue;
-
-      return {
-        active: project.active,
-        billingSource: dedicatedSeconds > 0 ? "manual" : "wakatime",
-        billableSeconds,
-        clientId: project.clientId,
-        clientName: project.client?.name ?? null,
-        dedicatedLabel: formatDuration(dedicatedSeconds),
-        hourlyRate,
-        id: project.id,
-        lastSyncLabel: formatDateTime(project.lastSyncAt),
-        name: project.name,
-        notes: project.notes,
-        pendingValue,
-        pendingValueLabel: formatCurrency(pendingValue),
-        receivedValue,
-        statusLabel: isConfigured ? "Configurado" : "Pendente",
-        statusTone: isConfigured ? "muted" : "warning",
-        totalValue,
-        totalValueLabel: formatCurrency(totalValue),
-        wakatimeLabel: formatDuration(wakatimeSeconds),
-        wakatimeProjectName: project.wakatimeProjectName
-      };
-    });
-
-    const pendingValue = totalGeneratedValue - totalReceivedValue;
-    const pendingProjects = projectSummaries.filter(
-      (project) => project.statusLabel === "Pendente"
-    ).length;
-    const configuredProjects = projectSummaries.length - pendingProjects;
+    totalWakaTimeSeconds += wakatimeSeconds;
+    totalDedicatedSeconds += dedicatedSeconds;
+    totalGeneratedValue += totalValue;
+    totalReceivedValue += receivedValue;
 
     return {
-      activeProjects: projectSummaries.length,
-      clients: clients.map((client) => ({
-        email: client.email,
-        id: client.id,
-        name: client.name,
-        notes: client.notes,
-        phone: client.phone,
-        projectCount: client._count.projects
-      })),
-      configuredProjects,
-      databaseAvailable: true,
-      lastSyncLabel: formatDateTime(latestSync?.finishedAt ?? latestSync?.startedAt),
-      latestSyncSuccessful: latestSync?.success ?? false,
-      metrics: [
-        {
-          detail:
-            totalWakaTimeSeconds > 0
-              ? "Tempo real importado do WakaTime"
-              : "Aguardando sincronização",
-          label: "Horas WakaTime",
-          value: formatDuration(totalWakaTimeSeconds)
-        },
-        {
-          detail:
-            totalDedicatedSeconds > 0
-              ? "Tempo manual usado como prioridade"
-              : "WakaTime será usado como base",
-          label: "Horas Dedicadas",
-          value: formatDuration(totalDedicatedSeconds)
-        },
-        {
-          detail: `${configuredProjects} projetos configurados`,
-          label: "Valor Gerado",
-          value: formatCurrency(totalGeneratedValue)
-        },
-        {
-          detail: totalReceivedValue > 0 ? "Pagamentos registrados" : "Sem pagamentos",
-          label: "Valor Recebido",
-          value: formatCurrency(totalReceivedValue)
-        },
-        {
-          detail: pendingValue !== 0 ? "Saldo calculado por projeto" : "Sem saldo pendente",
-          label: "Valor Pendente",
-          value: formatCurrency(pendingValue)
-        }
-      ],
-      payments: recentPayments.map((payment) => ({
-        amount: Number(payment.amount),
-        amountLabel: formatCurrency(Number(payment.amount)),
-        id: payment.id,
-        note: payment.note,
-        paidAtLabel: formatDate(payment.paidAt),
-        projectId: payment.project.id,
-        projectName: payment.project.name
-      })),
-      pendingProjects,
-      projects: projectSummaries
+      active: project.active,
+      billingSource: dedicatedSeconds > 0 ? "manual" : "wakatime",
+      billableSeconds,
+      clientId: project.clientId,
+      clientName: project.client?.name ?? null,
+      dedicatedLabel: formatDuration(dedicatedSeconds),
+      hourlyRate,
+      id: project.id,
+      lastSyncLabel: formatDateTime(project.lastSyncAt),
+      name: project.name,
+      notes: notesByProjectId.get(project.id) ?? null,
+      pendingValue,
+      pendingValueLabel: formatCurrency(pendingValue),
+      receivedValue,
+      statusLabel: isConfigured ? "Configurado" : "Pendente",
+      statusTone: isConfigured ? "muted" : "warning",
+      totalValue,
+      totalValueLabel: formatCurrency(totalValue),
+      wakatimeLabel: formatDuration(wakatimeSeconds),
+      wakatimeProjectName: project.wakatimeProjectName
     };
-  } catch {
-    return getEmptySummary(false);
-  }
+  });
+
+  const pendingValue = totalGeneratedValue - totalReceivedValue;
+  const pendingProjects = projectSummaries.filter(
+    (project) => project.statusLabel === "Pendente"
+  ).length;
+  const configuredProjects = projectSummaries.length - pendingProjects;
+  const activeProjectCountByClient = projects.reduce((counts, project) => {
+    if (project.clientId) {
+      counts.set(project.clientId, (counts.get(project.clientId) ?? 0) + 1);
+    }
+
+    return counts;
+  }, new Map<string, number>());
+
+  return {
+    activeProjects: projectSummaries.length,
+    clients: clients.map((client) => ({
+      email: client.email,
+      id: client.id,
+      name: client.name,
+      notes: client.notes,
+      phone: client.phone,
+      projectCount: activeProjectCountByClient.get(client.id) ?? 0
+    })),
+    configuredProjects,
+    databaseAvailable: true,
+    lastSyncLabel: formatDateTime(latestSync?.finishedAt ?? latestSync?.startedAt),
+    latestSyncSuccessful: latestSync?.success ?? false,
+    metrics: [
+      {
+        detail:
+          totalWakaTimeSeconds > 0
+            ? "Tempo real importado do WakaTime"
+            : "Aguardando sincronização",
+        label: "Horas WakaTime",
+        value: formatDuration(totalWakaTimeSeconds)
+      },
+      {
+        detail:
+          totalDedicatedSeconds > 0
+            ? "Tempo manual usado como prioridade"
+            : "WakaTime será usado como base",
+        label: "Horas Dedicadas",
+        value: formatDuration(totalDedicatedSeconds)
+      },
+      {
+        detail: `${configuredProjects} projetos configurados`,
+        label: "Valor Gerado",
+        value: formatCurrency(totalGeneratedValue)
+      },
+      {
+        detail: totalReceivedValue > 0 ? "Pagamentos registrados" : "Sem pagamentos",
+        label: "Valor Recebido",
+        value: formatCurrency(totalReceivedValue)
+      },
+      {
+        detail: pendingValue !== 0 ? "Saldo calculado por projeto" : "Sem saldo pendente",
+        label: "Valor Pendente",
+        value: formatCurrency(pendingValue)
+      }
+    ],
+    payments: recentPayments.map((payment) => ({
+      amount: Number(payment.amount),
+      amountLabel: formatCurrency(Number(payment.amount)),
+      id: payment.id,
+      note: payment.note,
+      paidAtLabel: formatDate(payment.paidAt),
+      projectId: payment.project.id,
+      projectName: payment.project.name
+    })),
+    pendingProjects,
+    projects: projectSummaries
+  };
 }
