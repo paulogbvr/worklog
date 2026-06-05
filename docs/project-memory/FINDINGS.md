@@ -467,6 +467,47 @@ Manter `directUrl` explícita em `prisma/schema.prisma`.
 
 ---
 
+## 2026-06-05
+
+### Descoberta
+
+A impossibilidade de desfazer a configuração de um projeto não vinha do schema: `clientId` e
+`hourlyRate` já eram opcionais. A obrigatoriedade havia sido adicionada tanto pela validação nativa
+do formulário quanto pelas validações do frontend e da rota.
+
+### Evidência
+
+- o select de cliente e o campo de valor tinham `required`
+- o frontend bloqueava cliente vazio e valor menor ou igual a zero
+- a rota rejeitava a mesma intenção antes de atualizar o Prisma
+- ao remover essas barreiras, o projeto voltou para `PENDING` preservando `wakatimeProjectName`
+
+### Impacto
+
+Projetos pessoais ficavam presos a uma configuração financeira e podiam gerar cobrança indevida.
+
+### Ação
+
+Tratar cliente e cobrança como opcionais, normalizar vazio/zero para `null` e manter cálculo
+financeiro apenas em projetos configurados.
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+O desalinhamento do card de ambiente no desktop era causado pela regra global
+`.sidebar-expanded-only`, que aplica `display: flex`. Sem direção vertical explícita, título e lista
+eram distribuídos na horizontal.
+
+### Ação
+
+Definir o card como `flex-col` e usar uma grade estável por linha, com nome truncável à esquerda e
+status fixo à direita.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

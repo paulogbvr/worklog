@@ -65,7 +65,7 @@ Aplicação inicializada:
 
 Ainda pendente:
 
-- registros de trabalho
+- filtros por período
 - portal compartilhável
 
 ---
@@ -252,7 +252,7 @@ Resultado:
 Status:
 
 ```txt
-Em andamento
+Concluído
 ```
 
 Objetivo:
@@ -281,8 +281,10 @@ Estado:
 - cadastro, edição e remoção de clientes: concluído
 - validações cadastrais de clientes: concluído
 - configuração de projeto com reflexo financeiro: concluído
+- projeto pessoal pode permanecer sem cliente e sem cobrança: concluído
 - mensagens específicas de validação e persistência: concluído
-- CRUD de registros de trabalho: pendente
+- CRUD de registros de trabalho: concluído
+- travessia de meia-noite e recálculo de duração: concluído
 
 ---
 

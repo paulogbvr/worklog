@@ -139,6 +139,7 @@ export default async function Home() {
         clients={dashboard.clients}
         payments={dashboard.payments}
         projects={dashboard.projects}
+        workEntries={dashboard.workEntries}
       />
     </AppShell>
   );

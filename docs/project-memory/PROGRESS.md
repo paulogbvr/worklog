@@ -862,3 +862,83 @@ Implementar:
 2. registros atravessando meia-noite
 3. filtros por período
 4. portal compartilhável somente leitura
+
+---
+
+## 2026-06-05
+
+### Projetos sem Cobrança e Registros de Trabalho
+
+Concluído:
+
+- card de ambiente alinhado na sidebar expandida do desktop
+- linhas de variável com indicador e nome à esquerda e status à direita
+- opção `Sem cliente` na configuração de projeto
+- valor por hora pode ser vazio ou zero
+- projeto sem cliente ou cobrança volta para `PENDING`
+- identidade WakaTime, horas e histórico são preservados
+- projeto sem configuração financeira não gera valor
+- validação nativa obrigatória removida do formulário de projeto
+- CRUD de registros de trabalho
+- duração derivada automaticamente do início e término
+- suporte a registros atravessando meia-noite
+- recálculo imediato de horas dedicadas e valores financeiros
+- navegação da sidebar conectada à aba de registros
+
+Validação funcional reversível:
+
+```txt
+worklog sem cliente/valor: PENDING, WakaTime preservado
+registro 22:00 → 01:15: 11700 segundos (3h15)
+edição para 4h: 14400 segundos
+criação, edição e exclusão: HTTP 200
+dados reais restaurados e zero registros temporários
+```
+
+Validação técnica:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Resultado:
+
+```txt
+sucesso
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+90%
+```
+
+Implementação:
+
+```txt
+68%
+```
+
+Projeto Geral:
+
+```txt
+███████████████░░░░░ 73%
+```
+
+### Próximo Passo
+
+Implementar:
+
+1. filtros por período
+2. portal compartilhável somente leitura
+3. proteção administrativa antes de ampliar o uso público

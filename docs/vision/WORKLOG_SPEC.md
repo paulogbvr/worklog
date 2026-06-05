@@ -59,10 +59,10 @@ Projeto configurado:
 Projeto pendente:
 
 - foi criado automaticamente pelo WakaTime
-- ainda não possui cliente
-- ainda não possui valor por hora
+- não possui cliente e/ou valor por hora
+- pode ser um projeto pessoal mantido intencionalmente sem cobrança
 
-Projetos pendentes devem ser destacados no dashboard.
+Projetos pendentes devem ser destacados no dashboard e não devem gerar valor financeiro.
 
 ---
 

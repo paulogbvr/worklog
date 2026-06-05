@@ -32,7 +32,7 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   active?: boolean;
-  operationView?: "clients" | "payments" | "projects";
+  operationView?: "clients" | "payments" | "projects" | "records";
 };
 
 const navItems: NavItem[] = [
@@ -49,7 +49,12 @@ const navItems: NavItem[] = [
     icon: Users,
     operationView: "clients"
   },
-  { label: "Registros", href: "#registros", icon: Clock3 },
+  {
+    label: "Registros",
+    href: "#operacao",
+    icon: Clock3,
+    operationView: "records"
+  },
   {
     label: "Pagamentos",
     href: "#operacao",
@@ -164,21 +169,24 @@ function NavLink({
 function EnvPanel({ envStatus }: { envStatus: ServerEnvStatus }) {
   return (
     <>
-      <div className="sidebar-expanded-only rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+      <div className="sidebar-expanded-only min-w-0 flex-col rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
         <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-faint)]">
           Ambiente
         </p>
-        <p className="mt-2 text-sm font-medium">
+        <p className="mt-2 min-w-0 truncate text-sm font-medium">
           {envStatus.configured ? "Variáveis configuradas" : "Variáveis pendentes"}
         </p>
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 min-w-0 space-y-2.5">
           {Object.entries(envStatus.keys).map(([key, check]) => (
-            <div className="flex items-center justify-between gap-4 text-xs" key={key}>
-              <span className="flex min-w-0 items-center gap-2 text-[color:var(--text-muted)]">
+            <div
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-xs"
+              key={key}
+            >
+              <span className="flex min-w-0 items-center gap-2.5 text-[color:var(--text-muted)]">
                 <StatusPulse tone={check.tone} />
                 <span className="truncate">{key}</span>
               </span>
-              <span className="text-[color:var(--text-soft)]">
+              <span className="shrink-0 text-right text-[color:var(--text-soft)]">
                 {check.label}
               </span>
             </div>

@@ -514,3 +514,31 @@ Evitar documentos inconsistentes, dados duplicados e idade desatualizada no banc
 - CPF/CNPJ inválido não chega ao Prisma
 - alteração da data atualiza a idade automaticamente
 - campos permanecem opcionais para não bloquear o MVP
+
+---
+
+### DECISION-021
+
+#### Título
+
+Configuração Financeira Opcional por Projeto
+
+#### Decisão
+
+Cliente e valor por hora são opcionais. Um projeto será `CONFIGURED` somente quando possuir ambos
+e o valor por hora for positivo. Limpar qualquer um deles retorna o projeto para `PENDING`.
+
+Valor vazio ou zero representa ausência de cobrança e é persistido como `null`.
+
+#### Motivo
+
+O WorkLog também acompanha projetos pessoais, que precisam manter horas e histórico sem cliente e
+sem gerar valor financeiro.
+
+#### Impacto
+
+- opção `Sem cliente` disponível na configuração
+- valor por hora pode ser vazio ou zero
+- projetos sem configuração financeira continuam sincronizados
+- identidade WakaTime e histórico não são removidos
+- dashboard calcula valor somente para projetos configurados

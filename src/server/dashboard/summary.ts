@@ -52,6 +52,18 @@ export type DashboardProject = {
   wakatimeProjectName: string | null;
 };
 
+export type DashboardWorkEntry = {
+  durationLabel: string;
+  durationSeconds: number;
+  endedAt: string;
+  id: string;
+  note: string | null;
+  periodLabel: string;
+  projectId: string;
+  projectName: string;
+  startedAt: string;
+};
+
 export type DashboardSummary = {
   activeProjects: number;
   clients: DashboardClient[];
@@ -63,6 +75,7 @@ export type DashboardSummary = {
   payments: DashboardPayment[];
   pendingProjects: number;
   projects: DashboardProject[];
+  workEntries: DashboardWorkEntry[];
 };
 
 export function formatDuration(totalSeconds: number) {
@@ -128,7 +141,8 @@ function getEmptySummary(databaseAvailable: boolean): DashboardSummary {
     ],
     payments: [],
     pendingProjects: 0,
-    projects: []
+    projects: [],
+    workEntries: []
   };
 }
 
@@ -189,7 +203,11 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
         wakatimeProjectName: true,
         workLogEntries: {
           select: {
-            durationSeconds: true
+            durationSeconds: true,
+            endedAt: true,
+            id: true,
+            note: true,
+            startedAt: true
           }
         }
       },
@@ -343,6 +361,21 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     (project) => project.statusLabel === "Pendente"
   ).length;
   const configuredProjects = projectSummaries.length - pendingProjects;
+  const workEntries = projects
+    .flatMap((project) =>
+      project.workLogEntries.map<DashboardWorkEntry>((entry) => ({
+        durationLabel: formatDuration(entry.durationSeconds),
+        durationSeconds: entry.durationSeconds,
+        endedAt: entry.endedAt.toISOString(),
+        id: entry.id,
+        note: entry.note,
+        periodLabel: `${formatDateTime(entry.startedAt)} → ${formatDateTime(entry.endedAt)}`,
+        projectId: project.id,
+        projectName: project.name,
+        startedAt: entry.startedAt.toISOString()
+      }))
+    )
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   const activeProjectCountByClient = projects.reduce((counts, project) => {
     if (project.clientId) {
       counts.set(project.clientId, (counts.get(project.clientId) ?? 0) + 1);
@@ -411,6 +444,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       projectName: payment.project.name
     })),
     pendingProjects,
-    projects: projectSummaries
+    projects: projectSummaries,
+    workEntries
   };
 }

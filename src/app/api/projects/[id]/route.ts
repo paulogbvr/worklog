@@ -11,8 +11,18 @@ function optionalText(value: unknown) {
 }
 
 function parseHourlyRate(value: unknown) {
-  const normalized = typeof value === "string" ? value.replace(",", ".") : value;
-  return Number(normalized);
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const normalized = typeof value === "string" ? value.trim().replace(",", ".") : value;
+
+  if (normalized === "") {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return parsed === 0 ? null : parsed;
 }
 
 export async function PATCH(
@@ -37,20 +47,10 @@ export async function PATCH(
       );
     }
 
-    if (!clientId) {
+    if (hourlyRate !== null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
       return NextResponse.json(
         {
-          error: "Selecione um cliente.",
-          ok: false
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
-      return NextResponse.json(
-        {
-          error: "Informe um valor por hora maior que zero.",
+          error: "Informe um valor por hora válido ou deixe o campo vazio.",
           ok: false
         },
         { status: 400 }
@@ -76,30 +76,37 @@ export async function PATCH(
       );
     }
 
-    const client = await prisma.client.findUnique({
-      select: {
-        id: true
-      },
-      where: {
-        id: clientId
-      }
-    });
-
-    if (!client) {
-      return NextResponse.json(
-        {
-          error: "Cliente selecionado não foi encontrado.",
-          ok: false
+    if (clientId) {
+      const client = await prisma.client.findUnique({
+        select: {
+          id: true
         },
-        { status: 400 }
-      );
+        where: {
+          id: clientId
+        }
+      });
+
+      if (!client) {
+        return NextResponse.json(
+          {
+            error: "Cliente selecionado não foi encontrado.",
+            ok: false
+          },
+          { status: 400 }
+        );
+      }
     }
+
+    const configurationStatus =
+      clientId && hourlyRate
+        ? ProjectConfigurationStatus.CONFIGURED
+        : ProjectConfigurationStatus.PENDING;
 
     await prisma.project.update({
       data: {
         active,
         clientId,
-        configurationStatus: ProjectConfigurationStatus.CONFIGURED,
+        configurationStatus,
         hourlyRate,
         name,
         notes: optionalText(body.notes)
@@ -111,7 +118,7 @@ export async function PATCH(
     revalidatePath("/", "page");
 
     return NextResponse.json({
-      configurationStatus: ProjectConfigurationStatus.CONFIGURED,
+      configurationStatus,
       ok: true
     });
   } catch (error) {

@@ -120,7 +120,9 @@ Regras:
 - projeto vindo do WakaTime pode nascer sem cliente
 - projeto vindo do WakaTime pode nascer sem valor por hora
 - projeto incompleto deve ficar como `PENDING`
+- projeto pessoal pode permanecer como `PENDING` sem cliente e sem cobrança
 - projeto configurado deve ficar como `CONFIGURED`
+- limpar cliente ou valor por hora deve retornar o projeto para `PENDING`
 - projeto WakaTime ausente da lista atual deve ficar com `active = false`
 - inativar não remove horas, pagamentos ou configuração
 

@@ -20,7 +20,7 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Dashboard             | ✅ Dados reais e financeiro |
 | Projetos              | ✅ Configuração validada |
 | Clientes              | ✅ CRUD e validações |
-| Registros de Trabalho | ⏳ Em andamento |
+| Registros de Trabalho | ✅ CRUD concluído |
 | Pagamentos            | ✅ Controle básico |
 | Portal Compartilhável | ⏳ Em andamento |
 | Deploy                | ⚙️ Publicado, proteção pendente |
@@ -34,7 +34,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-█████████████░░░░░░░ 67%
+███████████████░░░░░ 73%
 ```
 
 ---
@@ -254,8 +254,8 @@ Visualizar:
 Cada projeto possui:
 
 - nome
-- cliente
-- valor por hora
+- cliente opcional
+- valor por hora opcional
 - nome do projeto no WakaTime
 - horas acumuladas pelo WakaTime
 - horas dedicadas manualmente
@@ -288,10 +288,13 @@ Status:
 Pendente de Configuração
 ```
 
-O usuário deverá apenas definir:
+Quando houver cobrança, o usuário poderá definir:
 
 - cliente
 - valor por hora
+
+Projetos pessoais podem permanecer sem cliente e sem valor por hora. Nesse estado, continuam
+sincronizados e não geram valor financeiro.
 
 Quando um projeto deixa de existir na lista atual do WakaTime:
 
@@ -323,6 +326,10 @@ Exemplos:
 - publicação
 
 O usuário poderá adicionar múltiplos registros no mesmo dia.
+
+Os registros podem ser criados, editados e removidos. A duração é derivada do início e término,
+inclusive quando o período atravessa a meia-noite, e o dashboard recalcula horas e valores após
+cada alteração.
 
 Exemplo:
 
@@ -598,9 +605,12 @@ Assets de identidade:
 - CRUD de clientes com CPF/CNPJ, telefone, nascimento, idade derivada e endereço
 - validação real e máscara automática de CPF/CNPJ
 - configuração de nome, cliente, valor/hora, status e observações de projetos
+- projeto pode voltar ao estado pendente/sem cobrança ao limpar cliente e valor por hora
 - erros específicos para cliente, valor/hora e projeto inexistente
 - cadastro e remoção de pagamentos
+- CRUD de registros de trabalho com edição, exclusão e travessia de meia-noite
 - cálculo financeiro real com prioridade manual e fallback WakaTime
+- card de variáveis alinhado na sidebar expandida do desktop
 
 ---
 
@@ -621,8 +631,6 @@ Assets de identidade:
 
 Implementar:
 
-- CRUD de registros de trabalho
-- suporte a registros atravessando meia-noite
 - filtros por período no dashboard
 - portal compartilhável somente leitura
 - proteção administrativa antes de ampliar o uso público

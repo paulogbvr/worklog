@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
+import { Clock3, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import {
   calculateAge,
@@ -13,10 +13,11 @@ import {
 import type {
   DashboardClient,
   DashboardPayment,
-  DashboardProject
+  DashboardProject,
+  DashboardWorkEntry
 } from "@/server/dashboard/summary";
 
-type View = "clients" | "payments" | "projects";
+type View = "clients" | "payments" | "projects" | "records";
 
 type ProjectDraft = {
   active: boolean;
@@ -38,6 +39,14 @@ type ClientDraft = {
   taxId: string;
 };
 
+type WorkEntryDraft = {
+  endedAt: string;
+  id?: string;
+  note: string;
+  projectId: string;
+  startedAt: string;
+};
+
 const emptyClient: ClientDraft = {
   address: "",
   birthDate: "",
@@ -54,6 +63,47 @@ function todayInputValue() {
   return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10);
 }
 
+function dateTimeInputValue(date = new Date()) {
+  const timezoneOffset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function createWorkEntryDraft(projectId: string): WorkEntryDraft {
+  const startedAt = new Date();
+  startedAt.setSeconds(0, 0);
+  const endedAt = new Date(startedAt.getTime() + 60 * 60 * 1000);
+
+  return {
+    endedAt: dateTimeInputValue(endedAt),
+    note: "",
+    projectId,
+    startedAt: dateTimeInputValue(startedAt)
+  };
+}
+
+function formatDraftDuration(startedAt: string, endedAt: string) {
+  const start = new Date(startedAt);
+  const end = new Date(endedAt);
+
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end.getTime() <= start.getTime()
+  ) {
+    return null;
+  }
+
+  const totalMinutes = Math.round((end.getTime() - start.getTime()) / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes}min`;
+  }
+
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
+}
+
 async function readResponse(response: Response) {
   const payload = (await response.json()) as { error?: string; ok?: boolean };
 
@@ -62,10 +112,6 @@ async function readResponse(response: Response) {
   }
 
   return payload;
-}
-
-function parseHourlyRate(value: string) {
-  return Number(value.replace(",", "."));
 }
 
 function Modal({
@@ -109,11 +155,13 @@ const textareaClass =
 export function OperationsPanel({
   clients,
   payments,
-  projects
+  projects,
+  workEntries
 }: {
   clients: DashboardClient[];
   payments: DashboardPayment[];
   projects: DashboardProject[];
+  workEntries: DashboardWorkEntry[];
 }) {
   const [view, setView] = useState<View>("projects");
   const [projectDraft, setProjectDraft] = useState<ProjectDraft | null>(null);
@@ -123,6 +171,9 @@ export function OperationsPanel({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayInputValue());
   const [paymentNote, setPaymentNote] = useState("");
+  const [workEntryDraft, setWorkEntryDraft] = useState<WorkEntryDraft>(() =>
+    createWorkEntryDraft(projects[0]?.id ?? "")
+  );
   const router = useRouter();
   const { toast } = useToast();
 
@@ -130,7 +181,12 @@ export function OperationsPanel({
     function handleViewChange(event: Event) {
       const requestedView = (event as CustomEvent<View>).detail;
 
-      if (requestedView === "clients" || requestedView === "payments" || requestedView === "projects") {
+      if (
+        requestedView === "clients" ||
+        requestedView === "payments" ||
+        requestedView === "projects" ||
+        requestedView === "records"
+      ) {
         setView(requestedView);
       }
     }
@@ -153,6 +209,10 @@ export function OperationsPanel({
   const clientAge = useMemo(
     () => (clientDraft?.birthDate ? calculateAge(clientDraft.birthDate) : null),
     [clientDraft]
+  );
+  const workEntryDuration = useMemo(
+    () => formatDraftDuration(workEntryDraft.startedAt, workEntryDraft.endedAt),
+    [workEntryDraft.endedAt, workEntryDraft.startedAt]
   );
 
   function openProject(project: DashboardProject) {
@@ -190,26 +250,6 @@ export function OperationsPanel({
       return;
     }
 
-    if (!projectDraft.clientId) {
-      toast({
-        message: "Selecione o cliente responsável pelo projeto.",
-        title: "Cliente obrigatório",
-        tone: "error"
-      });
-      return;
-    }
-
-    const hourlyRate = parseHourlyRate(projectDraft.hourlyRate);
-
-    if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
-      toast({
-        message: "Informe um valor por hora maior que zero.",
-        title: "Valor por hora inválido",
-        tone: "error"
-      });
-      return;
-    }
-
     setIsSaving(true);
 
     try {
@@ -224,7 +264,7 @@ export function OperationsPanel({
       );
       setProjectDraft(null);
       toast({
-        message: "Cliente, valor por hora e status foram atualizados.",
+        message: "Cliente, cobrança e status foram atualizados.",
         title: "Projeto salvo",
         tone: "success"
       });
@@ -376,6 +416,116 @@ export function OperationsPanel({
     }
   }
 
+  function editWorkEntry(entry: DashboardWorkEntry) {
+    setWorkEntryDraft({
+      endedAt: dateTimeInputValue(new Date(entry.endedAt)),
+      id: entry.id,
+      note: entry.note ?? "",
+      projectId: entry.projectId,
+      startedAt: dateTimeInputValue(new Date(entry.startedAt))
+    });
+    setView("records");
+  }
+
+  function resetWorkEntry() {
+    setWorkEntryDraft(createWorkEntryDraft(projects[0]?.id ?? ""));
+  }
+
+  async function saveWorkEntry(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!workEntryDraft.projectId) {
+      toast({
+        message: "Escolha o projeto relacionado ao período trabalhado.",
+        title: "Projeto necessário",
+        tone: "error"
+      });
+      return;
+    }
+
+    const startedAt = new Date(workEntryDraft.startedAt);
+    const endedAt = new Date(workEntryDraft.endedAt);
+
+    if (
+      Number.isNaN(startedAt.getTime()) ||
+      Number.isNaN(endedAt.getTime()) ||
+      endedAt <= startedAt
+    ) {
+      toast({
+        message: "O término precisa acontecer depois do início.",
+        title: "Período inválido",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await readResponse(
+        await fetch(
+          workEntryDraft.id ? `/api/work-entries/${workEntryDraft.id}` : "/api/work-entries",
+          {
+            body: JSON.stringify({
+              endedAt: endedAt.toISOString(),
+              note: workEntryDraft.note,
+              projectId: workEntryDraft.projectId,
+              startedAt: startedAt.toISOString()
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            method: workEntryDraft.id ? "PATCH" : "POST"
+          }
+        )
+      );
+      toast({
+        message: "Horas dedicadas e valores financeiros foram recalculados.",
+        title: workEntryDraft.id ? "Registro atualizado" : "Registro criado",
+        tone: "success"
+      });
+      resetWorkEntry();
+      router.refresh();
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : "Não foi possível salvar o registro.",
+        title: "Erro no registro",
+        tone: "error"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function deleteWorkEntry(entry: DashboardWorkEntry) {
+    if (!window.confirm(`Remover o registro de ${entry.durationLabel} em ${entry.projectName}?`)) {
+      return;
+    }
+
+    try {
+      await readResponse(
+        await fetch(`/api/work-entries/${entry.id}`, {
+          method: "DELETE"
+        })
+      );
+      if (workEntryDraft.id === entry.id) {
+        resetWorkEntry();
+      }
+      toast({
+        message: "Horas dedicadas e valores financeiros foram recalculados.",
+        title: "Registro removido",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : "Não foi possível remover o registro.",
+        title: "Erro ao remover",
+        tone: "error"
+      });
+    }
+  }
+
   return (
     <>
       <section
@@ -386,15 +536,16 @@ export function OperationsPanel({
           <div>
             <h2 className="text-lg font-semibold">Operação</h2>
             <p className="mt-1 text-sm text-[color:var(--text-soft)]">
-              Configure projetos, clientes e recebimentos.
+              Configure projetos, horas dedicadas, clientes e recebimentos.
             </p>
           </div>
-          <div className="inline-flex w-fit rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
-            {(["projects", "clients", "payments"] as View[]).map((item) => {
+          <div className="grid w-full grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1 sm:flex sm:w-fit">
+            {(["projects", "records", "clients", "payments"] as View[]).map((item) => {
               const labels: Record<View, string> = {
                 clients: "Clientes",
                 payments: "Pagamentos",
-                projects: "Projetos"
+                projects: "Projetos",
+                records: "Registros"
               };
 
               return (
@@ -446,7 +597,7 @@ export function OperationsPanel({
                           currency: "BRL",
                           style: "currency"
                         }).format(project.hourlyRate)}/h`
-                      : "Valor/hora pendente"}
+                      : "Sem cobrança"}
                   </p>
                 </div>
                 <div>
@@ -479,6 +630,169 @@ export function OperationsPanel({
                 </button>
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {view === "records" ? (
+          <div className="p-5" id="registros">
+            <form
+              className="grid gap-4 border-b border-[color:var(--border)] pb-5"
+              noValidate
+              onSubmit={saveWorkEntry}
+            >
+              <div className="grid gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(190px,1fr)_minmax(190px,1fr)]">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Projeto
+                  </span>
+                  <select
+                    className={fieldClass}
+                    onChange={(event) =>
+                      setWorkEntryDraft((current) => ({
+                        ...current,
+                        projectId: event.target.value
+                      }))
+                    }
+                    value={workEntryDraft.projectId}
+                  >
+                    <option value="">Selecione o projeto</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Início
+                  </span>
+                  <input
+                    className={fieldClass}
+                    onChange={(event) =>
+                      setWorkEntryDraft((current) => ({
+                        ...current,
+                        startedAt: event.target.value
+                      }))
+                    }
+                    type="datetime-local"
+                    value={workEntryDraft.startedAt}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
+                    <span>Término</span>
+                    {workEntryDuration ? (
+                      <span className="inline-flex items-center gap-1.5 text-[color:var(--app-text-strong)]">
+                        <Clock3 className="size-3.5" />
+                        {workEntryDuration}
+                      </span>
+                    ) : null}
+                  </span>
+                  <input
+                    className={fieldClass}
+                    onChange={(event) =>
+                      setWorkEntryDraft((current) => ({
+                        ...current,
+                        endedAt: event.target.value
+                      }))
+                    }
+                    type="datetime-local"
+                    value={workEntryDraft.endedAt}
+                  />
+                </label>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Observação
+                  </span>
+                  <input
+                    className={fieldClass}
+                    onChange={(event) =>
+                      setWorkEntryDraft((current) => ({
+                        ...current,
+                        note: event.target.value
+                      }))
+                    }
+                    placeholder="O que foi feito neste período?"
+                    value={workEntryDraft.note}
+                  />
+                </label>
+                <div className="flex gap-2">
+                  {workEntryDraft.id ? (
+                    <button
+                      className="h-11 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                      onClick={resetWorkEntry}
+                      type="button"
+                    >
+                      Cancelar
+                    </button>
+                  ) : null}
+                  <button
+                    className="h-11 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                    disabled={isSaving}
+                    type="submit"
+                  >
+                    {isSaving
+                      ? "Salvando"
+                      : workEntryDraft.id
+                        ? "Atualizar registro"
+                        : "Adicionar registro"}
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div className="divide-y divide-[color:var(--border)]">
+              {workEntries.length > 0 ? (
+                workEntries.map((entry) => (
+                  <div
+                    className="grid gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+                    key={entry.id}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-[color:var(--app-text-strong)]">
+                          {entry.projectName}
+                        </p>
+                        <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                          {entry.durationLabel}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                        {entry.periodLabel}
+                      </p>
+                      {entry.note ? (
+                        <p className="mt-2 truncate text-sm text-[color:var(--text-muted)]">
+                          {entry.note}
+                        </p>
+                      ) : null}
+                    </div>
+                    <button
+                      aria-label={`Editar registro de ${entry.projectName}`}
+                      className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                      onClick={() => editWorkEntry(entry)}
+                      type="button"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
+                      aria-label={`Remover registro de ${entry.projectName}`}
+                      className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-red-500/10 hover:text-red-400"
+                      onClick={() => deleteWorkEntry(entry)}
+                      type="button"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="py-8 text-sm text-[color:var(--text-soft)]">
+                  Nenhum registro de trabalho adicionado.
+                </p>
+              )}
+            </div>
           </div>
         ) : null}
 
@@ -634,7 +948,7 @@ export function OperationsPanel({
           onClose={() => setProjectDraft(null)}
           title={projectDraft.clientId ? "Editar projeto" : "Configurar projeto"}
         >
-          <form className="space-y-4 p-5" onSubmit={saveProject}>
+          <form className="space-y-4 p-5" noValidate onSubmit={saveProject}>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                 Nome exibido
@@ -662,10 +976,9 @@ export function OperationsPanel({
                       current ? { ...current, clientId: event.target.value } : current
                     )
                   }
-                  required
                   value={projectDraft.clientId}
                 >
-                  <option value="">Selecione</option>
+                  <option value="">Sem cliente</option>
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.name}
@@ -686,10 +999,12 @@ export function OperationsPanel({
                     )
                   }
                   placeholder="Ex.: 150,00"
-                  required
                   type="text"
                   value={projectDraft.hourlyRate}
                 />
+                <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
+                  Deixe vazio ou use 0 para um projeto sem cobrança.
+                </span>
               </label>
             </div>
             <label className="block">
