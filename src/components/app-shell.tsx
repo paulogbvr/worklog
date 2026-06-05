@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   Clock3,
   CreditCard,
+  Download,
   FolderKanban,
+  Info,
   LayoutDashboard,
   Menu,
   Moon,
@@ -13,6 +16,7 @@ import {
   PanelLeftOpen,
   Sun,
   Users,
+  Workflow,
   X,
   type LucideIcon
 } from "lucide-react";
@@ -30,36 +34,43 @@ type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  active?: boolean;
   operationView?: "clients" | "payments" | "projects" | "records";
+  path: string;
 };
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "#dashboard", icon: LayoutDashboard, active: true },
+  { label: "Dashboard", href: "/#dashboard", icon: LayoutDashboard, path: "/" },
   {
     label: "Projetos",
-    href: "#operacao",
+    href: "/?view=projects#operacao",
     icon: FolderKanban,
-    operationView: "projects"
+    operationView: "projects",
+    path: "/"
   },
   {
     label: "Clientes",
-    href: "#operacao",
+    href: "/?view=clients#operacao",
     icon: Users,
-    operationView: "clients"
+    operationView: "clients",
+    path: "/"
   },
   {
     label: "Registros",
-    href: "#operacao",
+    href: "/?view=records#operacao",
     icon: Clock3,
-    operationView: "records"
+    operationView: "records",
+    path: "/"
   },
   {
     label: "Pagamentos",
-    href: "#operacao",
+    href: "/?view=payments#operacao",
     icon: CreditCard,
-    operationView: "payments"
-  }
+    operationView: "payments",
+    path: "/"
+  },
+  { label: "Fluxo", href: "/flow", icon: Workflow, path: "/flow" },
+  { label: "Instalação", href: "/installation", icon: Download, path: "/installation" },
+  { label: "Sobre", href: "/about", icon: Info, path: "/about" }
 ];
 
 function getPreference(key: string, fallback: string) {
@@ -133,9 +144,11 @@ function CompactTooltip({ children }: { children: ReactNode }) {
 }
 
 function NavLink({
+  active,
   item,
   onSelect
 }: {
+  active: boolean;
   item: NavItem;
   onSelect?: () => void;
 }) {
@@ -155,10 +168,10 @@ function NavLink({
 
   return (
     <Link
-      aria-current={item.active ? "page" : undefined}
+      aria-current={active ? "page" : undefined}
       className={[
         "sidebar-nav-link group relative flex h-11 items-center gap-3 rounded-md px-3 text-sm transition-colors duration-200",
-        item.active
+        active
           ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm shadow-black/10"
           : "text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
       ].join(" ")}
@@ -274,13 +287,16 @@ function ThemeToggle({ onToggle }: { onToggle: () => void }) {
 }
 
 export function AppShell({
+  activeOperationView = null,
   children,
   envStatus
 }: {
+  activeOperationView?: NavItem["operationView"] | null;
   children: ReactNode;
   envStatus: ServerEnvStatus;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
   const sidebarState = useStoredPreference(SIDEBAR_STORAGE_KEY, "expanded") as SidebarState;
   const collapsed = sidebarState === "collapsed";
 
@@ -292,6 +308,22 @@ export function AppShell({
     const currentTheme =
       document.documentElement.dataset.theme === "light" ? "light" : "dark";
     setPreference(THEME_STORAGE_KEY, currentTheme === "dark" ? "light" : "dark");
+  }
+
+  function isNavItemActive(item: NavItem) {
+    if (pathname !== item.path) {
+      return false;
+    }
+
+    if (item.path !== "/") {
+      return true;
+    }
+
+    if (item.operationView) {
+      return activeOperationView === item.operationView;
+    }
+
+    return !activeOperationView;
   }
 
   return (
@@ -342,9 +374,9 @@ export function AppShell({
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-visible px-3 py-5">
+          <nav className="min-h-0 flex-1 space-y-1 overflow-visible px-3 py-3">
             {navItems.map((item) => (
-              <NavLink item={item} key={item.label} />
+              <NavLink active={isNavItemActive(item)} item={item} key={item.label} />
             ))}
           </nav>
 
@@ -411,9 +443,14 @@ export function AppShell({
               </button>
             </div>
 
-            <nav className="space-y-1 px-4 py-5">
+            <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-5">
               {navItems.map((item) => (
-                <NavLink item={item} key={item.label} onSelect={() => setMobileOpen(false)} />
+                <NavLink
+                  active={isNavItemActive(item)}
+                  item={item}
+                  key={item.label}
+                  onSelect={() => setMobileOpen(false)}
+                />
               ))}
             </nav>
 

@@ -544,6 +544,53 @@ de storage e sincronizar também a meta `theme-color` e a safe-area móvel.
 
 ---
 
+## 2026-06-05
+
+### Descoberta
+
+O enum `billingMode` não representava a regra real desejada porque impedia cobrar horas WakaTime e
+horas dedicadas simultaneamente ou com tarifas diferentes.
+
+### Evidência
+
+O novo fluxo precisa aceitar WakaTime, dedicadas, ambas ou nenhuma fonte. Um único enum e uma única
+tarifa não conseguem expressar essas quatro combinações.
+
+### Impacto
+
+O modelo foi simplificado para duas tarifas opcionais e um booleano para cobrança dedicada.
+
+### Ação
+
+Aplicar a migration `20260605203000_dual_billing_rates`, movendo a tarifa de projetos antigos em
+modo `DEDICATED` para `dedicatedHourlyRate` antes de remover o enum.
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+As páginas públicas podem ser pré-renderizadas, mas o shell não deve depender de `useSearchParams`
+para definir a navegação ativa.
+
+### Evidência
+
+O primeiro build das páginas `/flow`, `/installation` e `/about` foi interrompido pelo bailout de
+client-side rendering provocado por `useSearchParams`.
+
+### Impacto
+
+Uma leitura de query desnecessária no shell transformava páginas estáticas em dependentes de
+Suspense.
+
+### Ação
+
+Resolver a aba operacional no Server Component da home e passar apenas a informação necessária
+para o shell.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

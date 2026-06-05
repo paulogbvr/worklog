@@ -206,6 +206,18 @@ Gráficos:
 
 - Recharts
 
+Implementação atual:
+
+```txt
+recharts 3.x
+```
+
+Uso:
+
+- gráficos responsivos de horas
+- gráficos de valor gerado e recebido
+- composição visual inspirada no chart do Shadcn UI
+
 ---
 
 # Bibliotecas Não Permitidas Sem Aprovação

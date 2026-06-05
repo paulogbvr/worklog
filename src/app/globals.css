@@ -38,6 +38,15 @@
   --modal-bg: #111111;
   --input-bg: rgba(255, 255, 255, 0.045);
   --border-focus: rgba(110, 231, 183, 0.55);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-wakatime: #60a5fa;
+  --chart-wakatime-fill: rgba(96, 165, 250, 0.12);
+  --chart-dedicated: #f59e0b;
+  --chart-dedicated-fill: rgba(245, 158, 11, 0.1);
+  --chart-generated: #a78bfa;
+  --chart-generated-fill: rgba(167, 139, 250, 0.1);
+  --chart-received: #34d399;
+  --chart-received-fill: rgba(52, 211, 153, 0.1);
   --sidebar-width: 288px;
   background: var(--app-bg);
   font-family:
@@ -83,6 +92,15 @@
   --modal-bg: #ffffff;
   --input-bg: rgba(15, 23, 42, 0.035);
   --border-focus: rgba(4, 120, 87, 0.45);
+  --chart-grid: rgba(15, 23, 42, 0.09);
+  --chart-wakatime: #2563eb;
+  --chart-wakatime-fill: rgba(37, 99, 235, 0.09);
+  --chart-dedicated: #d97706;
+  --chart-dedicated-fill: rgba(217, 119, 6, 0.08);
+  --chart-generated: #7c3aed;
+  --chart-generated-fill: rgba(124, 58, 237, 0.08);
+  --chart-received: #047857;
+  --chart-received-fill: rgba(4, 120, 87, 0.08);
 }
 
 @keyframes status-pulse {

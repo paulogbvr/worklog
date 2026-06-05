@@ -1,5 +1,7 @@
-import { ProjectBillingMode, SyncProvider } from "@prisma/client";
+import { SyncProvider } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+const TIME_ZONE = "America/Sao_Paulo";
 
 export type DashboardPeriod = "7d" | "30d" | "all";
 
@@ -7,6 +9,15 @@ export type DashboardMetric = {
   label: string;
   value: string;
   detail: string;
+};
+
+export type DashboardChartPoint = {
+  date: string;
+  label: string;
+  wakatimeHours: number;
+  dedicatedHours: number;
+  generatedValue: number;
+  receivedValue: number;
 };
 
 export type DashboardClient = {
@@ -33,26 +44,35 @@ export type DashboardPayment = {
 
 export type DashboardProject = {
   active: boolean;
-  billingMode: ProjectBillingMode;
-  billingSource: "manual" | "wakatime";
-  billableSeconds: number;
+  billDedicated: boolean;
+  chargeDedicated: boolean;
+  chargeWakaTime: boolean;
   clientId: string | null;
   clientName: string | null;
+  dedicatedHourlyRate: number | null;
   dedicatedLabel: string;
+  dedicatedValueLabel: string;
+  globalDedicatedLabel: string;
+  globalWakaTimeLabel: string;
   hourlyRate: number | null;
   id: string;
+  lastPaymentLabel: string;
   lastSyncLabel: string;
   name: string;
   notes: string | null;
   pendingValue: number;
   pendingValueLabel: string;
   receivedValue: number;
+  sinceLastPaymentDedicatedLabel: string;
+  sinceLastPaymentValueLabel: string;
+  sinceLastPaymentWakaTimeLabel: string;
   statusLabel: string;
   statusTone: "muted" | "warning";
   totalValue: number;
   totalValueLabel: string;
   wakatimeLabel: string;
   wakatimeProjectName: string | null;
+  wakatimeValueLabel: string;
 };
 
 export type DashboardWorkInterval = {
@@ -78,9 +98,12 @@ export type DashboardWorkOperation = {
 
 export type DashboardSummary = {
   activeProjects: number;
+  chartData: DashboardChartPoint[];
   clients: DashboardClient[];
   configuredProjects: number;
   databaseAvailable: boolean;
+  globalDedicatedLabel: string;
+  globalWakaTimeLabel: string;
   lastSyncLabel: string;
   latestSyncSuccessful: boolean;
   metrics: DashboardMetric[];
@@ -126,15 +149,70 @@ function formatDateTime(date: Date | null | undefined) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: "America/Sao_Paulo"
+    timeZone: TIME_ZONE
   }).format(date);
 }
 
-function formatDate(date: Date) {
+function formatDate(date: Date | null | undefined) {
+  if (!date) {
+    return "Nenhum pagamento";
+  }
+
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
-    timeZone: "America/Sao_Paulo"
+    timeZone: TIME_ZONE
   }).format(date);
+}
+
+function getLocalDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: TIME_ZONE,
+    year: "numeric"
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((parts, part) => {
+      if (part.type === "day" || part.type === "month" || part.type === "year") {
+        parts[part.type] = part.value;
+      }
+
+      return parts;
+    }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getDatabaseDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatChartDate(dateKey: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC"
+  })
+    .format(new Date(`${dateKey}T12:00:00.000Z`))
+    .replace(".", "");
+}
+
+function addDays(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T12:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function getPeriodStartKey(period: DashboardPeriod) {
+  if (period === "all") {
+    return null;
+  }
+
+  return addDays(getLocalDateKey(new Date()), period === "7d" ? -6 : -29);
+}
+
+function isInPeriod(dateKey: string, startKey: string | null) {
+  return !startKey || dateKey >= startKey;
 }
 
 function getEmptySummary(
@@ -143,9 +221,12 @@ function getEmptySummary(
 ): DashboardSummary {
   return {
     activeProjects: 0,
+    chartData: [],
     clients: [],
     configuredProjects: 0,
     databaseAvailable,
+    globalDedicatedLabel: "0h",
+    globalWakaTimeLabel: "0h",
     lastSyncLabel: "Não realizada",
     latestSyncSuccessful: false,
     metrics: [
@@ -187,41 +268,32 @@ async function readOptional<T>(
   }
 }
 
-function getPeriodRange(period: DashboardPeriod) {
-  if (period === "all") {
-    return null;
-  }
+type ChartAccumulator = {
+  dedicatedHours: number;
+  generatedValue: number;
+  receivedValue: number;
+  wakatimeHours: number;
+};
 
-  const todayParts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "America/Sao_Paulo",
-    year: "numeric"
-  })
-    .formatToParts(new Date())
-    .reduce<Record<string, number>>((parts, part) => {
-      if (part.type === "day" || part.type === "month" || part.type === "year") {
-        parts[part.type] = Number(part.value);
-      }
-
-      return parts;
-    }, {});
-  const days = period === "7d" ? 7 : 30;
-  const startDate = new Date(
-    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day - (days - 1))
-  );
-  const startInstant = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
-
-  return {
-    startDate,
-    startInstant
+function getChartPoint(
+  chartByDate: Map<string, ChartAccumulator>,
+  dateKey: string
+) {
+  const current = chartByDate.get(dateKey) ?? {
+    dedicatedHours: 0,
+    generatedValue: 0,
+    receivedValue: 0,
+    wakatimeHours: 0
   };
+
+  chartByDate.set(dateKey, current);
+  return current;
 }
 
 export async function getDashboardSummary(
   period: DashboardPeriod = "30d"
 ): Promise<DashboardSummary> {
-  const periodRange = getPeriodRange(period);
+  const startKey = getPeriodStartKey(period);
   let projects;
 
   try {
@@ -229,6 +301,7 @@ export async function getDashboardSummary(
       orderBy: [{ configurationStatus: "asc" }, { updatedAt: "desc" }],
       select: {
         active: true,
+        billDedicated: true,
         client: {
           select: {
             id: true,
@@ -236,38 +309,38 @@ export async function getDashboardSummary(
           }
         },
         clientId: true,
-        billingMode: true,
         configurationStatus: true,
+        dedicatedHourlyRate: true,
         hourlyRate: true,
         id: true,
         lastSyncAt: true,
         name: true,
+        notes: true,
         payments: {
-          select: {
-            amount: true
+          orderBy: {
+            paidAt: "asc"
           },
-          where: periodRange
-            ? {
-                paidAt: {
-                  gte: periodRange.startDate
-                }
-              }
-            : undefined
+          select: {
+            amount: true,
+            id: true,
+            note: true,
+            paidAt: true
+          }
         },
         wakatimeDays: {
-          select: {
-            totalSeconds: true
+          orderBy: {
+            date: "asc"
           },
-          where: periodRange
-            ? {
-                date: {
-                  gte: periodRange.startDate
-                }
-              }
-            : undefined
+          select: {
+            date: true,
+            totalSeconds: true
+          }
         },
         wakatimeProjectName: true,
         workLogEntries: {
+          orderBy: {
+            startedAt: "asc"
+          },
           select: {
             durationSeconds: true,
             endedAt: true,
@@ -275,14 +348,7 @@ export async function getDashboardSummary(
             note: true,
             operationId: true,
             startedAt: true
-          },
-          where: periodRange
-            ? {
-                startedAt: {
-                  gte: periodRange.startInstant
-                }
-              }
-            : undefined
+          }
         }
       },
       where: {
@@ -294,24 +360,6 @@ export async function getDashboardSummary(
     return getEmptySummary(false, period);
   }
 
-  const activeProjectIds = projects.map((project) => project.id);
-  const projectNotes = await readOptional(
-    "project notes",
-    () =>
-      prisma.project.findMany({
-        select: {
-          id: true,
-          notes: true
-        },
-        where: {
-          id: {
-            in: activeProjectIds
-          }
-        }
-      }),
-    []
-  );
-  const notesByProjectId = new Map(projectNotes.map((project) => [project.id, project.notes]));
   const clients = await readOptional(
     "clients",
     () =>
@@ -345,111 +393,176 @@ export async function getDashboardSummary(
       }),
     null
   );
-  const recentPayments = await readOptional(
-    "recent payments",
-    () =>
-      prisma.payment.findMany({
-        orderBy: {
-          paidAt: "desc"
-        },
-        select: {
-          amount: true,
-          id: true,
-          note: true,
-          paidAt: true,
-          project: {
-            select: {
-              id: true,
-              name: true
-            }
-          }
-        },
-        take: 10,
-        where: {
-          paidAt: periodRange
-            ? {
-                gte: periodRange.startDate
-              }
-            : undefined,
-          projectId: {
-            in: activeProjectIds
-          }
-        }
-      }),
-    []
-  );
+
+  const chartByDate = new Map<string, ChartAccumulator>();
+  const todayKey = getLocalDateKey(new Date());
+
+  if (startKey) {
+    for (let dateKey = startKey; dateKey <= todayKey; dateKey = addDays(dateKey, 1)) {
+      getChartPoint(chartByDate, dateKey);
+    }
+  }
 
   let totalWakaTimeSeconds = 0;
   let totalDedicatedSeconds = 0;
+  let globalWakaTimeSeconds = 0;
+  let globalDedicatedSeconds = 0;
   let totalGeneratedValue = 0;
   let totalReceivedValue = 0;
 
   const projectSummaries = projects.map<DashboardProject>((project) => {
-    const wakatimeSeconds = project.wakatimeDays.reduce(
-      (total, day) => total + day.totalSeconds,
-      0
-    );
-    const dedicatedSeconds = project.workLogEntries.reduce(
-      (total, entry) => total + entry.durationSeconds,
-      0
-    );
-    const billableSeconds =
-      project.billingMode === ProjectBillingMode.DEDICATED
-        ? dedicatedSeconds
-        : wakatimeSeconds;
     const hourlyRate = project.hourlyRate ? Number(project.hourlyRate) : null;
+    const dedicatedHourlyRate = project.dedicatedHourlyRate
+      ? Number(project.dedicatedHourlyRate)
+      : null;
+    const chargeWakaTime = Boolean(hourlyRate && hourlyRate > 0);
+    const chargeDedicated = Boolean(
+      project.billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0
+    );
     const isConfigured =
       project.configurationStatus === "CONFIGURED" &&
       Boolean(project.clientId) &&
-      Boolean(hourlyRate && hourlyRate > 0);
-    const totalValue = isConfigured && hourlyRate ? (billableSeconds / 3600) * hourlyRate : 0;
-    const receivedValue = project.payments.reduce(
+      (chargeWakaTime || chargeDedicated);
+    const periodWakaDays = project.wakatimeDays.filter((day) =>
+      isInPeriod(getDatabaseDateKey(day.date), startKey)
+    );
+    const periodWorkEntries = project.workLogEntries.filter((entry) =>
+      isInPeriod(getLocalDateKey(entry.startedAt), startKey)
+    );
+    const periodPayments = project.payments.filter((payment) =>
+      isInPeriod(getLocalDateKey(payment.paidAt), startKey)
+    );
+    const wakatimeSeconds = periodWakaDays.reduce(
+      (total, day) => total + day.totalSeconds,
+      0
+    );
+    const dedicatedSeconds = periodWorkEntries.reduce(
+      (total, entry) => total + entry.durationSeconds,
+      0
+    );
+    const allWakaTimeSeconds = project.wakatimeDays.reduce(
+      (total, day) => total + day.totalSeconds,
+      0
+    );
+    const allDedicatedSeconds = project.workLogEntries.reduce(
+      (total, entry) => total + entry.durationSeconds,
+      0
+    );
+    const wakatimeValue =
+      isConfigured && chargeWakaTime && hourlyRate
+        ? (wakatimeSeconds / 3600) * hourlyRate
+        : 0;
+    const dedicatedValue =
+      isConfigured && chargeDedicated && dedicatedHourlyRate
+        ? (dedicatedSeconds / 3600) * dedicatedHourlyRate
+        : 0;
+    const totalValue = wakatimeValue + dedicatedValue;
+    const receivedValue = periodPayments.reduce(
       (total, payment) => total + Number(payment.amount),
       0
     );
     const pendingValue = totalValue - receivedValue;
+    const lastPayment = project.payments.at(-1) ?? null;
+    const sinceLastPaymentWakaTimeSeconds = project.wakatimeDays
+      .filter(
+        (day) =>
+          !lastPayment ||
+          getDatabaseDateKey(day.date) >= getLocalDateKey(lastPayment.paidAt)
+      )
+      .reduce((total, day) => total + day.totalSeconds, 0);
+    const sinceLastPaymentDedicatedSeconds = project.workLogEntries
+      .filter((entry) => !lastPayment || entry.startedAt >= lastPayment.paidAt)
+      .reduce((total, entry) => total + entry.durationSeconds, 0);
+    const sinceLastPaymentValue =
+      (isConfigured && chargeWakaTime && hourlyRate
+        ? (sinceLastPaymentWakaTimeSeconds / 3600) * hourlyRate
+        : 0) +
+      (isConfigured && chargeDedicated && dedicatedHourlyRate
+        ? (sinceLastPaymentDedicatedSeconds / 3600) * dedicatedHourlyRate
+        : 0);
+
+    for (const day of periodWakaDays) {
+      const point = getChartPoint(chartByDate, getDatabaseDateKey(day.date));
+      point.wakatimeHours += day.totalSeconds / 3600;
+
+      if (isConfigured && chargeWakaTime && hourlyRate) {
+        point.generatedValue += (day.totalSeconds / 3600) * hourlyRate;
+      }
+    }
+
+    for (const entry of periodWorkEntries) {
+      const point = getChartPoint(chartByDate, getLocalDateKey(entry.startedAt));
+      point.dedicatedHours += entry.durationSeconds / 3600;
+
+      if (isConfigured && chargeDedicated && dedicatedHourlyRate) {
+        point.generatedValue += (entry.durationSeconds / 3600) * dedicatedHourlyRate;
+      }
+    }
+
+    for (const payment of periodPayments) {
+      getChartPoint(
+        chartByDate,
+        getLocalDateKey(payment.paidAt)
+      ).receivedValue += Number(payment.amount);
+    }
 
     totalWakaTimeSeconds += wakatimeSeconds;
     totalDedicatedSeconds += dedicatedSeconds;
+    globalWakaTimeSeconds += allWakaTimeSeconds;
+    globalDedicatedSeconds += allDedicatedSeconds;
     totalGeneratedValue += totalValue;
     totalReceivedValue += receivedValue;
 
     return {
       active: project.active,
-      billingMode: project.billingMode,
-      billingSource:
-        project.billingMode === ProjectBillingMode.DEDICATED ? "manual" : "wakatime",
-      billableSeconds,
+      billDedicated: project.billDedicated,
+      chargeDedicated,
+      chargeWakaTime,
       clientId: project.clientId,
       clientName: project.client?.name ?? null,
+      dedicatedHourlyRate,
       dedicatedLabel: formatDuration(dedicatedSeconds),
+      dedicatedValueLabel: formatCurrency(dedicatedValue),
+      globalDedicatedLabel: formatDuration(allDedicatedSeconds),
+      globalWakaTimeLabel: formatDuration(allWakaTimeSeconds),
       hourlyRate,
       id: project.id,
+      lastPaymentLabel: formatDate(lastPayment?.paidAt),
       lastSyncLabel: formatDateTime(project.lastSyncAt),
       name: project.name,
-      notes: notesByProjectId.get(project.id) ?? null,
+      notes: project.notes,
       pendingValue,
       pendingValueLabel: formatCurrency(pendingValue),
       receivedValue,
+      sinceLastPaymentDedicatedLabel: formatDuration(
+        sinceLastPaymentDedicatedSeconds
+      ),
+      sinceLastPaymentValueLabel: formatCurrency(sinceLastPaymentValue),
+      sinceLastPaymentWakaTimeLabel: formatDuration(
+        sinceLastPaymentWakaTimeSeconds
+      ),
       statusLabel: isConfigured ? "Configurado" : "Pendente",
       statusTone: isConfigured ? "muted" : "warning",
       totalValue,
       totalValueLabel: formatCurrency(totalValue),
       wakatimeLabel: formatDuration(wakatimeSeconds),
-      wakatimeProjectName: project.wakatimeProjectName
+      wakatimeProjectName: project.wakatimeProjectName,
+      wakatimeValueLabel: formatCurrency(wakatimeValue)
     };
   });
 
-  const pendingValue = totalGeneratedValue - totalReceivedValue;
-  const pendingProjects = projectSummaries.filter(
-    (project) => project.statusLabel === "Pendente"
-  ).length;
-  const configuredProjects = projectSummaries.length - pendingProjects;
+  if (chartByDate.size === 0) {
+    getChartPoint(chartByDate, todayKey);
+  }
+
   const workOperations = projects
     .flatMap((project) => {
-      const operations = new Map<string, typeof project.workLogEntries>();
+      const entriesInPeriod = project.workLogEntries.filter((entry) =>
+        isInPeriod(getLocalDateKey(entry.startedAt), startKey)
+      );
+      const operations = new Map<string, typeof entriesInPeriod>();
 
-      for (const entry of project.workLogEntries) {
+      for (const entry of entriesInPeriod) {
         const operation = operations.get(entry.operationId) ?? [];
         operation.push(entry);
         operations.set(entry.operationId, operation);
@@ -495,9 +608,36 @@ export async function getDashboardSummary(
 
     return counts;
   }, new Map<string, number>());
+  const payments = projects
+    .flatMap((project) =>
+      project.payments
+        .filter((payment) => isInPeriod(getLocalDateKey(payment.paidAt), startKey))
+        .map((payment) => ({
+          ...payment,
+          projectId: project.id,
+          projectName: project.name
+        }))
+    )
+    .sort((a, b) => b.paidAt.getTime() - a.paidAt.getTime())
+    .slice(0, 10);
+  const pendingValue = totalGeneratedValue - totalReceivedValue;
+  const pendingProjects = projectSummaries.filter(
+    (project) => project.statusLabel === "Pendente"
+  ).length;
+  const configuredProjects = projectSummaries.length - pendingProjects;
 
   return {
     activeProjects: projectSummaries.length,
+    chartData: [...chartByDate.entries()]
+      .sort(([first], [second]) => first.localeCompare(second))
+      .map(([date, point]) => ({
+        date,
+        dedicatedHours: Number(point.dedicatedHours.toFixed(2)),
+        generatedValue: Number(point.generatedValue.toFixed(2)),
+        label: formatChartDate(date),
+        receivedValue: Number(point.receivedValue.toFixed(2)),
+        wakatimeHours: Number(point.wakatimeHours.toFixed(2))
+      })),
     clients: clients.map((client) => ({
       address: client.address,
       birthDate: client.birthDate?.toISOString().slice(0, 10) ?? null,
@@ -511,13 +651,15 @@ export async function getDashboardSummary(
     })),
     configuredProjects,
     databaseAvailable: true,
+    globalDedicatedLabel: formatDuration(globalDedicatedSeconds),
+    globalWakaTimeLabel: formatDuration(globalWakaTimeSeconds),
     lastSyncLabel: formatDateTime(latestSync?.finishedAt ?? latestSync?.startedAt),
     latestSyncSuccessful: latestSync?.success ?? false,
     metrics: [
       {
         detail:
           totalWakaTimeSeconds > 0
-            ? "Tempo real importado do WakaTime"
+            ? "Tempo importado no período"
             : "Aguardando sincronização",
         label: "Horas WakaTime",
         value: formatDuration(totalWakaTimeSeconds)
@@ -525,35 +667,35 @@ export async function getDashboardSummary(
       {
         detail:
           totalDedicatedSeconds > 0
-            ? "Tempo manual registrado no período"
-            : "Nenhum registro manual no período",
+            ? "Tempo manual no período"
+            : "Nenhum registro no período",
         label: "Horas Dedicadas",
         value: formatDuration(totalDedicatedSeconds)
       },
       {
-        detail: `${configuredProjects} projetos configurados`,
+        detail: `${configuredProjects} projetos com cobrança`,
         label: "Valor Gerado",
         value: formatCurrency(totalGeneratedValue)
       },
       {
-        detail: totalReceivedValue > 0 ? "Pagamentos registrados" : "Sem pagamentos",
+        detail: totalReceivedValue > 0 ? "Pagamentos no período" : "Sem pagamentos",
         label: "Valor Recebido",
         value: formatCurrency(totalReceivedValue)
       },
       {
-        detail: pendingValue !== 0 ? "Saldo calculado por projeto" : "Sem saldo pendente",
+        detail: pendingValue !== 0 ? "Gerado menos recebido" : "Sem saldo pendente",
         label: "Valor Pendente",
         value: formatCurrency(pendingValue)
       }
     ],
-    payments: recentPayments.map((payment) => ({
+    payments: payments.map((payment) => ({
       amount: Number(payment.amount),
       amountLabel: formatCurrency(Number(payment.amount)),
       id: payment.id,
       note: payment.note,
       paidAtLabel: formatDate(payment.paidAt),
-      projectId: payment.project.id,
-      projectName: payment.project.name
+      projectId: payment.projectId,
+      projectName: payment.projectName
     })),
     pendingProjects,
     period,

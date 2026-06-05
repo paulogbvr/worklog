@@ -13,11 +13,6 @@ enum ProjectConfigurationStatus {
   CONFIGURED
 }
 
-enum ProjectBillingMode {
-  WAKATIME
-  DEDICATED
-}
-
 enum SyncProvider {
   WAKATIME
 }
@@ -43,9 +38,10 @@ model Project {
   name                String
   notes               String?
   hourlyRate          Decimal?                   @db.Decimal(10, 2)
+  dedicatedHourlyRate Decimal?                   @db.Decimal(10, 2)
+  billDedicated       Boolean                    @default(false)
   wakatimeProjectId   String?                    @unique
   wakatimeProjectName String?                    @unique
-  billingMode         ProjectBillingMode         @default(WAKATIME)
   active              Boolean                    @default(true)
   configurationStatus ProjectConfigurationStatus @default(PENDING)
   lastSyncAt          DateTime?

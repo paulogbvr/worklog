@@ -62,6 +62,9 @@ Aplicação inicializada:
 - sincronização WakaTime em lote, adequada ao Transaction Pooler
 - arquivamento automático de projetos removidos do WakaTime
 - dashboard com leituras sequenciais/resilientes e atualização após sincronização
+- cobrança independente para horas WakaTime e horas dedicadas
+- gráficos responsivos com Recharts
+- páginas públicas de fluxo, instalação e créditos
 
 Ainda pendente:
 
@@ -227,13 +230,16 @@ Entregáveis:
 - revalidação e atualização do painel após sincronização
 - leitura resiliente para não zerar todo o resumo quando uma consulta auxiliar falhar
 - filtros de 7 dias, 30 dias e todo o período
-- modo de faturamento respeitado por projeto
+- tarifas independentes respeitadas por projeto
+- métricas desde o último pagamento
+- totais históricos globais e por projeto
+- gráficos de horas e movimento financeiro
 
 Critério de aceite:
 
 - dashboard funciona com banco vazio
 - dashboard funciona após sincronização real
-- valores financeiros usam a fonte escolhida no projeto
+- valores financeiros combinam somente as fontes habilitadas no projeto
 - sidebar mantém estado após atualizar a página
 - tema mantém estado após atualizar a página
 
@@ -242,7 +248,7 @@ Resultado:
 - resumo real de horas e valores concluído
 - listagem operacional de projetos concluída
 - estados vazio e indisponível preservados
-- cálculo financeiro usa exclusivamente o modo configurado no projeto
+- cálculo financeiro soma WakaTime e horas dedicadas quando ambas estiverem configuradas
 - filtro de período recalcula horas, pagamentos e valores
 - sincronização atualiza métricas e lista de projetos imediatamente
 - erros auxiliares do banco não apagam projetos e horas já disponíveis
@@ -268,7 +274,8 @@ Entregáveis:
 - data de nascimento com idade derivada
 - telefone e endereço
 - configuração de cliente e valor/hora em projetos
-- configuração da fonte de faturamento
+- configuração das tarifas WakaTime e dedicada
+- toggle para cobrar horas dedicadas
 - CRUD de registros de trabalho
 - múltiplos intervalos por operação
 - suporte a registros atravessando meia-noite
@@ -290,7 +297,7 @@ Estado:
 - CRUD de registros de trabalho: concluído
 - agrupamento de múltiplos intervalos por operação: concluído
 - travessia de meia-noite e recálculo de duração: concluído
-- modo de faturamento WakaTime/Dedicadas: concluído
+- cobrança WakaTime e dedicada independente: concluído
 
 ---
 
@@ -380,6 +387,9 @@ Estado:
 
 - branding, favicon, manifest e preview social v5 concluídos
 - tema, sidebar, tooltips, estados, pre-hydration e responsividade validados
+- dashboard compacto, gráficos e métricas históricas concluídos
+- páginas `/flow`, `/installation` e `/about` concluídas
+- créditos de Paulo Oliveira com GitHub, Instagram e LinkedIn concluídos
 - proteção administrativa continua pendente
 
 Deploy inicial já disponível:

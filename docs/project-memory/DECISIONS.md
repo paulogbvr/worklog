@@ -526,7 +526,8 @@ Configuração Financeira Opcional por Projeto
 #### Decisão
 
 Cliente e valor por hora são opcionais. Um projeto será `CONFIGURED` somente quando possuir ambos
-e o valor por hora for positivo. Limpar qualquer um deles retorna o projeto para `PENDING`.
+e ao menos uma tarifa cobrável positiva. Limpar o cliente ou todas as tarifas cobráveis retorna o
+projeto para `PENDING`.
 
 Valor vazio ou zero representa ausência de cobrança e é persistido como `null`.
 
@@ -550,6 +551,10 @@ sem gerar valor financeiro.
 #### Título
 
 Fonte de Faturamento Explícita por Projeto
+
+#### Status
+
+Substituída pela `DECISION-025`.
 
 #### Decisão
 
@@ -606,3 +611,54 @@ WakaTime, horas dedicadas, pagamentos e valores financeiros na mesma consulta.
 - período padrão: 30 dias
 - filtro via query string `period`
 - contadores estruturais de projetos e clientes permanecem globais
+
+---
+
+### DECISION-025
+
+#### Título
+
+Cobrança Independente por Tipo de Hora
+
+#### Decisão
+
+Cada projeto possui duas configurações financeiras independentes:
+
+- `hourlyRate` para horas WakaTime
+- `dedicatedHourlyRate` para horas dedicadas
+- `billDedicated` para habilitar ou desabilitar a cobrança dedicada
+
+O valor total é a soma das fontes com tarifa positiva e habilitada. Esta decisão substitui a
+`DECISION-022`, que limitava o projeto a uma única fonte por `billingMode`.
+
+#### Motivo
+
+Horas de código e horas de pesquisa, reunião ou planejamento podem ter preços diferentes e podem
+ser cobradas juntas.
+
+#### Impacto
+
+- WakaTime pode ser cobrado sozinho
+- horas dedicadas podem ser cobradas sozinhas
+- ambas podem ser cobradas simultaneamente
+- nenhuma fonte é cobrada quando as tarifas estiverem vazias ou zeradas
+- a migration preserva a intenção dos projetos configurados no modelo anterior
+
+---
+
+### DECISION-026
+
+#### Título
+
+Resumo Financeiro Desde o Último Pagamento
+
+#### Decisão
+
+O dashboard calcula, por projeto, horas WakaTime, horas dedicadas e valor gerado a partir do
+pagamento mais recente. Quando não houver pagamento, todo o histórico é considerado.
+
+#### Impacto
+
+- o último pagamento é derivado de `Payment.paidAt`
+- a métrica não exige novo campo persistido
+- totais históricos permanecem disponíveis separadamente do filtro do dashboard

@@ -51,19 +51,21 @@ Horas registradas no WorkLog por meio de `WorkLogEntry`.
 
 Uso:
 
-- calcular faturamento quando o projeto selecionar `DEDICATED`
+- calcular faturamento quando `billDedicated` estiver ativo e houver tarifa dedicada
 - registrar reunioes, suporte, planejamento, documentacao e revisao
 - complementar o que o WakaTime nao captura
 
 Formula financeira oficial:
 
 ```txt
-Horas da fonte selecionada x Valor Hora = Valor Total
+(Horas WakaTime x hourlyRate)
++
+(Horas Dedicadas x dedicatedHourlyRate, quando billDedicated = true)
+= Valor Total
 Valor Total - Pagamentos Recebidos = Valor Pendente
 ```
 
-Cada projeto seleciona `WAKATIME` ou `DEDICATED`. O padrão é `WAKATIME` e não existe fallback
-automático.
+Cada fonte é configurada de forma independente. Tarifa vazia ou zero não gera cobrança.
 
 ---
 
@@ -102,8 +104,9 @@ Campos:
 - clientId opcional
 - name
 - notes opcional
-- hourlyRate opcional
-- billingMode com padrão `WAKATIME`
+- hourlyRate opcional para WakaTime
+- dedicatedHourlyRate opcional
+- billDedicated com padrão `false`
 - wakatimeProjectId opcional
 - wakatimeProjectName opcional
 - active
@@ -119,8 +122,10 @@ Regras:
 - projeto incompleto deve ficar como `PENDING`
 - projeto pessoal pode permanecer como `PENDING` sem cliente e sem cobrança
 - projeto configurado deve ficar como `CONFIGURED`
-- limpar cliente ou valor por hora deve retornar o projeto para `PENDING`
-- faturamento deve usar somente a fonte definida em `billingMode`
+- limpar cliente ou todas as tarifas cobráveis deve retornar o projeto para `PENDING`
+- WakaTime gera cobrança quando `hourlyRate` for positivo
+- horas dedicadas geram cobrança somente quando `billDedicated` estiver ativo e
+  `dedicatedHourlyRate` for positivo
 - projeto WakaTime ausente da lista atual deve ficar com `active = false`
 - inativar não remove horas, pagamentos ou configuração
 
@@ -243,12 +248,22 @@ soma de WakaTimeProjectDay.totalSeconds
 ## Valor Total
 
 ```txt
-Project.billingMode = WAKATIME:
-  Horas WakaTime x Project.hourlyRate
+Valor WakaTime = Horas WakaTime x Project.hourlyRate
+Valor Dedicado = billDedicated
+  ? Horas Dedicadas x Project.dedicatedHourlyRate
+  : 0
 
-Project.billingMode = DEDICATED:
-  Horas Dedicadas x Project.hourlyRate
+Valor Total = Valor WakaTime + Valor Dedicado
 ```
+
+## Desde o Ultimo Pagamento
+
+```txt
+ultimo pagamento = maior Payment.paidAt do projeto
+horas desde o pagamento = registros a partir dessa data
+```
+
+Sem pagamento, considerar todo o histórico.
 
 ## Valor Recebido
 

@@ -17,8 +17,8 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Estrutura Inicial     | ✅ Concluído    |
 | Banco (Prisma)        | ✅ Concluído    |
 | Integração WakaTime   | ✅ Sync manual  |
-| Dashboard             | ✅ Dados reais, financeiro e filtros |
-| Projetos              | ✅ Configuração validada |
+| Dashboard             | ✅ Métricas, gráficos e filtros |
+| Projetos              | ✅ Cobrança independente por tipo de hora |
 | Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ✅ CRUD concluído |
 | Pagamentos            | ✅ Controle básico |
@@ -34,7 +34,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-████████████████░░░░ 80%
+█████████████████░░░ 86%
 ```
 
 ---
@@ -82,7 +82,10 @@ https://worklog-projects.vercel.app/
 │   ├── schema.prisma
 │   └── migrations/
 │       ├── 20260604231000_init/
-│       └── 20260605011210_project_notes/
+│       ├── 20260605011210_project_notes/
+│       ├── 20260605162000_billing_modes_and_work_operations/
+│       ├── 20260605170000_client_profile_fields/
+│       └── 20260605203000_dual_billing_rates/
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -90,6 +93,9 @@ https://worklog-projects.vercel.app/
 │   │   │   ├── payments/
 │   │   │   ├── projects/
 │   │   │   └── wakatime/
+│   │   ├── about/
+│   │   ├── flow/
+│   │   ├── installation/
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   ├── manifest.ts
@@ -97,6 +103,7 @@ https://worklog-projects.vercel.app/
 │   ├── components/
 │   │   ├── app-shell.tsx
 │   │   ├── brand-logo.tsx
+│   │   ├── dashboard-charts.tsx
 │   │   ├── operations-panel.tsx
 │   │   ├── status-pulse.tsx
 │   │   ├── toast-provider.tsx
@@ -105,6 +112,8 @@ https://worklog-projects.vercel.app/
 │   ├── lib/
 │   │   ├── env.ts
 │   │   └── prisma.ts
+│   ├── content/
+│   │   └── site.ts
 │   └── server/
 │       ├── dashboard/
 │       │   └── summary.ts
@@ -112,6 +121,7 @@ https://worklog-projects.vercel.app/
 │           ├── client.ts
 │           └── sync.ts
 └── public/
+    ├── creator-paulogbvr.jpg
     ├── favicon.ico
     ├── icon-worklog.png
     ├── og-worklog-v5.png
@@ -255,8 +265,9 @@ Cada projeto possui:
 
 - nome
 - cliente opcional
-- valor por hora opcional
-- modo de faturamento: WakaTime ou horas dedicadas
+- valor/hora WakaTime opcional
+- valor/hora dedicada opcional
+- opção para cobrar horas dedicadas
 - nome do projeto no WakaTime
 - horas acumuladas pelo WakaTime
 - horas dedicadas manualmente
@@ -465,6 +476,7 @@ Estado atual:
 - migration `20260604231000_init` aplicada com sucesso no Supabase
 - migration `20260605011210_project_notes` registrada e aplicada no Supabase
 - migration `20260605170000_client_profile_fields` aplicada no Supabase
+- migration `20260605203000_dual_billing_rates` aplicada no Supabase
 - Prisma Client regenerado automaticamente antes de cada build
 - sincronização real validada usando Prisma e Supabase
 - projetos removidos do WakaTime são arquivados sem perda de histórico
@@ -526,16 +538,18 @@ Permitindo identificar tempo gasto em atividades fora da programação.
 
 ## Valor Financeiro
 
-Cada projeto escolhe explicitamente a fonte do faturamento:
-
-- Horas WakaTime
-- Horas Dedicadas
+Cada tipo de hora possui cobrança independente:
 
 ```txt
-Horas da fonte selecionada × Valor Hora = Valor Total
+(Horas WakaTime × Valor/hora WakaTime)
++
+(Horas Dedicadas × Valor/hora dedicada, quando habilitado)
+=
+Valor Total
 ```
 
-Não existe fallback automático entre as duas fontes.
+Um projeto pode cobrar WakaTime, horas dedicadas, ambas ou nenhuma. Campo vazio ou zero não gera
+cobrança para aquela fonte.
 
 ---
 
@@ -588,6 +602,7 @@ Assets de identidade:
 - `prisma.config.ts` configurado para carregar `.env.local`
 - migration `20260604231000_init` aplicada no Supabase
 - migration `20260605162000_billing_modes_and_work_operations` aplicada no Supabase
+- migration `20260605203000_dual_billing_rates` aplicada no Supabase
 - cliente WakaTime server-side criado
 - rota `POST /api/wakatime/sync` criada
 - botão manual `Atualizar agora` conectado ao backend
@@ -609,9 +624,12 @@ Assets de identidade:
 - cadastro e remoção de pagamentos
 - CRUD de registros de trabalho com edição, exclusão e travessia de meia-noite
 - operações de trabalho com múltiplos intervalos e observação única
-- modo de faturamento explícito por projeto
+- tarifas independentes para WakaTime e horas dedicadas
+- toggle para incluir ou não horas dedicadas na cobrança
 - filtros de dashboard para 7 dias, 30 dias e todo o período
-- cálculo financeiro usando exclusivamente a fonte escolhida no projeto
+- gráficos responsivos de horas e movimento financeiro com Recharts
+- métricas desde o último pagamento e totais históricos por projeto
+- páginas públicas `Fluxo`, `Instalação` e `Sobre`
 - card de variáveis alinhado na sidebar expandida do desktop
 - header móvel, safe-area e `theme-color` sincronizados com o tema antes da hidratação
 
@@ -627,6 +645,7 @@ Assets de identidade:
 - Prisma ORM
 - Supabase
 - Vercel
+- Recharts
 
 ---
 

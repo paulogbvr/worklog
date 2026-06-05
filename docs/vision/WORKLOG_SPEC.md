@@ -26,8 +26,9 @@ Campos:
 
 - nome
 - cliente
-- valor_hora
-- modo_faturamento
+- valor_hora_wakatime
+- valor_hora_dedicada
+- cobrar_horas_dedicadas
 - wakatime_project_name
 - ativo
 
@@ -55,12 +56,12 @@ Um projeto pode estar:
 Projeto configurado:
 
 - possui cliente
-- possui valor por hora
+- possui ao menos uma tarifa cobrável positiva
 
 Projeto pendente:
 
 - foi criado automaticamente pelo WakaTime
-- não possui cliente e/ou valor por hora
+- não possui cliente e/ou tarifa cobrável
 - pode ser um projeto pessoal mantido intencionalmente sem cobrança
 
 Projetos pendentes devem ser destacados no dashboard e não devem gerar valor financeiro.
@@ -254,7 +255,7 @@ Campos iniciais:
 Campos pendentes:
 
 - cliente
-- valor por hora
+- ao menos uma tarifa cobrável
 
 O sistema deve registrar a data da última sincronização.
 
@@ -267,7 +268,7 @@ Pendente de Configuração
 até que o usuário defina:
 
 - cliente
-- valor por hora
+- valor/hora WakaTime e/ou valor/hora dedicada habilitada
 
 ---
 
@@ -323,22 +324,15 @@ Tempo não registrado pelo WakaTime
 
 ## Valor Total
 
-Horas da fonte escolhida no projeto
-
-×
-
-Valor Hora
-
+```txt
+(Horas WakaTime × Valor/hora WakaTime)
++
+(Horas Dedicadas × Valor/hora dedicada, quando habilitado)
 =
-
 Valor Total
+```
 
-Fontes permitidas:
-
-- WakaTime
-- Horas Dedicadas
-
-Não usar fallback automático entre fontes.
+Cada fonte pode ser cobrada de forma independente. Não usar fallback automático entre tarifas.
 
 ---
 
@@ -383,6 +377,8 @@ Campos:
 - clientId
 - name
 - hourlyRate
+- dedicatedHourlyRate
+- billDedicated
 - wakatimeProjectName
 - active
 - configurationStatus

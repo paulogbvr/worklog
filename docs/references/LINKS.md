@@ -37,6 +37,19 @@ Documentação oficial:
 https://wakatime.com/developers
 ```
 
+Site, chave, plugins e suporte:
+
+```txt
+https://wakatime.com/
+https://wakatime.com/api-key
+https://wakatime.com/plugins
+https://wakatime.com/faq
+https://wakatime.com/vs-code-plugin
+https://wakatime.com/cursor
+https://wakatime.com/plugins/windsurf/installing
+https://wakatime.com/plugins/zed/installing
+```
+
 API base:
 
 ```txt
@@ -57,6 +70,13 @@ Site:
 
 ```txt
 https://supabase.com/
+```
+
+Conexões PostgreSQL e Prisma:
+
+```txt
+https://supabase.com/docs/guides/database/connecting-to-postgres
+https://supabase.com/docs/guides/database/prisma
 ```
 
 Uso no projeto:
@@ -94,6 +114,12 @@ Documentação:
 
 ```txt
 https://nextjs.org/docs
+```
+
+Deploy:
+
+```txt
+https://nextjs.org/docs/app/getting-started/deploying
 ```
 
 Uso no projeto:
@@ -177,6 +203,8 @@ Usar como inspiração para:
 
 ```txt
 https://ui.shadcn.com/
+https://ui.shadcn.com/docs/components/chart
+https://ui.shadcn.com/charts
 ```
 
 Uso:
@@ -214,6 +242,18 @@ https://recharts.org/
 Uso:
 
 - gráficos do dashboard
+
+## Tremor
+
+```txt
+https://tremor.so/
+https://www.tremor.so/docs/visualizations/area-chart
+```
+
+Uso:
+
+- referência visual para gráficos compactos
+- não instalado no projeto atual
 
 ---
 

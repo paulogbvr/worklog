@@ -25,12 +25,13 @@ import type {
   DashboardWorkOperation
 } from "@/server/dashboard/summary";
 
-type View = "clients" | "payments" | "projects" | "records";
+export type OperationView = "clients" | "payments" | "projects" | "records";
 
 type ProjectDraft = {
   active: boolean;
-  billingMode: "DEDICATED" | "WAKATIME";
+  billDedicated: boolean;
   clientId: string;
+  dedicatedHourlyRate: string;
   hourlyRate: string;
   id: string;
   name: string;
@@ -59,6 +60,11 @@ type WorkOperationDraft = {
   intervals: WorkIntervalDraft[];
   note: string;
   projectId: string;
+};
+
+type OperationConfirmation = {
+  action: "delete" | "edit";
+  operation: DashboardWorkOperation;
 };
 
 const emptyClient: ClientDraft = {
@@ -184,16 +190,18 @@ const textareaClass =
 
 export function OperationsPanel({
   clients,
+  initialView = "projects",
   payments,
   projects,
   workOperations
 }: {
   clients: DashboardClient[];
+  initialView?: OperationView;
   payments: DashboardPayment[];
   projects: DashboardProject[];
   workOperations: DashboardWorkOperation[];
 }) {
-  const [view, setView] = useState<View>("projects");
+  const [view, setView] = useState<OperationView>(initialView);
   const [projectDraft, setProjectDraft] = useState<ProjectDraft | null>(null);
   const [clientDraft, setClientDraft] = useState<ClientDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -204,12 +212,14 @@ export function OperationsPanel({
   const [workOperationDraft, setWorkOperationDraft] = useState<WorkOperationDraft>(
     createWorkOperationDraft
   );
+  const [operationConfirmation, setOperationConfirmation] =
+    useState<OperationConfirmation | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     function handleViewChange(event: Event) {
-      const requestedView = (event as CustomEvent<View>).detail;
+      const requestedView = (event as CustomEvent<OperationView>).detail;
 
       if (
         requestedView === "clients" ||
@@ -260,8 +270,9 @@ export function OperationsPanel({
   function openProject(project: DashboardProject) {
     setProjectDraft({
       active: project.active,
-      billingMode: project.billingMode,
+      billDedicated: project.billDedicated,
       clientId: project.clientId ?? "",
+      dedicatedHourlyRate: project.dedicatedHourlyRate?.toString() ?? "",
       hourlyRate: project.hourlyRate?.toString() ?? "",
       id: project.id,
       name: project.name,
@@ -572,14 +583,6 @@ export function OperationsPanel({
   }
 
   async function deleteWorkOperation(operation: DashboardWorkOperation) {
-    if (
-      !window.confirm(
-        `Remover a operação de ${operation.durationLabel} em ${operation.projectName}?`
-      )
-    ) {
-      return;
-    }
-
     try {
       await readResponse(
         await fetch(`/api/work-entries/${operation.id}`, {
@@ -604,6 +607,22 @@ export function OperationsPanel({
     }
   }
 
+  async function confirmWorkOperationAction() {
+    if (!operationConfirmation) {
+      return;
+    }
+
+    const { action, operation } = operationConfirmation;
+    setOperationConfirmation(null);
+
+    if (action === "edit") {
+      editWorkOperation(operation);
+      return;
+    }
+
+    await deleteWorkOperation(operation);
+  }
+
   return (
     <>
       <section
@@ -618,8 +637,8 @@ export function OperationsPanel({
             </p>
           </div>
           <div className="grid w-full grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1 sm:flex sm:w-fit">
-            {(["projects", "records", "clients", "payments"] as View[]).map((item) => {
-              const labels: Record<View, string> = {
+            {(["projects", "records", "clients", "payments"] as OperationView[]).map((item) => {
+              const labels: Record<OperationView, string> = {
                 clients: "Clientes",
                 payments: "Pagamentos",
                 projects: "Projetos",
@@ -655,7 +674,7 @@ export function OperationsPanel({
           <div className="divide-y divide-[color:var(--border)] px-5">
             {projects.map((project) => (
               <div
-                className="grid gap-4 py-5 md:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(110px,.5fr))_auto] md:items-center"
+                className="grid gap-4 py-5 xl:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(100px,.5fr))_auto] xl:items-center"
                 key={project.id}
               >
                 <div className="min-w-0">
@@ -674,33 +693,50 @@ export function OperationsPanel({
                       {project.statusLabel}
                     </span>
                   </div>
-                  <p className="mt-1 truncate text-xs text-[color:var(--text-soft)]">
-                    {project.clientName ?? "Sem cliente"} ·{" "}
-                    {project.hourlyRate
+                  <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
+                    {project.clientName ?? "Sem cliente"} · WakaTime:{" "}
+                    {project.chargeWakaTime && project.hourlyRate
                       ? `${new Intl.NumberFormat("pt-BR", {
                           currency: "BRL",
                           style: "currency"
                         }).format(project.hourlyRate)}/h`
-                      : "Sem cobrança"}{" "}
-                    · Base:{" "}
-                    {project.billingMode === "DEDICATED" ? "Horas dedicadas" : "WakaTime"}
+                      : "sem cobrança"}{" "}
+                    · Dedicadas:{" "}
+                    {project.chargeDedicated && project.dedicatedHourlyRate
+                      ? `${new Intl.NumberFormat("pt-BR", {
+                          currency: "BRL",
+                          style: "currency"
+                        }).format(project.dedicatedHourlyRate)}/h`
+                      : "sem cobrança"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Horas base</p>
-                  <p className="mt-1 text-sm">
-                    {project.billingSource === "manual"
-                      ? project.dedicatedLabel
-                      : project.wakatimeLabel}
+                  <p className="text-xs text-[color:var(--text-faint)]">WakaTime</p>
+                  <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                    Total {project.globalWakaTimeLabel}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Gerado</p>
+                  <p className="text-xs text-[color:var(--text-faint)]">Dedicadas</p>
+                  <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                    Total {project.globalDedicatedLabel}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[color:var(--text-faint)]">Financeiro</p>
                   <p className="mt-1 text-sm">{project.totalValueLabel}</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                    Pendente {project.pendingValueLabel}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Pendente</p>
-                  <p className="mt-1 text-sm">{project.pendingValueLabel}</p>
+                  <p className="text-xs text-[color:var(--text-faint)]">Desde o pagamento</p>
+                  <p className="mt-1 text-sm">{project.sinceLastPaymentValueLabel}</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                    {project.lastPaymentLabel}
+                  </p>
                 </div>
                 <button
                   className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
@@ -906,7 +942,7 @@ export function OperationsPanel({
               {workOperations.length > 0 ? (
                 workOperations.map((operation) => (
                   <div
-                    className="grid gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+                    className="grid gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                     key={operation.id}
                   >
                     <div className="min-w-0">
@@ -933,22 +969,30 @@ export function OperationsPanel({
                         </p>
                       ) : null}
                     </div>
-                    <button
-                      aria-label={`Editar operação de ${operation.projectName}`}
-                      className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
-                      onClick={() => editWorkOperation(operation)}
-                      type="button"
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
-                      aria-label={`Remover operação de ${operation.projectName}`}
-                      className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-red-500/10 hover:text-red-400"
-                      onClick={() => deleteWorkOperation(operation)}
-                      type="button"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex items-center justify-start gap-2">
+                      <button
+                        aria-label={`Editar operação de ${operation.projectName}`}
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        onClick={() =>
+                          setOperationConfirmation({ action: "edit", operation })
+                        }
+                        type="button"
+                      >
+                        <Pencil className="size-4" />
+                        Editar
+                      </button>
+                      <button
+                        aria-label={`Remover operação de ${operation.projectName}`}
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        onClick={() =>
+                          setOperationConfirmation({ action: "delete", operation })
+                        }
+                        type="button"
+                      >
+                        <Trash2 className="size-4" />
+                        Excluir
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -1166,7 +1210,7 @@ export function OperationsPanel({
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
-                  Valor por hora
+                  Valor/hora WakaTime
                 </span>
                 <input
                   className={fieldClass}
@@ -1181,45 +1225,72 @@ export function OperationsPanel({
                   value={projectDraft.hourlyRate}
                 />
                 <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
-                  Deixe vazio ou use 0 para um projeto sem cobrança.
+                  Vazio ou 0 mantém as horas visíveis sem gerar cobrança.
                 </span>
               </label>
             </div>
-            <fieldset>
-              <legend className="mb-2 text-xs text-[color:var(--text-muted)]">
-                Horas usadas no cálculo financeiro
-              </legend>
-              <div className="grid grid-cols-2 gap-1 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
-                {(
-                  [
-                    ["WAKATIME", "Horas WakaTime"],
-                    ["DEDICATED", "Horas dedicadas"]
-                  ] as const
-                ).map(([mode, label]) => (
-                  <button
-                    aria-pressed={projectDraft.billingMode === mode}
+            <div className="rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+              <button
+                aria-checked={projectDraft.billDedicated}
+                className="flex w-full items-center justify-between gap-4 text-left"
+                onClick={() =>
+                  setProjectDraft((current) =>
+                    current
+                      ? { ...current, billDedicated: !current.billDedicated }
+                      : current
+                  )
+                }
+                role="switch"
+                type="button"
+              >
+                <span>
+                  <span className="block text-sm font-medium text-[color:var(--app-text-strong)]">
+                    Cobrar horas dedicadas
+                  </span>
+                  <span className="mt-1 block text-xs text-[color:var(--text-soft)]">
+                    Reuniões, pesquisa e outras operações manuais entram no valor.
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  className={[
+                    "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
+                    projectDraft.billDedicated
+                      ? "border-emerald-500/40 bg-emerald-500/25"
+                      : "border-[color:var(--border-strong)] bg-[var(--input-bg)]"
+                  ].join(" ")}
+                >
+                  <span
                     className={[
-                      "min-h-10 rounded px-3 text-sm transition-colors",
-                      projectDraft.billingMode === mode
-                        ? "bg-[var(--active-bg)] font-medium text-[color:var(--app-text-strong)] shadow-sm"
-                        : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+                      "absolute top-1/2 size-4 -translate-y-1/2 rounded-full bg-[var(--app-text-strong)] transition-[left]",
+                      projectDraft.billDedicated ? "left-6" : "left-1"
                     ].join(" ")}
-                    key={mode}
-                    onClick={() =>
-                      setProjectDraft((current) =>
-                        current ? { ...current, billingMode: mode } : current
-                      )
-                    }
-                    type="button"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-[color:var(--text-faint)]">
-                O projeto usa somente a fonte selecionada, sem fallback automático.
-              </p>
-            </fieldset>
+                  />
+                </span>
+              </button>
+              <label className="mt-4 block">
+                <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                  Valor/hora dedicada
+                </span>
+                <input
+                  className={fieldClass}
+                  inputMode="decimal"
+                  onChange={(event) =>
+                    setProjectDraft((current) =>
+                      current
+                        ? { ...current, dedicatedHourlyRate: event.target.value }
+                        : current
+                    )
+                  }
+                  placeholder="Ex.: 75,00"
+                  type="text"
+                  value={projectDraft.dedicatedHourlyRate}
+                />
+                <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
+                  A tarifa fica salva, mas só é cobrada quando o controle acima está ativo.
+                </span>
+              </label>
+            </div>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                 Observações
@@ -1265,6 +1336,52 @@ export function OperationsPanel({
               </button>
             </div>
           </form>
+        </Modal>
+      ) : null}
+
+      {operationConfirmation ? (
+        <Modal
+          onClose={() => setOperationConfirmation(null)}
+          title={
+            operationConfirmation.action === "edit"
+              ? "Confirmar edição"
+              : "Confirmar exclusão"
+          }
+        >
+          <div className="p-5">
+            <p className="text-sm leading-6 text-[color:var(--text-muted)]">
+              {operationConfirmation.action === "edit"
+                ? "Deseja realmente editar esta operação?"
+                : "Deseja realmente excluir esta operação?"}
+            </p>
+            <p className="mt-2 text-xs text-[color:var(--text-soft)]">
+              {operationConfirmation.operation.projectName} ·{" "}
+              {operationConfirmation.operation.durationLabel}
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                onClick={() => setOperationConfirmation(null)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className={[
+                  "h-10 rounded-md px-4 text-sm font-medium transition-colors",
+                  operationConfirmation.action === "delete"
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-[var(--primary-bg)] text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+                ].join(" ")}
+                onClick={confirmWorkOperationAction}
+                type="button"
+              >
+                {operationConfirmation.action === "edit"
+                  ? "Editar operação"
+                  : "Excluir operação"}
+              </button>
+            </div>
+          </div>
         </Modal>
       ) : null}
 

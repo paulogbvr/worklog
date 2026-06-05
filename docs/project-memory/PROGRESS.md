@@ -1031,3 +1031,98 @@ Implementar:
 
 1. portal compartilhável somente leitura
 2. proteção administrativa antes de ampliar o uso público
+
+---
+
+## 2026-06-05
+
+### Dashboard, Cobrança Avançada e Páginas Públicas
+
+Concluído:
+
+- cobrança independente de horas WakaTime e horas dedicadas
+- tarifa própria para cada tipo de hora
+- toggle `Cobrar horas dedicadas`
+- migration `20260605203000_dual_billing_rates` aplicada no Supabase
+- backfill preservando configurações do modelo anterior
+- métricas desde o último pagamento
+- totais históricos globais e por projeto
+- dashboard compacto com filtros `7D`, `30D` e `ALL`
+- gráficos responsivos de horas e movimento financeiro com Recharts
+- bloco `Fluxo principal` removido da home
+- página `/flow` criada
+- página pública `/installation` criada com Supabase, Prisma, WakaTime e Vercel
+- página `/about` criada com história, foto e créditos
+- perfil registrado como Paulo Oliveira
+- Instagram `@theuniquereal`
+- GitHub `paulogbvr`
+- LinkedIn público registrado
+- botões Editar e Excluir lado a lado no mobile
+- confirmação própria antes de editar ou excluir operações
+- card de última sincronização compactado
+- marca WorkLog com texto real e line-height corrigido
+
+Validação funcional reversível:
+
+```txt
+core ativado temporariamente com tarifa dedicada de R$ 12,50
+API respondeu HTTP 200
+billDedicated e dedicatedHourlyRate persistidos
+projeto permaneceu CONFIGURED
+WakaTime apenas: CONFIGURED
+dedicadas apenas: CONFIGURED
+ambas as fontes: CONFIGURED
+nenhuma cobrança: PENDING
+dados originais restaurados ao final
+```
+
+Validação técnica:
+
+```bash
+npm run prisma:deploy
+npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev
+```
+
+Resultado:
+
+```txt
+sucesso
+0 vulnerabilidades
+rotas /, /flow, /installation e /about respondendo HTTP 200
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+94%
+```
+
+Implementação:
+
+```txt
+83%
+```
+
+Projeto Geral:
+
+```txt
+█████████████████░░░ 86%
+```
+
+### Próximo Passo
+
+Implementar:
+
+1. portal compartilhável somente leitura
+2. proteção administrativa antes de ampliar o uso público

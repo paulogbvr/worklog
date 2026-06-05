@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import {
-  Prisma,
-  ProjectBillingMode,
-  ProjectConfigurationStatus
-} from "@prisma/client";
+import { Prisma, ProjectConfigurationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logPrismaError } from "@/lib/prisma-error";
 
@@ -39,11 +35,9 @@ export async function PATCH(
     const name = optionalText(body.name);
     const clientId = optionalText(body.clientId);
     const hourlyRate = parseHourlyRate(body.hourlyRate);
+    const dedicatedHourlyRate = parseHourlyRate(body.dedicatedHourlyRate);
+    const billDedicated = body.billDedicated === true;
     const active = body.active !== false;
-    const billingMode =
-      body.billingMode === ProjectBillingMode.DEDICATED
-        ? ProjectBillingMode.DEDICATED
-        : ProjectBillingMode.WAKATIME;
 
     if (!name) {
       return NextResponse.json(
@@ -59,6 +53,19 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: "Informe um valor por hora válido ou deixe o campo vazio.",
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      dedicatedHourlyRate !== null &&
+      (!Number.isFinite(dedicatedHourlyRate) || dedicatedHourlyRate < 0)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Informe um valor válido para horas dedicadas ou deixe o campo vazio.",
           ok: false
         },
         { status: 400 }
@@ -105,17 +112,21 @@ export async function PATCH(
       }
     }
 
+    const hasBillableRate =
+      Boolean(hourlyRate && hourlyRate > 0) ||
+      Boolean(billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0);
     const configurationStatus =
-      clientId && hourlyRate
+      clientId && hasBillableRate
         ? ProjectConfigurationStatus.CONFIGURED
         : ProjectConfigurationStatus.PENDING;
 
     await prisma.project.update({
       data: {
         active,
-        billingMode,
+        billDedicated,
         clientId,
         configurationStatus,
+        dedicatedHourlyRate,
         hourlyRate,
         name,
         notes: optionalText(body.notes)
@@ -127,7 +138,7 @@ export async function PATCH(
     revalidatePath("/", "page");
 
     return NextResponse.json({
-      billingMode,
+      billDedicated,
       configurationStatus,
       ok: true
     });
