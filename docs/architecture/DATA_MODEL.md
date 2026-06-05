@@ -83,9 +83,18 @@ Campos:
 - name
 - email
 - phone
+- taxId opcional e unico
+- birthDate opcional
+- address opcional
 - notes
 - createdAt
 - updatedAt
+
+Regras:
+
+- `taxId` armazena apenas digitos
+- CPF e CNPJ devem ser validados antes da persistencia
+- idade e sempre derivada de `birthDate`
 
 ## Project
 

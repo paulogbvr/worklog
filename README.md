@@ -18,8 +18,8 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Banco (Prisma)        | ✅ Concluído    |
 | Integração WakaTime   | ✅ Sync manual  |
 | Dashboard             | ✅ Dados reais e financeiro |
-| Projetos              | ✅ Configuração básica |
-| Clientes              | ✅ CRUD básico |
+| Projetos              | ✅ Configuração validada |
+| Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ⏳ Em andamento |
 | Pagamentos            | ✅ Controle básico |
 | Portal Compartilhável | ⏳ Em andamento |
@@ -34,7 +34,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-█████████████░░░░░░░ 65%
+█████████████░░░░░░░ 67%
 ```
 
 ---
@@ -458,6 +458,8 @@ Estado atual:
 - Prisma CLI configurado em `prisma.config.ts` para carregar `.env.local`
 - migration `20260604231000_init` aplicada com sucesso no Supabase
 - migration `20260605011210_project_notes` registrada e aplicada no Supabase
+- migration `20260605170000_client_profile_fields` aplicada no Supabase
+- Prisma Client regenerado automaticamente antes de cada build
 - sincronização real validada usando Prisma e Supabase
 - projetos removidos do WakaTime são arquivados sem perda de histórico
 
@@ -593,8 +595,10 @@ Assets de identidade:
 - status reutilizável para ambiente e notificações
 - status das variáveis baseado apenas em presença e formato válido, sem expor valores
 - toasts premium para sincronização e operações
-- CRUD básico de clientes
+- CRUD de clientes com CPF/CNPJ, telefone, nascimento, idade derivada e endereço
+- validação real e máscara automática de CPF/CNPJ
 - configuração de nome, cliente, valor/hora, status e observações de projetos
+- erros específicos para cliente, valor/hora e projeto inexistente
 - cadastro e remoção de pagamentos
 - cálculo financeiro real com prioridade manual e fallback WakaTime
 

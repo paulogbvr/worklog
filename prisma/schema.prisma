@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ProjectConfigurationStatus {
@@ -21,6 +22,9 @@ model Client {
   name      String
   email     String?
   phone     String?
+  taxId     String?   @unique
+  birthDate DateTime? @db.Date
+  address   String?
   notes     String?
   projects  Project[]
   createdAt DateTime  @default(now())

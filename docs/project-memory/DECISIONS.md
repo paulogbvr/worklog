@@ -281,6 +281,7 @@ O endpoint direto do Supabase pode ser IPv6-only. Em ambientes locais ou CI sem 
 
 - `prisma.config.ts` carrega `.env.local`
 - Prisma CLI usa `DIRECT_URL` quando definida
+- `prisma/schema.prisma` declara `directUrl = env("DIRECT_URL")`
 - `.env.example` documenta `DIRECT_URL`
 - `.env.local` continua fora do Git
 
@@ -488,3 +489,28 @@ Em produção, a sincronização gravou corretamente, mas uma falha dentro de co
 - erros são registrados sem segredos
 - o número de conexões simultâneas é reduzido
 - a sincronização revalida e atualiza o dashboard ao concluir
+
+---
+
+### DECISION-020
+
+#### Título
+
+Dados Cadastrais Derivados e Normalizados
+
+#### Decisão
+
+CPF/CNPJ será validado no frontend e no backend, armazenado somente com dígitos e único quando informado.
+
+Data de nascimento será persistida como data. A idade será sempre calculada em tempo real e nunca armazenada.
+
+#### Motivo
+
+Evitar documentos inconsistentes, dados duplicados e idade desatualizada no banco.
+
+#### Impacto
+
+- máscaras são apenas de apresentação
+- CPF/CNPJ inválido não chega ao Prisma
+- alteração da data atualiza a idade automaticamente
+- campos permanecem opcionais para não bloquear o MVP

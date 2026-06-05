@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { ProjectConfigurationStatus } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { Prisma, ProjectConfigurationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { logPrismaError } from "@/lib/prisma-error";
+import { parseClientInput } from "@/server/clients/validation";
 
 export const runtime = "nodejs";
-
-function optionalText(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
 
 export async function PATCH(
   request: Request,
@@ -15,12 +14,12 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const body = (await request.json()) as Record<string, unknown>;
-    const name = optionalText(body.name);
+    const parsed = parseClientInput(body);
 
-    if (!name) {
+    if (!parsed.ok) {
       return NextResponse.json(
         {
-          error: "Informe o nome do cliente.",
+          error: parsed.error,
           ok: false
         },
         { status: 400 }
@@ -28,19 +27,37 @@ export async function PATCH(
     }
 
     await prisma.client.update({
-      data: {
-        email: optionalText(body.email),
-        name,
-        notes: optionalText(body.notes),
-        phone: optionalText(body.phone)
-      },
+      data: parsed.data,
       where: {
         id
       }
     });
+    revalidatePath("/", "page");
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    logPrismaError("client update", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json(
+        {
+          error: "CPF/CNPJ já cadastrado para outro cliente.",
+          ok: false
+        },
+        { status: 409 }
+      );
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        {
+          error: "Cliente não encontrado.",
+          ok: false
+        },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: "Não foi possível salvar o cliente.",
@@ -73,9 +90,22 @@ export async function DELETE(
         }
       })
     ]);
+    revalidatePath("/", "page");
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    logPrismaError("client delete", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        {
+          error: "Cliente não encontrado.",
+          ok: false
+        },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: "Não foi possível remover o cliente.",

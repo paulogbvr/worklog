@@ -794,6 +794,40 @@ Validação visual:
 - tema light persistido após recarregar
 - sincronização atualizou métricas e projetos sem recarregamento manual
 
+### Clientes Validados e Configuração de Projetos Restaurada
+
+Concluído:
+
+- causa da falha de projeto isolada no Prisma Client desatualizado do build de produção
+- `npm run build` passou a executar `prisma generate` antes do Next.js
+- configuração de projeto exige cliente existente e valor/hora maior que zero
+- erros específicos para cliente obrigatório, valor inválido e projeto inexistente
+- configuração validada refletindo status, valor gerado e saldo pendente no dashboard
+- CPF e CNPJ com máscara automática e validação de dígitos verificadores
+- documentos inválidos conhecidos e sequências repetidas rejeitados
+- CPF/CNPJ armazenado somente com dígitos e protegido contra duplicidade
+- data de nascimento com idade calculada em tempo real, sem persistir idade
+- telefone com máscara automática e suporte à entrada com código `+55`
+- endereço estruturado como campo próprio do cliente
+- criação e edição usam a mesma validação server-side
+- migration `20260605170000_client_profile_fields` aplicada no Supabase
+- `directUrl` declarada no schema Prisma para migrations pela Session Pooler
+
+Validação funcional:
+
+```txt
+Projeto sem cliente: HTTP 400
+Valor/hora igual a zero: HTTP 400
+Projeto inexistente: HTTP 404
+Projeto configurado com valor 123,45: HTTP 200
+CPF inválido: HTTP 400
+CPF/CNPJ duplicado: HTTP 409
+Data futura: HTTP 400
+Criação, edição e remoção temporárias: HTTP 200
+```
+
+Dados temporários foram removidos e os projetos reais foram restaurados após os testes.
+
 ### Status Atual
 
 Documentação:
@@ -811,13 +845,13 @@ Infraestrutura:
 Implementação:
 
 ```txt
-55%
+58%
 ```
 
 Projeto Geral:
 
 ```txt
-█████████████░░░░░░░ 65%
+█████████████░░░░░░░ 67%
 ```
 
 ### Próximo Passo

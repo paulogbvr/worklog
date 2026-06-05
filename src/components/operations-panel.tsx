@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import {
+  calculateAge,
+  formatPhone,
+  formatTaxId,
+  getTaxIdFeedback
+} from "@/lib/client-profile";
 import type {
   DashboardClient,
   DashboardPayment,
@@ -22,18 +28,24 @@ type ProjectDraft = {
 };
 
 type ClientDraft = {
+  address: string;
+  birthDate: string;
   email: string;
   id?: string;
   name: string;
   notes: string;
   phone: string;
+  taxId: string;
 };
 
 const emptyClient: ClientDraft = {
+  address: "",
+  birthDate: "",
   email: "",
   name: "",
   notes: "",
-  phone: ""
+  phone: "",
+  taxId: ""
 };
 
 function todayInputValue() {
@@ -52,6 +64,10 @@ async function readResponse(response: Response) {
   return payload;
 }
 
+function parseHourlyRate(value: string) {
+  return Number(value.replace(",", "."));
+}
+
 function Modal({
   children,
   onClose,
@@ -65,7 +81,7 @@ function Modal({
     <div className="fixed inset-0 z-[180] grid place-items-center bg-black/65 p-4 backdrop-blur-sm">
       <div
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-[color:var(--border-strong)] bg-[var(--modal-bg)] shadow-[var(--toast-shadow)]"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-[color:var(--border-strong)] bg-[var(--modal-bg)] shadow-[var(--toast-shadow)]"
         role="dialog"
       >
         <div className="flex items-center justify-between border-b border-[color:var(--border)] px-5 py-4">
@@ -130,6 +146,14 @@ export function OperationsPanel({
     () => projects.filter((project) => project.statusLabel === "Configurado"),
     [projects]
   );
+  const clientTaxIdFeedback = useMemo(
+    () => (clientDraft ? getTaxIdFeedback(clientDraft.taxId) : null),
+    [clientDraft]
+  );
+  const clientAge = useMemo(
+    () => (clientDraft?.birthDate ? calculateAge(clientDraft.birthDate) : null),
+    [clientDraft]
+  );
 
   function openProject(project: DashboardProject) {
     setProjectDraft({
@@ -146,11 +170,14 @@ export function OperationsPanel({
     setClientDraft(
       client
         ? {
+            address: client.address ?? "",
+            birthDate: client.birthDate ?? "",
             email: client.email ?? "",
             id: client.id,
             name: client.name,
             notes: client.notes ?? "",
-            phone: client.phone ?? ""
+            phone: client.phone ? formatPhone(client.phone) : "",
+            taxId: client.taxId ? formatTaxId(client.taxId) : ""
           }
         : emptyClient
     );
@@ -160,6 +187,26 @@ export function OperationsPanel({
     event.preventDefault();
 
     if (!projectDraft) {
+      return;
+    }
+
+    if (!projectDraft.clientId) {
+      toast({
+        message: "Selecione o cliente responsável pelo projeto.",
+        title: "Cliente obrigatório",
+        tone: "error"
+      });
+      return;
+    }
+
+    const hourlyRate = parseHourlyRate(projectDraft.hourlyRate);
+
+    if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
+      toast({
+        message: "Informe um valor por hora maior que zero.",
+        title: "Valor por hora inválido",
+        tone: "error"
+      });
       return;
     }
 
@@ -197,6 +244,15 @@ export function OperationsPanel({
     event.preventDefault();
 
     if (!clientDraft) {
+      return;
+    }
+
+    if (clientTaxIdFeedback && !clientTaxIdFeedback.valid) {
+      toast({
+        message: `Revise os dígitos informados para o ${clientTaxIdFeedback.kind}.`,
+        title: `${clientTaxIdFeedback.kind} inválido`,
+        tone: "error"
+      });
       return;
     }
 
@@ -452,6 +508,7 @@ export function OperationsPanel({
                       <p className="mt-1 text-xs text-[color:var(--text-soft)]">
                         {client.projectCount} projetos
                         {client.email ? ` · ${client.email}` : ""}
+                        {client.taxId ? ` · ${formatTaxId(client.taxId)}` : ""}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -605,6 +662,7 @@ export function OperationsPanel({
                       current ? { ...current, clientId: event.target.value } : current
                     )
                   }
+                  required
                   value={projectDraft.clientId}
                 >
                   <option value="">Selecione</option>
@@ -622,14 +680,14 @@ export function OperationsPanel({
                 <input
                   className={fieldClass}
                   inputMode="decimal"
-                  min="0"
                   onChange={(event) =>
                     setProjectDraft((current) =>
                       current ? { ...current, hourlyRate: event.target.value } : current
                     )
                   }
-                  step="0.01"
-                  type="number"
+                  placeholder="Ex.: 150,00"
+                  required
+                  type="text"
                   value={projectDraft.hourlyRate}
                 />
               </label>
@@ -687,7 +745,7 @@ export function OperationsPanel({
           onClose={() => setClientDraft(null)}
           title={clientDraft.id ? "Editar cliente" : "Novo cliente"}
         >
-          <form className="space-y-4 p-5" onSubmit={saveClient}>
+          <form className="space-y-5 p-5" onSubmit={saveClient}>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">Nome</span>
               <input
@@ -701,7 +759,7 @@ export function OperationsPanel({
                 value={clientDraft.name}
               />
             </label>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                   Email
@@ -725,13 +783,102 @@ export function OperationsPanel({
                   className={fieldClass}
                   onChange={(event) =>
                     setClientDraft((current) =>
-                      current ? { ...current, phone: event.target.value } : current
+                      current ? { ...current, phone: formatPhone(event.target.value) } : current
                     )
                   }
+                  inputMode="tel"
+                  maxLength={15}
+                  placeholder="(00) 00000-0000"
                   value={clientDraft.phone}
                 />
               </label>
             </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                  CPF/CNPJ
+                </span>
+                <input
+                  aria-describedby={clientTaxIdFeedback ? "tax-id-feedback" : undefined}
+                  className={[
+                    fieldClass,
+                    clientTaxIdFeedback
+                      ? clientTaxIdFeedback.valid
+                        ? "border-emerald-500/55 focus:border-emerald-500/75"
+                        : "border-red-500/55 focus:border-red-500/75"
+                      : ""
+                  ].join(" ")}
+                  inputMode="numeric"
+                  maxLength={18}
+                  onChange={(event) =>
+                    setClientDraft((current) =>
+                      current ? { ...current, taxId: formatTaxId(event.target.value) } : current
+                    )
+                  }
+                  placeholder="000.000.000-00"
+                  value={clientDraft.taxId}
+                />
+                {clientTaxIdFeedback ? (
+                  <span
+                    className={[
+                      "mt-2 flex items-center gap-2 text-xs font-medium",
+                      clientTaxIdFeedback.valid ? "text-emerald-500" : "text-red-400"
+                    ].join(" ")}
+                    id="tax-id-feedback"
+                  >
+                    <span
+                      aria-hidden
+                      className={[
+                        "size-1.5 rounded-full",
+                        clientTaxIdFeedback.valid ? "bg-emerald-500" : "bg-red-500"
+                      ].join(" ")}
+                    />
+                    {clientTaxIdFeedback.kind}{" "}
+                    {clientTaxIdFeedback.valid ? "válido" : "inválido"}
+                  </span>
+                ) : (
+                  <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
+                    A máscara muda automaticamente entre CPF e CNPJ.
+                  </span>
+                )}
+              </label>
+              <label className="block">
+                <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
+                  <span>Data de nascimento</span>
+                  {clientAge !== null ? (
+                    <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[color:var(--app-text-strong)]">
+                      {clientAge} {clientAge === 1 ? "ano" : "anos"}
+                    </span>
+                  ) : null}
+                </span>
+                <input
+                  className={fieldClass}
+                  max={todayInputValue()}
+                  onChange={(event) =>
+                    setClientDraft((current) =>
+                      current ? { ...current, birthDate: event.target.value } : current
+                    )
+                  }
+                  type="date"
+                  value={clientDraft.birthDate}
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                Endereço
+              </span>
+              <textarea
+                className="min-h-20 w-full resize-y rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]"
+                onChange={(event) =>
+                  setClientDraft((current) =>
+                    current ? { ...current, address: event.target.value } : current
+                  )
+                }
+                placeholder="Rua, número, complemento, cidade e estado."
+                value={clientDraft.address}
+              />
+            </label>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                 Observações

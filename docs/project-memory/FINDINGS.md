@@ -420,6 +420,53 @@ Versionar a URL do asset como `og-worklog-v5.png`, preservando dimensões e iden
 
 ---
 
+## 2026-06-05
+
+### Descoberta
+
+A configuração de projeto falhava somente na Vercel porque o Prisma Client de produção estava desatualizado em relação ao schema que adicionou `Project.notes`.
+
+### Evidência
+
+- a relação Cliente ↔ Projeto foi atualizada com sucesso dentro de uma transação Prisma
+- a mesma rota retornou HTTP 200 em build local de produção
+- a rota publicada retornou HTTP 500 com a mesma carga
+- o dashboard já precisava tratar a leitura de `notes` como opcional
+- o script de build executava apenas `next build`, sem regenerar explicitamente o Prisma Client
+
+### Impacto
+
+O cache de dependências da Vercel podia reutilizar um cliente gerado antes da mudança de schema. O campo `notes` era válido no banco, mas inválido para o cliente antigo.
+
+### Ação
+
+Executar `prisma generate` em todo `npm run build` e registrar códigos seguros de erro nas rotas.
+
+---
+
+## 2026-06-05
+
+### Descoberta
+
+O Prisma CLI continuava escolhendo a porta `6543` para migrations enquanto `directUrl` não estava declarada no datasource do schema.
+
+### Evidência
+
+- `DIRECT_URL` local apontava para a Session Pooler na porta `5432`
+- `prisma migrate deploy` mostrava a porta `6543` e não concluía
+- após declarar `directUrl = env("DIRECT_URL")`, o CLI usou `5432`
+- a migration de dados cadastrais foi aplicada com sucesso
+
+### Impacto
+
+Ter a variável e carregá-la em `prisma.config.ts` não era suficiente para garantir a URL de migration neste fluxo.
+
+### Ação
+
+Manter `directUrl` explícita em `prisma/schema.prisma`.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

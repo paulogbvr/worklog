@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { logPrismaError } from "@/lib/prisma-error";
+import { parseClientInput } from "@/server/clients/validation";
 
 export const runtime = "nodejs";
-
-function optionalText(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
-    const name = optionalText(body.name);
+    const parsed = parseClientInput(body);
 
-    if (!name) {
+    if (!parsed.ok) {
       return NextResponse.json(
         {
-          error: "Informe o nome do cliente.",
+          error: parsed.error,
           ok: false
         },
         { status: 400 }
@@ -23,13 +23,9 @@ export async function POST(request: Request) {
     }
 
     const client = await prisma.client.create({
-      data: {
-        email: optionalText(body.email),
-        name,
-        notes: optionalText(body.notes),
-        phone: optionalText(body.phone)
-      }
+      data: parsed.data
     });
+    revalidatePath("/", "page");
 
     return NextResponse.json({
       client: {
@@ -38,7 +34,19 @@ export async function POST(request: Request) {
       },
       ok: true
     });
-  } catch {
+  } catch (error) {
+    logPrismaError("client create", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json(
+        {
+          error: "CPF/CNPJ já cadastrado para outro cliente.",
+          ok: false
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: "Não foi possível criar o cliente.",

@@ -8,12 +8,15 @@ export type DashboardMetric = {
 };
 
 export type DashboardClient = {
+  address: string | null;
+  birthDate: string | null;
   email: string | null;
   id: string;
   name: string;
   notes: string | null;
   phone: string | null;
   projectCount: number;
+  taxId: string | null;
 };
 
 export type DashboardPayment = {
@@ -225,11 +228,14 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
           name: "asc"
         },
         select: {
+          address: true,
+          birthDate: true,
           email: true,
           id: true,
           name: true,
           notes: true,
-          phone: true
+          phone: true,
+          taxId: true
         }
       }),
     []
@@ -348,12 +354,15 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   return {
     activeProjects: projectSummaries.length,
     clients: clients.map((client) => ({
+      address: client.address,
+      birthDate: client.birthDate?.toISOString().slice(0, 10) ?? null,
       email: client.email,
       id: client.id,
       name: client.name,
       notes: client.notes,
       phone: client.phone,
-      projectCount: activeProjectCountByClient.get(client.id) ?? 0
+      projectCount: activeProjectCountByClient.get(client.id) ?? 0,
+      taxId: client.taxId
     })),
     configuredProjects,
     databaseAvailable: true,

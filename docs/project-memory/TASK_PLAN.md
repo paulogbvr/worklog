@@ -262,6 +262,9 @@ Permitir configurar projetos e registrar trabalho manual.
 Entregáveis:
 
 - cadastro e edicao de clientes
+- validação e máscara de CPF/CNPJ
+- data de nascimento com idade derivada
+- telefone e endereço
 - configuração de cliente e valor/hora em projetos
 - CRUD de registros de trabalho
 - suporte a registros atravessando meia-noite
@@ -276,7 +279,9 @@ Critério de aceite:
 Estado:
 
 - cadastro, edição e remoção de clientes: concluído
-- configuração de projeto: concluído
+- validações cadastrais de clientes: concluído
+- configuração de projeto com reflexo financeiro: concluído
+- mensagens específicas de validação e persistência: concluído
 - CRUD de registros de trabalho: pendente
 
 ---

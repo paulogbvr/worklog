@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
-import { ProjectConfigurationStatus } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { Prisma, ProjectConfigurationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { logPrismaError } from "@/lib/prisma-error";
 
 export const runtime = "nodejs";
 
 function optionalText(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function parseHourlyRate(value: unknown) {
+  const normalized = typeof value === "string" ? value.replace(",", ".") : value;
+  return Number(normalized);
 }
 
 export async function PATCH(
@@ -17,7 +24,7 @@ export async function PATCH(
     const body = (await request.json()) as Record<string, unknown>;
     const name = optionalText(body.name);
     const clientId = optionalText(body.clientId);
-    const hourlyRate = Number(body.hourlyRate);
+    const hourlyRate = parseHourlyRate(body.hourlyRate);
     const active = body.active !== false;
 
     if (!name) {
@@ -30,26 +37,69 @@ export async function PATCH(
       );
     }
 
-    if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
+    if (!clientId) {
       return NextResponse.json(
         {
-          error: "Informe um valor por hora válido.",
+          error: "Selecione um cliente.",
           ok: false
         },
         { status: 400 }
       );
     }
 
-    const configurationStatus =
-      clientId && hourlyRate > 0
-        ? ProjectConfigurationStatus.CONFIGURED
-        : ProjectConfigurationStatus.PENDING;
+    if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
+      return NextResponse.json(
+        {
+          error: "Informe um valor por hora maior que zero.",
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
+    const project = await prisma.project.findUnique({
+      select: {
+        id: true
+      },
+      where: {
+        id
+      }
+    });
+
+    if (!project) {
+      return NextResponse.json(
+        {
+          error: "Projeto não encontrado.",
+          ok: false
+        },
+        { status: 404 }
+      );
+    }
+
+    const client = await prisma.client.findUnique({
+      select: {
+        id: true
+      },
+      where: {
+        id: clientId
+      }
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        {
+          error: "Cliente selecionado não foi encontrado.",
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
 
     await prisma.project.update({
       data: {
         active,
         clientId,
-        configurationStatus,
+        configurationStatus: ProjectConfigurationStatus.CONFIGURED,
         hourlyRate,
         name,
         notes: optionalText(body.notes)
@@ -58,15 +108,28 @@ export async function PATCH(
         id
       }
     });
+    revalidatePath("/", "page");
 
     return NextResponse.json({
-      configurationStatus,
+      configurationStatus: ProjectConfigurationStatus.CONFIGURED,
       ok: true
     });
-  } catch {
+  } catch (error) {
+    logPrismaError("project configuration", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        {
+          error: "Projeto não encontrado.",
+          ok: false
+        },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       {
-        error: "Não foi possível salvar o projeto.",
+        error: "Erro ao salvar configuração do projeto.",
         ok: false
       },
       { status: 500 }

@@ -105,9 +105,18 @@ Campos:
 - nome
 - email
 - telefone
+- CPF/CNPJ
+- data de nascimento
+- endereço
 - observacoes
 
 Cada cliente pode possuir vários projetos.
+
+Regras:
+
+- CPF/CNPJ deve ser validado pelos dígitos verificadores
+- CPF/CNPJ deve ser armazenado sem máscara
+- idade deve ser calculada a partir da data de nascimento e não persistida
 
 ---
 
@@ -348,6 +357,9 @@ Campos:
 - name
 - email
 - phone
+- taxId
+- birthDate
+- address
 - notes
 - createdAt
 - updatedAt
