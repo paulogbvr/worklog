@@ -7,6 +7,11 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     icons: [
       {
+        sizes: "180x180",
+        src: "/apple-icon.png",
+        type: "image/png"
+      },
+      {
         sizes: "512x512",
         src: "/icon-worklog.png",
         type: "image/png"

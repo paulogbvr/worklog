@@ -1150,7 +1150,7 @@ Concluído:
 - notificações persistidas para sync, erro, compartilhamento e acesso
 - badge, dropdown e página `/notifications`
 - navegação dedicada com `Link` e prefetch nativo
-- foto oficial atualizada para `public/creator-photo.jpeg`
+- foto oficial atualizada para `public/creator-photo.jpg`
 - Instagram apresentado como `Instagram`
 - repositório oficial destacado na página de instalação
 - migration `20260606013000_project_sharing_notifications` aplicada no Supabase
@@ -1213,3 +1213,109 @@ Projeto Geral:
 ### Próximo Passo
 
 Implementar proteção administrativa simples e validar o fluxo no deploy da Vercel.
+
+---
+
+## 2026-06-06
+
+### Pagamentos, Notificações, Portal Público e Página Sobre
+
+Concluído:
+
+- botões primários corrigidos em dark/light, desktop e mobile
+- URL oficial aplicada à instalação
+- sete blocos de instalação com cópia exata, feedback e fallback
+- sidebar expandida e recolhida revisadas
+- badge visível na sidebar recolhida
+- dropdown de notificações fecha por clique externo e ESC
+- polling leve atualiza badge e gera toast para eventos importantes
+- sincronizações concluídas separadas em `Atualizações`
+- alertas de ambiente geram toast e notificação sem expor valores
+- filtros 7D, 30D e ALL aplicados ao resumo, operação e gráficos
+- refresh transformado em botão de ícone junto aos filtros
+- pagamentos com forma, edição, confirmação de exclusão e WhatsApp
+- estrutura opcional para comprovantes privados no Supabase Storage
+- visualização e download de comprovante pelo backend
+- portal público com status, observações, histórico e ações
+- metadata e Open Graph dinâmicos por projeto
+- eventos de acesso, cópia e PDF relacionados ao link
+- PDF público gerado no backend com identificação do WorkLog
+- favicon `</>` regenerado como botão preto
+- página Sobre reescrita com história, capacidades, CTA e open source
+- `CLAUDE.md` e assets OG v4 sem uso removidos
+- migration `20260606183000_payments_notifications_public_sharing` aplicada
+
+Validação funcional reversível:
+
+```txt
+pagamento temporário: criar HTTP 200
+edição para TED: HTTP 200
+exclusão: HTTP 200
+registro temporário removido
+portal público: HTTP 200
+Open Graph dinâmico: PNG HTTP 200
+PDF público: application/pdf HTTP 200
+dropdown: ESC e clique externo validados
+eventos e notificações de QA removidos
+contador do link restaurado
+```
+
+Validação visual:
+
+- desktop 1440 × 900 em dark mode
+- mobile 390 × 844 em light mode
+- sidebar expandida e recolhida
+- badge e dropdown recolhidos
+- formulário de pagamento mobile
+- página Sobre completa
+- portal público mobile
+
+Validação técnica:
+
+```bash
+npm run prisma:deploy
+npm run prisma:validate
+npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev
+```
+
+Resultado:
+
+```txt
+sucesso
+0 vulnerabilidades
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+98%
+```
+
+Implementação:
+
+```txt
+97%
+```
+
+Projeto Geral:
+
+```txt
+███████████████████▓ 98%
+```
+
+### Próximo Passo
+
+1. configurar o bucket privado de comprovantes na Vercel
+2. implementar proteção administrativa simples
+3. validar o fluxo no deploy público

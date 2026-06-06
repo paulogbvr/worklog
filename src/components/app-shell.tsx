@@ -23,6 +23,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { EnvironmentNotifier } from "@/components/environment-notifier";
 import { NotificationMenu } from "@/components/notification-menu";
 import { StatusPulse } from "@/components/status-pulse";
 import { ToastProvider } from "@/components/toast-provider";
@@ -170,7 +171,7 @@ function NavLink({
 function EnvPanel({ envStatus }: { envStatus: ServerEnvStatus }) {
   return (
     <>
-      <div className="sidebar-expanded-only min-w-0 flex-col rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+      <div className="sidebar-env-panel sidebar-expanded-only min-w-0 flex-col rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
         <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-faint)]">
           Ambiente
         </p>
@@ -296,6 +297,7 @@ export function AppShell({
 
   return (
     <ToastProvider>
+      <EnvironmentNotifier envStatus={envStatus} />
       <main className="min-h-screen bg-[var(--app-bg)] text-[color:var(--app-text)]">
       <div className="pointer-events-none fixed inset-0 bg-[var(--ambient-gradient)]" />
       <div className="pointer-events-none fixed inset-0 bg-[var(--grid-pattern)] bg-[size:72px_72px]" />
@@ -342,13 +344,13 @@ export function AppShell({
             </div>
           </div>
 
-          <nav className="min-h-0 flex-1 space-y-0.5 overflow-visible px-3 py-2">
+          <nav className="sidebar-nav-area min-h-0 flex-1 space-y-0.5 overflow-visible px-3 py-2">
             {navItems.map((item) => (
               <NavLink active={isNavItemActive(item)} item={item} key={item.label} />
             ))}
           </nav>
 
-          <div className="space-y-3 overflow-visible px-3 pb-4">
+          <div className="sidebar-footer shrink-0 space-y-3 overflow-visible px-3 pb-4">
             <NotificationMenu />
             <ThemeToggle onToggle={handleThemeToggle} />
             <EnvPanel envStatus={envStatus} />

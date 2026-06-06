@@ -15,12 +15,20 @@ export type NotificationCenterItem = {
 };
 
 export function NotificationsCenter({
-  initialItems
+  defaultMode = "unread",
+  description,
+  initialItems,
+  showReadControls = true,
+  title = "Importantes"
 }: {
+  defaultMode?: "all" | "unread";
+  description?: string;
   initialItems: NotificationCenterItem[];
+  showReadControls?: boolean;
+  title?: string;
 }) {
   const [items, setItems] = useState(initialItems);
-  const [mode, setMode] = useState<"all" | "unread">("unread");
+  const [mode, setMode] = useState<"all" | "unread">(defaultMode);
   const router = useRouter();
   const visibleItems = useMemo(
     () => (mode === "unread" ? items.filter((item) => !item.read) : items),
@@ -57,37 +65,49 @@ export function NotificationsCenter({
   return (
     <section className="mt-6 overflow-hidden rounded-lg border border-[color:var(--border)] bg-[var(--surface)]">
       <div className="flex flex-col gap-4 border-b border-[color:var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid w-fit grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
-          {(
-            [
-              ["unread", `Não lidas (${unreadCount})`],
-              ["all", "Todas"]
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              className={[
-                "h-9 rounded px-3 text-sm transition-colors",
-                mode === value
-                  ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
-                  : "text-[color:var(--text-muted)]"
-              ].join(" ")}
-              key={value}
-              onClick={() => setMode(value)}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
+        <div>
+          <h2 className="font-semibold text-[color:var(--app-text-strong)]">{title}</h2>
+          {description ? (
+            <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
+              {description}
+            </p>
+          ) : null}
         </div>
-        {unreadCount > 0 ? (
-          <button
-            className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
-            onClick={() => void markAllRead()}
-            type="button"
-          >
-            <CheckCheck className="size-4" />
-            Marcar todas como lidas
-          </button>
+        {showReadControls ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="grid w-fit grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
+              {(
+                [
+                  ["unread", `Não lidas (${unreadCount})`],
+                  ["all", "Todas"]
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  className={[
+                    "h-9 rounded px-3 text-sm transition-colors",
+                    mode === value
+                      ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
+                      : "text-[color:var(--text-muted)]"
+                  ].join(" ")}
+                  key={value}
+                  onClick={() => setMode(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {unreadCount > 0 ? (
+              <button
+                className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                onClick={() => void markAllRead()}
+                type="button"
+              >
+                <CheckCheck className="size-4" />
+                Marcar todas como lidas
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -105,7 +125,7 @@ export function NotificationsCenter({
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="font-medium">{item.title}</h2>
-                  {!item.read ? (
+                  {showReadControls && !item.read ? (
                     <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
                       Nova
                     </span>
@@ -118,7 +138,7 @@ export function NotificationsCenter({
                   {item.createdAtLabel}
                 </p>
               </div>
-              {!item.read ? (
+              {showReadControls && !item.read ? (
                 <button
                   aria-label={`Marcar ${item.title} como lida`}
                   className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"

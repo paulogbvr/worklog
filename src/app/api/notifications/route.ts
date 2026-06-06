@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { NotificationCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +22,14 @@ export async function GET() {
           title: true,
           type: true
         },
-        take: 8
+        take: 8,
+        where: {
+          category: NotificationCategory.IMPORTANT
+        }
       }),
       prisma.notification.count({
         where: {
+          category: NotificationCategory.IMPORTANT,
           readAt: null
         }
       })
@@ -57,6 +62,7 @@ export async function PATCH() {
         readAt: new Date()
       },
       where: {
+        category: NotificationCategory.IMPORTANT,
         readAt: null
       }
     });

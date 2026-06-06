@@ -25,6 +25,12 @@ Site publicado:
 https://worklog-projects.vercel.app/
 ```
 
+Repositório oficial:
+
+```txt
+https://github.com/paulogbvr/worklog
+```
+
 ---
 
 # Referências Técnicas
@@ -77,11 +83,16 @@ Conexões PostgreSQL e Prisma:
 ```txt
 https://supabase.com/docs/guides/database/connecting-to-postgres
 https://supabase.com/docs/guides/database/prisma
+https://supabase.com/docs/guides/storage
+https://supabase.com/docs/reference/javascript/storage-from-upload
+https://supabase.com/docs/reference/javascript/storage-from-download
+https://supabase.com/docs/reference/javascript/storage-from-remove
 ```
 
 Uso no projeto:
 
 - banco PostgreSQL gerenciado
+- comprovantes privados de pagamento, quando Storage estiver configurado
 
 Observação:
 
@@ -292,6 +303,16 @@ Uso:
 - tabelas de projetos
 - tabelas de pagamentos
 - tabelas de registros
+
+## pdf-lib
+
+```txt
+https://pdf-lib.js.org/
+```
+
+Uso:
+
+- gerar PDF do acompanhamento público no backend
 
 ---
 

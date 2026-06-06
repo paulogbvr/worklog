@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { FaGithub } from "react-icons/fa6";
 import { AppShell } from "@/components/app-shell";
+import { InstallationCodeBlock } from "@/components/installation-code-block";
 import { creatorProfile } from "@/content/site";
 import { getServerEnvStatus } from "@/lib/env";
 
@@ -36,14 +37,6 @@ function DocsLink({ children, href }: { children: string; href: string }) {
   );
 }
 
-function CodeBlock({ children }: { children: string }) {
-  return (
-    <pre className="mt-4 overflow-x-auto rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4 text-xs leading-6 text-[color:var(--app-text-strong)]">
-      <code>{children}</code>
-    </pre>
-  );
-}
-
 export default function InstallationPage() {
   return (
     <AppShell envStatus={getServerEnvStatus()}>
@@ -70,7 +63,7 @@ export default function InstallationPage() {
               </p>
             </div>
             <a
-              className="inline-flex h-11 w-fit items-center gap-2 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+              className="button-primary inline-flex h-11 w-fit items-center gap-2 px-4 text-sm font-medium"
               href={creatorProfile.repositoryUrl}
               rel="noreferrer"
               target="_blank"
@@ -91,16 +84,16 @@ export default function InstallationPage() {
             <p>
               Faça um fork para sua conta, clone o repositório e instale as dependências com npm.
             </p>
-            <CodeBlock>{`git clone URL_DO_REPOSITORIO
+            <InstallationCodeBlock>{`git clone https://github.com/paulogbvr/worklog
 cd worklog
 npm install
-cp .env.example .env.local`}</CodeBlock>
+cp .env.example .env.local`}</InstallationCodeBlock>
             <p className="mt-4">
               Para publicar sua cópia em outro repositório, altere o remote e envie a branch
               principal.
             </p>
-            <CodeBlock>{`git remote set-url origin URL_DO_SEU_REPOSITORIO
-git push -u origin main`}</CodeBlock>
+            <InstallationCodeBlock>{`git remote set-url origin URL_DO_SEU_REPOSITORIO
+git push -u origin main`}</InstallationCodeBlock>
           </div>
         </section>
 
@@ -115,8 +108,8 @@ git push -u origin main`}</CodeBlock>
               Transaction Pooler em `DATABASE_URL` para o runtime serverless. Use uma conexão
               direta compatível ou o Session Pooler em `DIRECT_URL` para migrations.
             </p>
-            <CodeBlock>{`DATABASE_URL="postgresql://..."
-DIRECT_URL="postgresql://..."`}</CodeBlock>
+            <InstallationCodeBlock>{`DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."`}</InstallationCodeBlock>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3">
               <DocsLink href={links.supabase}>Supabase</DocsLink>
               <DocsLink href={links.supabaseConnection}>Conexões PostgreSQL</DocsLink>
@@ -134,8 +127,8 @@ DIRECT_URL="postgresql://..."`}</CodeBlock>
             <p>
               Gere o Prisma Client e aplique as migrations versionadas no banco configurado.
             </p>
-            <CodeBlock>{`npm run prisma:generate
-npm run prisma:deploy`}</CodeBlock>
+            <InstallationCodeBlock>{`npm run prisma:generate
+npm run prisma:deploy`}</InstallationCodeBlock>
             <div className="mt-4">
               <DocsLink href={links.prisma}>Documentação Prisma</DocsLink>
             </div>
@@ -152,7 +145,7 @@ npm run prisma:deploy`}</CodeBlock>
               Crie uma conta, instale o plugin oficial no editor e copie sua API Key para o
               backend do WorkLog.
             </p>
-            <CodeBlock>{`WAKATIME_API_KEY="sua_chave_secreta"`}</CodeBlock>
+            <InstallationCodeBlock>{`WAKATIME_API_KEY="sua_chave_secreta"`}</InstallationCodeBlock>
             <p className="mt-4">
               No VS Code, Cursor e Windsurf, abra o comando de instalação de extensões, procure
               por `wakatime` e informe a API Key quando solicitado. No Zed, procure por `wakatime`
@@ -173,7 +166,7 @@ npm run prisma:deploy`}</CodeBlock>
               Inicie o app, abra o dashboard e use “Atualizar agora” para criar os projetos e
               importar as primeiras horas.
             </p>
-            <CodeBlock>{`npm run dev`}</CodeBlock>
+            <InstallationCodeBlock>{`npm run dev`}</InstallationCodeBlock>
           </div>
         </section>
 
@@ -187,9 +180,9 @@ npm run prisma:deploy`}</CodeBlock>
               Importe o repositório GitHub na Vercel e adicione as três variáveis nos ambientes
               Production e Preview. Faça um novo deploy sempre que alterar variáveis.
             </p>
-            <CodeBlock>{`WAKATIME_API_KEY=
+            <InstallationCodeBlock>{`WAKATIME_API_KEY=
 DATABASE_URL=
-DIRECT_URL=`}</CodeBlock>
+DIRECT_URL=`}</InstallationCodeBlock>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3">
               <DocsLink href={links.vercel}>Vercel</DocsLink>
               <DocsLink href={links.nextDeploy}>Deploy de Next.js</DocsLink>

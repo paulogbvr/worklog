@@ -1,6 +1,6 @@
 export const creatorProfile = {
   githubUrl: "https://github.com/paulogbvr",
-  image: "/creator-photo.jpeg",
+  image: "/creator-photo.jpg",
   instagramHandle: "@theuniquereal",
   instagramUrl: "https://www.instagram.com/theuniquereal/",
   linkedinUrl: "https://www.linkedin.com/in/paulo-oliveira-358a432b7/",

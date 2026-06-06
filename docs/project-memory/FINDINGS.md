@@ -629,6 +629,68 @@ notificações persistidas.
 
 ---
 
+## 2026-06-06
+
+### Descoberta
+
+Persistir um arquivo por preview social ou por PDF compartilhável geraria duplicação sem benefício.
+
+### Evidência
+
+O App Router conseguiu servir a imagem Open Graph dinâmica e o `pdf-lib` gerou o relatório sob
+demanda com HTTP 200.
+
+### Impacto
+
+Não é necessário criar colunas de imagem ou PDF nem limpar assets ao reativar links.
+
+### Ação
+
+Gerar ambos dinamicamente e persistir somente os eventos relacionados ao `ShareLink`.
+
+---
+
+## 2026-06-06
+
+### Descoberta
+
+A Clipboard API pode negar acesso em contextos automatizados ou restritos mesmo quando o botão foi
+renderizado corretamente.
+
+### Evidência
+
+Uma chamada sem gesto real retornou falha; o clique real no mesmo botão copiou o conteúdo exato e
+exibiu o toast esperado.
+
+### Impacto
+
+Copiar deve ter fallback de seleção temporária para navegadores que não liberem
+`navigator.clipboard`.
+
+### Ação
+
+Centralizar a operação em `src/lib/clipboard.ts`.
+
+---
+
+## 2026-06-06
+
+### Descoberta
+
+O Supabase Storage ainda não está configurado no ambiente local atual.
+
+### Impacto
+
+Cadastro, edição e exclusão de pagamentos funcionam normalmente, mas o input de comprovante fica
+desabilitado até que as variáveis opcionais sejam adicionadas.
+
+### Ação
+
+Criar o bucket privado `payment-receipts` e configurar `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_STORAGE_BUCKET` na Vercel e no `.env.local`.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bell, CheckCheck, ChevronRight } from "lucide-react";
 import { StatusPulse } from "@/components/status-pulse";
+import { useToast } from "@/components/toast-provider";
 
 type NotificationItem = {
   createdAt: string;
@@ -12,7 +13,14 @@ type NotificationItem = {
   projectId: string | null;
   readAt: string | null;
   title: string;
-  type: "SHARE_ACCESSED" | "SHARE_CREATED" | "SYNC_ERROR" | "SYNC_SUCCESS";
+  type:
+    | "ENV_WARNING"
+    | "SHARE_ACCESSED"
+    | "SHARE_COPIED"
+    | "SHARE_CREATED"
+    | "SHARE_PDF_DOWNLOADED"
+    | "SYNC_ERROR"
+    | "SYNC_SUCCESS";
 };
 
 type NotificationResponse = {
@@ -46,7 +54,7 @@ function relativeTime(value: string) {
 }
 
 function notificationTone(type: NotificationItem["type"]) {
-  if (type === "SYNC_ERROR") {
+  if (type === "ENV_WARNING" || type === "SYNC_ERROR") {
     return "error" as const;
   }
 
@@ -62,8 +70,12 @@ export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [showUnread, setShowUnread] = useState(true);
+  const initializedRef = useRef(false);
+  const knownIdsRef = useRef(new Set<string>());
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  async function loadNotifications() {
+  const loadNotifications = useCallback(async function loadNotifications() {
     try {
       const response = await fetch("/api/notifications", {
         cache: "no-store"
@@ -71,18 +83,39 @@ export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
       const payload = (await response.json()) as NotificationResponse;
 
       if (response.ok && payload.ok) {
-        setItems(payload.notifications ?? []);
+        const notifications = payload.notifications ?? [];
+        const newImportant = initializedRef.current
+          ? notifications.find(
+              (notification) =>
+                !notification.readAt && !knownIdsRef.current.has(notification.id)
+            )
+          : null;
+
+        if (newImportant) {
+          toast({
+            message: newImportant.message,
+            title: newImportant.title,
+            tone: notificationTone(newImportant.type)
+          });
+        }
+
+        knownIdsRef.current = new Set(notifications.map((notification) => notification.id));
+        initializedRef.current = true;
+        setItems(notifications);
         setUnreadCount(payload.unreadCount ?? 0);
       }
     } catch {
       // A navegação continua disponível mesmo se o painel de notificações falhar.
     }
-  }
+  }, [toast]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => {
       void loadNotifications();
     }, 0);
+    const polling = window.setInterval(() => {
+      void loadNotifications();
+    }, 30_000);
 
     function refresh() {
       void loadNotifications();
@@ -91,9 +124,36 @@ export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
     window.addEventListener("worklog-notifications-refresh", refresh);
     return () => {
       window.clearTimeout(initialLoad);
+      window.clearInterval(polling);
       window.removeEventListener("worklog-notifications-refresh", refresh);
     };
-  }, []);
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
 
   const visibleItems = useMemo(
     () => (showUnread ? items.filter((item) => !item.readAt) : items),
@@ -121,7 +181,7 @@ export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
       aria-expanded={open}
       aria-label={`Notificações${unreadCount > 0 ? `, ${unreadCount} não lidas` : ""}`}
       className={[
-        "group relative flex items-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]",
+        "sidebar-notification-button group relative flex items-center rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]",
         mobile ? "h-11 w-full gap-3 px-3" : "h-11 w-full gap-3 px-3"
       ].join(" ")}
       onClick={() => setOpen((current) => !current)}
@@ -132,15 +192,16 @@ export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
         Notificações
       </span>
       {unreadCount > 0 ? (
-        <span className="sidebar-nav-label inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+        <span className="sidebar-notification-badge inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm shadow-black/20">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       ) : null}
+      {!mobile ? <span className="sidebar-notification-tooltip"><span>Notificações</span></span> : null}
     </button>
   );
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       {button}
       {open ? (
         <div

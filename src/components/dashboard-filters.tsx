@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import type { ReactNode } from "react";
 import type { DashboardPeriod } from "@/server/dashboard/summary";
 
 export function DashboardFilters({
+  actions,
   basePath = "/",
   period,
   projectId,
   projects
 }: {
+  actions?: ReactNode;
   basePath?: string;
   period: DashboardPeriod;
   projectId: string | null;
@@ -66,33 +69,36 @@ export function DashboardFilters({
         />
       </label>
 
-      <nav
-        aria-label="Filtrar dashboard por período"
-        className="grid w-fit grid-cols-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1"
-      >
-        {(
-          [
-            ["7d", "7D"],
-            ["30d", "30D"],
-            ["all", "ALL"]
-          ] as const
-        ).map(([value, label]) => (
-          <Link
-            aria-current={period === value ? "page" : undefined}
-            className={[
-              "min-w-12 rounded px-3 py-2 text-center text-xs font-medium transition-colors",
-              period === value
-                ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
-                : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
-            ].join(" ")}
-            href={buildHref(value)}
-            key={value}
-            prefetch
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <div className="flex items-center gap-2">
+        <nav
+          aria-label="Filtrar dashboard por período"
+          className="grid min-w-0 flex-1 grid-cols-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1 sm:flex-none"
+        >
+          {(
+            [
+              ["7d", "7D"],
+              ["30d", "30D"],
+              ["all", "ALL"]
+            ] as const
+          ).map(([value, label]) => (
+            <Link
+              aria-current={period === value ? "page" : undefined}
+              className={[
+                "min-w-12 rounded px-3 py-2 text-center text-xs font-medium transition-colors",
+                period === value
+                  ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
+                  : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+              ].join(" ")}
+              href={buildHref(value)}
+              key={value}
+              prefetch
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+        {actions}
+      </div>
     </div>
   );
 }

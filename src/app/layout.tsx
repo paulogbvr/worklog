@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     canonical: "/"
   },
   icons: {
-    apple: [{ url: "/icon-worklog.png", sizes: "512x512", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
     icon: [
       { url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
       { url: "/icon-worklog.png", sizes: "512x512", type: "image/png" }

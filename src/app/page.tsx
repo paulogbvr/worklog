@@ -40,6 +40,18 @@ export default async function Home({
   const period = parsePeriod(params.period);
   const dashboard = await getDashboardSummary(period, parseProjectId(params.project));
   const envStatus = getServerEnvStatus();
+  const periodContext =
+    dashboard.period === "all"
+      ? "em todo o histórico"
+      : dashboard.period === "30d"
+        ? "nos últimos 30 dias"
+        : "nos últimos 7 dias";
+  const syncTone =
+    dashboard.lastSyncLabel === "Não realizada"
+      ? "neutral"
+      : dashboard.latestSyncSuccessful
+        ? "success"
+        : "error";
 
   return (
     <AppShell envStatus={envStatus}>
@@ -52,16 +64,16 @@ export default async function Home({
             </h1>
           </div>
           <DashboardFilters
+            actions={<SyncNowButton />}
             period={dashboard.period}
             projectId={dashboard.selectedProjectId}
             projects={dashboard.projectOptions}
           />
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <SyncNowButton />
+        <div className="mt-3 flex justify-end">
           <div className="inline-flex w-fit max-w-full items-center gap-2.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[color:var(--text-muted)]">
-            <StatusPulse tone={dashboard.latestSyncSuccessful ? "success" : "neutral"} />
+            <StatusPulse tone={syncTone} />
             <span className="truncate">Última sincronização</span>
             <strong className="shrink-0 font-medium text-[color:var(--app-text-strong)]">
               {dashboard.lastSyncLabel}
@@ -80,28 +92,28 @@ export default async function Home({
       <section className="py-7">
         <div className="mb-4">
           <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
-            Resumo histórico
+            {dashboard.period === "all" ? "Resumo histórico" : "Resumo do período"}
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {[
             {
               icon: Code2,
-              label: "WakaTime em todo o histórico",
+              label: `WakaTime ${periodContext}`,
               tone: "bg-blue-500/10 text-blue-400",
-              value: dashboard.globalWakaTimeLabel
+              value: dashboard.periodWakaTimeLabel
             },
             {
               icon: Clock3,
-              label: "Horas dedicadas em todo o histórico",
+              label: `Horas dedicadas ${periodContext}`,
               tone: "bg-amber-500/10 text-amber-500",
-              value: dashboard.globalDedicatedLabel
+              value: dashboard.periodDedicatedLabel
             },
             {
               icon: WalletCards,
-              label: "Valor pendente em todo o histórico",
+              label: `Valor pendente ${periodContext}`,
               tone: "bg-emerald-500/10 text-emerald-400",
-              value: dashboard.globalPendingValueLabel
+              value: dashboard.periodPendingValueLabel
             }
           ].map((item) => {
             const Icon = item.icon;
@@ -169,16 +181,12 @@ export default async function Home({
                 <div>
                   <p className="text-xs text-[color:var(--text-faint)]">WakaTime</p>
                   <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Total {project.globalWakaTimeLabel}
-                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">{periodContext}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[color:var(--text-faint)]">Dedicadas</p>
                   <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Total {project.globalDedicatedLabel}
-                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">{periodContext}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[color:var(--text-faint)]">Gerado</p>
@@ -188,13 +196,10 @@ export default async function Home({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">
-                    Desde o último pagamento
-                  </p>
-                  <p className="mt-1 text-sm">{project.sinceLastPaymentValueLabel}</p>
+                  <p className="text-xs text-[color:var(--text-faint)]">Recebido</p>
+                  <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
                   <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    {project.sinceLastPaymentWakaTimeLabel} Waka ·{" "}
-                    {project.sinceLastPaymentDedicatedLabel} dedicadas
+                    {periodContext}
                   </p>
                 </div>
               </article>

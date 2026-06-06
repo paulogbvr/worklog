@@ -1,5 +1,10 @@
 import { SyncProvider } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  getPaymentMethodLabel,
+  type PaymentMethodValue
+} from "@/lib/payment";
+import { isPaymentReceiptStorageConfigured } from "@/server/storage/payment-receipts";
 
 const TIME_ZONE = "America/Sao_Paulo";
 
@@ -45,11 +50,20 @@ export type DashboardClient = {
 export type DashboardPayment = {
   amount: number;
   amountLabel: string;
+  clientName: string | null;
+  clientPhone: string | null;
   id: string;
+  method: PaymentMethodValue;
+  methodLabel: string;
   note: string | null;
+  paidAt: string;
   paidAtLabel: string;
   projectId: string;
   projectName: string;
+  receiptMimeType: string | null;
+  receiptName: string | null;
+  receiptPath: string | null;
+  sharePath: string | null;
 };
 
 export type DashboardProject = {
@@ -73,6 +87,7 @@ export type DashboardProject = {
   pendingValue: number;
   pendingValueLabel: string;
   receivedValue: number;
+  receivedValueLabel: string;
   repositoryUrl: string | null;
   shareAccessCount: number;
   shareLastAccessedLabel: string;
@@ -130,11 +145,13 @@ export type DashboardSummary = {
   periodDedicatedLabel: string;
   periodGeneratedValue: number;
   periodGeneratedValueLabel: string;
+  periodPendingValueLabel: string;
   periodReceivedValue: number;
   periodReceivedValueLabel: string;
   periodWakaTimeLabel: string;
   projectOptions: Array<{ id: string; name: string }>;
   projects: DashboardProject[];
+  receiptStorageConfigured: boolean;
   selectedProjectId: string | null;
   workOperations: DashboardWorkOperation[];
 };
@@ -277,11 +294,13 @@ function getEmptySummary(
     periodDedicatedLabel: "0h",
     periodGeneratedValue: 0,
     periodGeneratedValueLabel: "R$ 0,00",
+    periodPendingValueLabel: "R$ 0,00",
     periodReceivedValue: 0,
     periodReceivedValueLabel: "R$ 0,00",
     periodWakaTimeLabel: "0h",
     projectOptions: [],
     projects: [],
+    receiptStorageConfigured: isPaymentReceiptStorageConfigured(),
     selectedProjectId: null,
     workOperations: []
   };
@@ -366,7 +385,8 @@ export async function getDashboardSummary(
         client: {
           select: {
             id: true,
-            name: true
+            name: true,
+            phone: true
           }
         },
         clientId: true,
@@ -385,8 +405,12 @@ export async function getDashboardSummary(
           select: {
             amount: true,
             id: true,
+            method: true,
             note: true,
-            paidAt: true
+            paidAt: true,
+            receiptMimeType: true,
+            receiptName: true,
+            receiptPath: true
           }
         },
         repositoryUrl: true,
@@ -646,6 +670,7 @@ export async function getDashboardSummary(
       pendingValue,
       pendingValueLabel: formatCurrency(pendingValue),
       receivedValue,
+      receivedValueLabel: formatCurrency(receivedValue),
       repositoryUrl: project.repositoryUrl,
       shareAccessCount: shareLink?.accessCount ?? 0,
       shareLastAccessedLabel: formatDateTime(shareLink?.lastAccessedAt),
@@ -730,8 +755,13 @@ export async function getDashboardSummary(
         .filter((payment) => isInPeriod(getLocalDateKey(payment.paidAt), startKey))
         .map((payment) => ({
           ...payment,
+          clientName: project.client?.name ?? null,
+          clientPhone: project.client?.phone ?? null,
           projectId: project.id,
-          projectName: project.name
+          projectName: project.name,
+          sharePath: project.shareLinks[0]?.active
+            ? `/share/${project.shareLinks[0].slug}`
+            : null
         }))
     )
     .sort((a, b) => b.paidAt.getTime() - a.paidAt.getTime());
@@ -813,17 +843,27 @@ export async function getDashboardSummary(
     payments: payments.map((payment) => ({
       amount: Number(payment.amount),
       amountLabel: formatCurrency(Number(payment.amount)),
+      clientName: payment.clientName,
+      clientPhone: payment.clientPhone,
       id: payment.id,
+      method: payment.method,
+      methodLabel: getPaymentMethodLabel(payment.method),
       note: payment.note,
+      paidAt: payment.paidAt.toISOString().slice(0, 10),
       paidAtLabel: formatDate(payment.paidAt),
       projectId: payment.projectId,
-      projectName: payment.projectName
+      projectName: payment.projectName,
+      receiptMimeType: payment.receiptMimeType,
+      receiptName: payment.receiptName,
+      receiptPath: payment.receiptPath,
+      sharePath: payment.sharePath
     })),
     pendingProjects,
     period,
     periodDedicatedLabel: formatDuration(totalDedicatedSeconds),
     periodGeneratedValue: totalGeneratedValue,
     periodGeneratedValueLabel: formatCurrency(totalGeneratedValue),
+    periodPendingValueLabel: formatCurrency(pendingValue),
     periodReceivedValue: totalReceivedValue,
     periodReceivedValueLabel: formatCurrency(totalReceivedValue),
     periodWakaTimeLabel: formatDuration(totalWakaTimeSeconds),
@@ -832,6 +872,7 @@ export async function getDashboardSummary(
       name: project.name
     })),
     projects: projectSummaries,
+    receiptStorageConfigured: isPaymentReceiptStorageConfigured(),
     selectedProjectId,
     workOperations
   };

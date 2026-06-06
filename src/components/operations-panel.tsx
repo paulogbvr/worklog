@@ -6,7 +6,10 @@ import {
   ChevronDown,
   Clock3,
   Copy,
+  Download,
+  Eye,
   ExternalLink,
+  FileText,
   Link2,
   Pencil,
   Plus,
@@ -14,6 +17,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa6";
 import { useToast } from "@/components/toast-provider";
 import {
   calculateAge,
@@ -21,6 +25,11 @@ import {
   formatTaxId,
   getTaxIdFeedback
 } from "@/lib/client-profile";
+import {
+  PAYMENT_METHODS,
+  type PaymentMethodValue
+} from "@/lib/payment";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import type {
   DashboardClient,
   DashboardPayment,
@@ -71,6 +80,10 @@ type WorkOperationDraft = {
 type OperationConfirmation = {
   action: "delete" | "edit";
   operation: DashboardWorkOperation;
+};
+
+type PaymentConfirmation = {
+  payment: DashboardPayment;
 };
 
 const emptyClient: ClientDraft = {
@@ -204,6 +217,7 @@ export function OperationsPanel({
   initialView = "projects",
   payments,
   projects,
+  receiptStorageConfigured = false,
   workOperations
 }: {
   clients: DashboardClient[];
@@ -211,6 +225,7 @@ export function OperationsPanel({
   initialView?: OperationView;
   payments: DashboardPayment[];
   projects: DashboardProject[];
+  receiptStorageConfigured?: boolean;
   workOperations: DashboardWorkOperation[];
 }) {
   const [viewState, setView] = useState<OperationView>(initialView);
@@ -221,7 +236,15 @@ export function OperationsPanel({
   const [paymentProjectId, setPaymentProjectId] = useState(projects[0]?.id ?? "");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayInputValue());
+  const [paymentEditingId, setPaymentEditingId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>("PIX");
   const [paymentNote, setPaymentNote] = useState("");
+  const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null);
+  const [paymentReceiptInputKey, setPaymentReceiptInputKey] = useState(0);
+  const [removePaymentReceipt, setRemovePaymentReceipt] = useState(false);
+  const [paymentConfirmation, setPaymentConfirmation] =
+    useState<PaymentConfirmation | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<DashboardPayment | null>(null);
   const [workOperationDraft, setWorkOperationDraft] = useState<WorkOperationDraft>(
     createWorkOperationDraft
   );
@@ -425,28 +448,59 @@ export function OperationsPanel({
 
   async function savePayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!paymentProjectId) {
+      toast({
+        message: "Escolha o projeto que recebeu o pagamento.",
+        title: "Projeto necessário",
+        tone: "error"
+      });
+      return;
+    }
+
+    if (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0) {
+      toast({
+        message: "Informe um valor maior que zero.",
+        title: "Valor inválido",
+        tone: "error"
+      });
+      return;
+    }
+
+    if (!paymentDate) {
+      toast({
+        message: "Informe a data em que o pagamento foi recebido.",
+        title: "Data necessária",
+        tone: "error"
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
+      const formData = new FormData();
+      formData.set("amount", paymentAmount);
+      formData.set("method", paymentMethod);
+      formData.set("note", paymentNote);
+      formData.set("paidAt", paymentDate);
+      formData.set("projectId", paymentProjectId);
+      formData.set("removeReceipt", removePaymentReceipt ? "true" : "false");
+
+      if (paymentReceipt) {
+        formData.set("receipt", paymentReceipt);
+      }
+
       await readResponse(
-        await fetch("/api/payments", {
-          body: JSON.stringify({
-            amount: paymentAmount,
-            note: paymentNote,
-            paidAt: paymentDate,
-            projectId: paymentProjectId
-          }),
-          headers: {
-            "Content-Type": "application/json"
-          },
-          method: "POST"
+        await fetch(paymentEditingId ? `/api/payments/${paymentEditingId}` : "/api/payments", {
+          body: formData,
+          method: paymentEditingId ? "PATCH" : "POST"
         })
       );
-      setPaymentAmount("");
-      setPaymentNote("");
+      resetPaymentForm();
       toast({
         message: "O saldo pendente foi recalculado.",
-        title: "Pagamento registrado",
+        title: paymentEditingId ? "Pagamento atualizado" : "Pagamento registrado",
         tone: "success"
       });
       router.refresh();
@@ -461,11 +515,34 @@ export function OperationsPanel({
     }
   }
 
-  async function deletePayment(payment: DashboardPayment) {
-    if (!window.confirm(`Remover o pagamento de ${payment.amountLabel}?`)) {
-      return;
-    }
+  function resetPaymentForm() {
+    setPaymentAmount("");
+    setPaymentDate(todayInputValue());
+    setPaymentEditingId(null);
+    setPaymentMethod("PIX");
+    setPaymentNote("");
+    setPaymentReceipt(null);
+    setPaymentReceiptInputKey((current) => current + 1);
+    setRemovePaymentReceipt(false);
+  }
 
+  function editPayment(payment: DashboardPayment) {
+    setPaymentAmount(payment.amount.toString());
+    setPaymentDate(payment.paidAt);
+    setPaymentEditingId(payment.id);
+    setPaymentMethod(payment.method);
+    setPaymentNote(payment.note ?? "");
+    setPaymentProjectId(payment.projectId);
+    setPaymentReceipt(null);
+    setPaymentReceiptInputKey((current) => current + 1);
+    setRemovePaymentReceipt(false);
+    document.getElementById("payment-form")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+
+  async function deletePayment(payment: DashboardPayment) {
     try {
       await readResponse(
         await fetch(`/api/payments/${payment.id}`, {
@@ -485,6 +562,43 @@ export function OperationsPanel({
         tone: "error"
       });
     }
+  }
+
+  function notifyClient(payment: DashboardPayment) {
+    const phoneDigits = payment.clientPhone?.replace(/\D/g, "");
+    const phone =
+      phoneDigits && (phoneDigits.length === 10 || phoneDigits.length === 11)
+        ? `55${phoneDigits}`
+        : phoneDigits;
+
+    if (!phone) {
+      toast({
+        message: "Cadastre o telefone do cliente antes de abrir o WhatsApp.",
+        title: "Telefone não encontrado",
+        tone: "warning"
+      });
+      return;
+    }
+
+    const shareUrl = payment.sharePath
+      ? `${window.location.origin}${payment.sharePath}`
+      : null;
+    const client = payment.clientName ?? "cliente";
+    const lines = [
+      `Olá, ${client}! Seu pagamento de ${payment.amountLabel} foi registrado no projeto ${payment.projectName}.`,
+      "",
+      `Forma de pagamento: ${payment.methodLabel}`,
+      payment.note ? `Observação: ${payment.note}` : null,
+      shareUrl ? "" : null,
+      shareUrl ? "Você pode acompanhar o projeto por aqui:" : null,
+      shareUrl
+    ].filter((line): line is string => line !== null);
+
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   function editWorkOperation(operation: DashboardWorkOperation) {
@@ -714,7 +828,7 @@ export function OperationsPanel({
       return;
     }
 
-    await navigator.clipboard.writeText(`${window.location.origin}${projectDraft.sharePath}`);
+    await copyTextToClipboard(`${window.location.origin}${projectDraft.sharePath}`);
     toast({
       message: "O endereço somente leitura está na área de transferência.",
       title: "Link copiado",
@@ -872,7 +986,7 @@ export function OperationsPanel({
                   </p>
                 </div>
                 <button
-                  className="inline-flex h-10 w-fit items-center gap-2 rounded-md bg-[var(--primary-bg)] px-3 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+                  className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium"
                   onClick={() => {
                     resetWorkOperation();
                     setRecordComposerOpen((current) => !current);
@@ -1058,7 +1172,7 @@ export function OperationsPanel({
                     </button>
                   ) : null}
                   <button
-                    className="h-11 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                    className="button-primary h-11 px-4 text-sm font-medium disabled:opacity-60"
                     disabled={isSaving}
                     type="submit"
                   >
@@ -1152,7 +1266,7 @@ export function OperationsPanel({
           <div id="clientes">
             <div className="flex justify-end px-5 pt-5">
               <button
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--primary-bg)] px-3 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+                className="button-primary inline-flex h-10 items-center gap-2 px-3 text-sm font-medium"
                 onClick={() => openClient()}
                 type="button"
               >
@@ -1209,88 +1323,263 @@ export function OperationsPanel({
         {view === "payments" ? (
           <div className="p-5" id="pagamentos">
             <form
-              className="grid gap-3 border-b border-[color:var(--border)] pb-5 md:grid-cols-[1fr_160px_160px_1fr_auto]"
+              className="border-b border-[color:var(--border)] pb-6"
+              id="payment-form"
+              noValidate
               onSubmit={savePayment}
             >
-              <span className="relative block">
-                <select
-                  className={selectClass}
-                  onChange={(event) => setPaymentProjectId(event.target.value)}
-                  required
-                  value={paymentProjectId}
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {paymentEditingId ? "Editar pagamento" : "Registrar pagamento"}
+                  </h2>
+                  <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                    O histórico atualiza imediatamente os valores recebidos e pendentes.
+                  </p>
+                </div>
+                {paymentEditingId ? (
+                  <button
+                    className="h-9 w-fit rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                    onClick={resetPaymentForm}
+                    type="button"
+                  >
+                    Cancelar edição
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Projeto
+                  </span>
+                  <span className="relative block">
+                    <select
+                      className={selectClass}
+                      onChange={(event) => setPaymentProjectId(event.target.value)}
+                      value={paymentProjectId}
+                    >
+                      <option value="">Selecione o projeto</option>
+                      {(configuredProjects.length > 0 ? configuredProjects : projects).map(
+                        (project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                    <ChevronDown
+                      aria-hidden
+                      className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                    />
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Valor recebido
+                  </span>
+                  <input
+                    className={fieldClass}
+                    inputMode="decimal"
+                    min="0.01"
+                    onChange={(event) => setPaymentAmount(event.target.value)}
+                    placeholder="0,00"
+                    step="0.01"
+                    type="number"
+                    value={paymentAmount}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Data
+                  </span>
+                  <input
+                    className={fieldClass}
+                    onChange={(event) => setPaymentDate(event.target.value)}
+                    type="date"
+                    value={paymentDate}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Forma de pagamento
+                  </span>
+                  <span className="relative block">
+                    <select
+                      className={selectClass}
+                      onChange={(event) =>
+                        setPaymentMethod(event.target.value as PaymentMethodValue)
+                      }
+                      value={paymentMethod}
+                    >
+                      {PAYMENT_METHODS.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      aria-hidden
+                      className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                    />
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.7fr)_auto] lg:items-end">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Observação
+                  </span>
+                  <input
+                    className={fieldClass}
+                    onChange={(event) => setPaymentNote(event.target.value)}
+                    placeholder="Referência ou detalhe opcional"
+                    value={paymentNote}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
+                    <span>Comprovante</span>
+                    <span className="text-[color:var(--text-faint)]">até 10 MB</span>
+                  </span>
+                  <input
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,application/pdf,image/png,image/jpeg,image/webp,text/plain"
+                    className="block h-11 w-full rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] text-xs text-[color:var(--text-muted)] file:mr-3 file:h-full file:border-0 file:border-r file:border-[color:var(--border)] file:bg-[var(--surface-subtle)] file:px-3 file:text-xs file:font-medium file:text-[color:var(--app-text-strong)]"
+                    disabled={!receiptStorageConfigured}
+                    key={paymentReceiptInputKey}
+                    onChange={(event) => {
+                      setPaymentReceipt(event.target.files?.[0] ?? null);
+                      setRemovePaymentReceipt(false);
+                    }}
+                    type="file"
+                  />
+                </label>
+
+                <button
+                  className="button-primary h-11 px-4 text-sm font-medium disabled:opacity-60"
+                  disabled={isSaving}
+                  type="submit"
                 >
-                  <option value="">Selecione o projeto</option>
-                  {(configuredProjects.length > 0 ? configuredProjects : projects).map(
-                    (project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    )
-                  )}
-                </select>
-                <ChevronDown
-                  aria-hidden
-                  className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
-                />
-              </span>
-              <input
-                className={fieldClass}
-                inputMode="decimal"
-                min="0.01"
-                onChange={(event) => setPaymentAmount(event.target.value)}
-                placeholder="Valor"
-                required
-                step="0.01"
-                type="number"
-                value={paymentAmount}
-              />
-              <input
-                className={fieldClass}
-                onChange={(event) => setPaymentDate(event.target.value)}
-                required
-                type="date"
-                value={paymentDate}
-              />
-              <input
-                className={fieldClass}
-                onChange={(event) => setPaymentNote(event.target.value)}
-                placeholder="Observação opcional"
-                value={paymentNote}
-              />
-              <button
-                className="h-11 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)] disabled:opacity-60"
-                disabled={isSaving}
-                type="submit"
-              >
-                Registrar
-              </button>
+                  {isSaving
+                    ? "Salvando"
+                    : paymentEditingId
+                      ? "Salvar alterações"
+                      : "Registrar"}
+                </button>
+              </div>
+
+              {!receiptStorageConfigured ? (
+                <p className="mt-3 text-xs leading-5 text-[color:var(--text-soft)]">
+                  Comprovantes ficam disponíveis após configurar o bucket privado do Supabase
+                  Storage. O pagamento pode ser salvo normalmente sem arquivo.
+                </p>
+              ) : null}
+
+              {paymentEditingId &&
+              payments.find((payment) => payment.id === paymentEditingId)?.receiptPath ? (
+                <label className="mt-3 inline-flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                  <input
+                    checked={removePaymentReceipt}
+                    className="size-4 accent-emerald-500"
+                    onChange={(event) => setRemovePaymentReceipt(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Remover o comprovante atual ao salvar
+                </label>
+              ) : null}
             </form>
 
-            <div className="divide-y divide-[color:var(--border)]">
+            <div className="pt-6">
+              <h2 className="text-lg font-semibold">Histórico de pagamentos</h2>
+              <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                Edite dados, consulte comprovantes ou avise o cliente pelo WhatsApp.
+              </p>
+            </div>
+
+            <div className="mt-3 divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
               {payments.length > 0 ? (
                 payments.map((payment) => (
                   <div
-                    className="grid gap-2 py-4 text-sm sm:grid-cols-[1fr_auto_auto_auto] sm:items-center"
+                    className="grid gap-4 py-5 text-sm lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
                     key={payment.id}
                   >
-                    <div>
-                      <p className="font-medium text-[color:var(--app-text-strong)]">
-                        {payment.projectName}
-                      </p>
-                      <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <p className="font-medium text-[color:var(--app-text-strong)]">
+                          {payment.projectName}
+                        </p>
+                        <span className="text-[color:var(--text-muted)]">
+                          {payment.paidAtLabel}
+                        </span>
+                        <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                          {payment.methodLabel}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-[color:var(--text-soft)]">
                         {payment.note ?? "Sem observação"}
                       </p>
+                      {payment.receiptName ? (
+                        <p className="mt-2 inline-flex min-w-0 items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                          <FileText className="size-3.5 shrink-0" />
+                          <span className="truncate">{payment.receiptName}</span>
+                        </p>
+                      ) : null}
                     </div>
-                    <span className="text-[color:var(--text-muted)]">{payment.paidAtLabel}</span>
-                    <strong>{payment.amountLabel}</strong>
-                    <button
-                      aria-label={`Remover pagamento de ${payment.amountLabel}`}
-                      className="grid size-9 place-items-center rounded-md text-[color:var(--text-muted)] hover:bg-red-500/10 hover:text-red-400"
-                      onClick={() => deletePayment(payment)}
-                      type="button"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      <strong className="mr-2 text-base">{payment.amountLabel}</strong>
+                      <button
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
+                        onClick={() => notifyClient(payment)}
+                        type="button"
+                      >
+                        <FaWhatsapp className="size-4" />
+                        Avisar cliente
+                      </button>
+                      {payment.receiptPath ? (
+                        <>
+                          <button
+                            aria-label={`Visualizar comprovante de ${payment.projectName}`}
+                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                            onClick={() => setReceiptPreview(payment)}
+                            title="Visualizar comprovante"
+                            type="button"
+                          >
+                            <Eye className="size-4" />
+                          </button>
+                          <a
+                            aria-label={`Baixar comprovante de ${payment.projectName}`}
+                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                            href={`/api/payments/${payment.id}/receipt?download=1`}
+                            title="Baixar comprovante"
+                          >
+                            <Download className="size-4" />
+                          </a>
+                        </>
+                      ) : null}
+                      <button
+                        aria-label={`Editar pagamento de ${payment.amountLabel}`}
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        onClick={() => editPayment(payment)}
+                        title="Editar pagamento"
+                        type="button"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        aria-label={`Remover pagamento de ${payment.amountLabel}`}
+                        className="grid size-9 place-items-center rounded-md border border-red-500/20 text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        onClick={() => setPaymentConfirmation({ payment })}
+                        title="Excluir pagamento"
+                        type="button"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -1548,7 +1837,7 @@ export function OperationsPanel({
                 Cancelar
               </button>
               <button
-                className="h-10 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] disabled:opacity-60"
+                className="button-primary h-10 px-4 text-sm font-medium disabled:opacity-60"
                 disabled={isSaving}
                 type="submit"
               >
@@ -1591,7 +1880,7 @@ export function OperationsPanel({
                   "h-10 rounded-md px-4 text-sm font-medium transition-colors",
                   operationConfirmation.action === "delete"
                     ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-[var(--primary-bg)] text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+                    : "button-primary"
                 ].join(" ")}
                 onClick={confirmWorkOperationAction}
                 type="button"
@@ -1600,6 +1889,65 @@ export function OperationsPanel({
                   ? "Editar operação"
                   : "Excluir operação"}
               </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {paymentConfirmation ? (
+        <Modal onClose={() => setPaymentConfirmation(null)} title="Excluir pagamento">
+          <div className="p-5">
+            <p className="text-sm leading-6 text-[color:var(--text-muted)]">
+              Excluir este pagamento recalculará o saldo do projeto. O comprovante relacionado
+              também será removido do Storage quando estiver configurado.
+            </p>
+            <p className="mt-2 text-xs text-[color:var(--text-soft)]">
+              {paymentConfirmation.payment.projectName} ·{" "}
+              {paymentConfirmation.payment.amountLabel}
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                onClick={() => setPaymentConfirmation(null)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="h-10 rounded-md bg-red-500 px-4 text-sm font-medium text-white transition-colors hover:bg-red-600"
+                onClick={() => {
+                  const payment = paymentConfirmation.payment;
+                  setPaymentConfirmation(null);
+                  void deletePayment(payment);
+                }}
+                type="button"
+              >
+                Excluir pagamento
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {receiptPreview ? (
+        <Modal
+          onClose={() => setReceiptPreview(null)}
+          title={receiptPreview.receiptName ?? "Comprovante"}
+        >
+          <div className="p-5">
+            <iframe
+              className="h-[62vh] min-h-80 w-full rounded-md border border-[color:var(--border)] bg-white"
+              src={`/api/payments/${receiptPreview.id}/receipt`}
+              title={`Comprovante de ${receiptPreview.projectName}`}
+            />
+            <div className="mt-4 flex justify-end">
+              <a
+                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+                href={`/api/payments/${receiptPreview.id}/receipt?download=1`}
+              >
+                <Download className="size-4" />
+                Baixar comprovante
+              </a>
             </div>
           </div>
         </Modal>
@@ -1767,7 +2115,7 @@ export function OperationsPanel({
                 Cancelar
               </button>
               <button
-                className="h-10 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] disabled:opacity-60"
+                className="button-primary h-10 px-4 text-sm font-medium disabled:opacity-60"
                 disabled={isSaving}
                 type="submit"
               >

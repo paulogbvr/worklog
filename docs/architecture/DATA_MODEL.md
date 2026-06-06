@@ -183,8 +183,20 @@ Campos:
 - projectId
 - amount
 - paidAt
+- method
 - note
+- receiptPath opcional
+- receiptName opcional
+- receiptMimeType opcional
 - createdAt
+- updatedAt
+
+Regras:
+
+- comprovante fica em bucket privado e o banco armazena apenas a referência
+- upload e download passam pelo backend
+- excluir ou substituir comprovante tenta remover o objeto antigo do Storage
+- pagamento continua funcionando sem Storage configurado
 
 ## ShareLink
 
@@ -200,6 +212,7 @@ Campos:
 - lastAccessedAt
 - createdAt
 - updatedAt
+- events
 
 Regras:
 
@@ -207,6 +220,26 @@ Regras:
 - preferir slug nao obvio para evitar exposicao acidental
 - portal nao pode permitir escrita
 - cada acesso concluído incrementa `accessCount` e atualiza `lastAccessedAt`
+- metadata e imagem Open Graph são dinâmicas, sem gerar arquivo por link
+- excluir permanentemente um link remove eventos e notificações relacionados por cascade
+- desativar preserva o histórico
+
+## ShareEvent
+
+Representa uma interação do cliente com o link público.
+
+Campos:
+
+- id
+- shareLinkId
+- type
+- createdAt
+
+Tipos:
+
+- acesso
+- cópia do link
+- download do PDF
 
 ## Notification
 
@@ -216,7 +249,9 @@ Campos:
 
 - id
 - projectId opcional
+- shareLinkId opcional
 - type
+- category
 - title
 - message
 - readAt opcional
@@ -228,6 +263,8 @@ Regras:
 - sincronização e compartilhamento não devem falhar se a notificação falhar
 - leitura é controlada por `readAt`
 - não criar infraestrutura de filas no MVP
+- `IMPORTANT` entra no badge
+- `UPDATE` registra atividade operacional sem poluir o contador
 
 ## SyncLog
 
@@ -256,9 +293,29 @@ SyncProvider:
 
 NotificationType:
 - SHARE_ACCESSED
+- SHARE_COPIED
 - SHARE_CREATED
+- SHARE_PDF_DOWNLOADED
+- ENV_WARNING
 - SYNC_SUCCESS
 - SYNC_ERROR
+
+NotificationCategory:
+- IMPORTANT
+- UPDATE
+
+PaymentMethod:
+- PIX
+- CREDIT_CARD
+- TED
+- CASH
+- BOLETO
+- OTHER
+
+ShareEventType:
+- ACCESS
+- COPY_LINK
+- PDF_DOWNLOAD
 ```
 
 ---
@@ -316,7 +373,7 @@ Valor Total - Valor Recebido
 - multiusuario
 - permissoes
 - workspaces
-- relatorios PDF
+- relatorios financeiros PDF avançados
 - exportacao financeira
 - Stripe
 - CRM

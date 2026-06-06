@@ -68,6 +68,11 @@ Aplicação inicializada:
 - páginas dedicadas para projetos, operações, clientes, registros e pagamentos
 - portal compartilhável somente leitura
 - notificações de sincronização e compartilhamento
+- pagamentos com forma, edição, comprovante opcional e WhatsApp
+- notificações importantes separadas de atualizações
+- metadata e Open Graph dinâmicos por projeto
+- PDF público gerado no backend
+- página Sobre orientada ao propósito e à instalação
 
 ---
 
@@ -82,7 +87,7 @@ Concluído
 Entregáveis:
 
 - `AGENTS.md` como instrução oficial do Codex
-- `CLAUDE.md` mantido apenas como ponte legada
+- `CLAUDE.md` removido; `AGENTS.md` é a única instrução operacional
 - `DATA_MODEL.md` criado
 - `WAKATIME_SYNC.md` criado
 - roadmap transformado neste arquivo
@@ -332,7 +337,11 @@ Critério de aceite:
 
 Resultado:
 
-- cadastro e remoção de pagamentos concluídos
+- cadastro, edição e remoção confirmada de pagamentos concluídos
+- formas Pix, cartão, TED, dinheiro, boleto e outro
+- comprovante privado opcional preparado para Supabase Storage
+- visualização e download de comprovante sem sair da página
+- aviso ao cliente por WhatsApp
 - histórico recente disponível no painel
 - valor recebido e saldo pendente recalculados no resumo
 
@@ -372,6 +381,11 @@ Resultado:
 - portal `/share/{slug}` com horas, valores, pagamentos e última sincronização
 - acessos contabilizados sem permitir escrita
 - notificações para link criado e projeto acessado
+- metadata, título, descrição e Open Graph dinâmicos por projeto
+- botões para copiar link e salvar PDF
+- eventos de acesso, cópia e PDF
+- histórico público de pagamentos e atualizações
+- PDF gerado sob demanda sem arquivo duplicado
 
 ---
 
@@ -408,6 +422,13 @@ Estado:
 - páginas dedicadas para cada fluxo administrativo
 - navegação via `Link` e prefetch nativo
 - badge, dropdown e página completa de notificações
+- badge atualizado por polling leve e visível na sidebar recolhida
+- importantes separadas de atualizações operacionais
+- botões primários e blocos copiáveis da instalação refinados
+- favicon oficial regenerado como botão preto com `</>`
+- página `/about` com narrativa, capacidades, CTA e open source
+- `CLAUDE.md` e assets antigos removidos
+- pagamentos e portal público avançados concluídos
 - proteção administrativa continua pendente
 
 Deploy inicial já disponível:
@@ -427,7 +448,7 @@ Critério de aceite:
 
 # Backlog Futuro
 
-- relatórios PDF
+- relatórios financeiros PDF avançados
 - exportação financeira
 - filtros personalizados por datas
 - multiusuário

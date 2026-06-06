@@ -6,13 +6,14 @@ import {
 } from "@/components/notifications-center";
 import { getServerEnvStatus } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { NotificationCategory } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 const TIME_ZONE = "America/Sao_Paulo";
 
 function toneForType(type: string): NotificationCenterItem["tone"] {
-  if (type === "SYNC_ERROR") {
+  if (type === "SYNC_ERROR" || type === "ENV_WARNING") {
     return "error";
   }
 
@@ -30,7 +31,8 @@ export default async function NotificationsPage() {
     },
     take: 100
   });
-  const items = notifications.map<NotificationCenterItem>((notification) => ({
+  const items = notifications.map<NotificationCenterItem & { category: NotificationCategory }>((notification) => ({
+    category: notification.category,
     createdAtLabel: new Intl.DateTimeFormat("pt-BR", {
       dateStyle: "medium",
       timeStyle: "short",
@@ -42,7 +44,13 @@ export default async function NotificationsPage() {
     title: notification.title,
     tone: toneForType(notification.type)
   }));
-  const unreadCount = items.filter((item) => !item.read).length;
+  const importantItems = items.filter(
+    (item) => item.category === NotificationCategory.IMPORTANT
+  );
+  const updateItems = items.filter(
+    (item) => item.category === NotificationCategory.UPDATE
+  );
+  const unreadCount = importantItems.filter((item) => !item.read).length;
 
   return (
     <AppShell envStatus={getServerEnvStatus()}>
@@ -66,12 +74,23 @@ export default async function NotificationsPage() {
           <Bell className="size-5 text-[color:var(--text-muted)]" />
           <div>
             <p className="text-xs text-[color:var(--text-soft)]">Total recente</p>
-            <p className="mt-1 text-xl font-semibold">{items.length}</p>
+            <p className="mt-1 text-xl font-semibold">{notifications.length}</p>
           </div>
         </div>
       </section>
 
-      <NotificationsCenter initialItems={items} />
+      <NotificationsCenter
+        description="Acessos, compartilhamentos, falhas e alertas que merecem sua atenção."
+        initialItems={importantItems}
+        title="Importantes"
+      />
+      <NotificationsCenter
+        defaultMode="all"
+        description="Sincronizações concluídas e movimentações operacionais normais."
+        initialItems={updateItems}
+        showReadControls={false}
+        title="Atualizações"
+      />
     </AppShell>
   );
 }

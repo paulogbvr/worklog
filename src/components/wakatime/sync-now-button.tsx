@@ -77,22 +77,17 @@ export function SyncNowButton() {
   }
 
   return (
-    <div className="flex flex-col items-start gap-2 sm:items-end">
-      <button
-        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[color:var(--border-strong)] bg-[var(--primary-bg)] text-sm font-medium text-[color:var(--primary-text)] transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isSyncing || isRefreshing}
-        onClick={handleSync}
-        type="button"
-      >
-        <span className="grid size-10 place-items-center">
-          <RefreshCw
-            className={["size-4", isSyncing || isRefreshing ? "animate-spin" : ""].join(" ")}
-          />
-        </span>
-        <span className="pr-4">
-          {isSyncing ? "Sincronizando" : isRefreshing ? "Atualizando painel" : "Atualizar agora"}
-        </span>
-      </button>
-    </div>
+    <button
+      aria-label="Clique para atualizar agora"
+      className="button-primary grid size-11 shrink-0 place-items-center disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={isSyncing || isRefreshing}
+      onClick={handleSync}
+      title="Clique para atualizar agora"
+      type="button"
+    >
+      <RefreshCw
+        className={["size-4", isSyncing || isRefreshing ? "animate-spin" : ""].join(" ")}
+      />
+    </button>
   );
 }

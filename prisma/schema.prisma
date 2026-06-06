@@ -19,9 +19,32 @@ enum SyncProvider {
 
 enum NotificationType {
   SHARE_ACCESSED
+  SHARE_COPIED
   SHARE_CREATED
+  SHARE_PDF_DOWNLOADED
+  ENV_WARNING
   SYNC_SUCCESS
   SYNC_ERROR
+}
+
+enum NotificationCategory {
+  IMPORTANT
+  UPDATE
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  TED
+  CASH
+  BOLETO
+  OTHER
+}
+
+enum ShareEventType {
+  ACCESS
+  COPY_LINK
+  PDF_DOWNLOAD
 }
 
 model Client {
@@ -96,13 +119,18 @@ model WakaTimeProjectDay {
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  amount    Decimal  @db.Decimal(10, 2)
-  paidAt    DateTime
-  note      String?
-  createdAt DateTime @default(now())
+  id              String        @id @default(cuid())
+  projectId       String
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amount          Decimal       @db.Decimal(10, 2)
+  paidAt          DateTime
+  method          PaymentMethod @default(OTHER)
+  note            String?
+  receiptPath     String?
+  receiptName     String?
+  receiptMimeType String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([projectId])
   @@index([paidAt])
@@ -118,24 +146,43 @@ model ShareLink {
   lastAccessedAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  events         ShareEvent[]
+  notifications  Notification[]
 
   @@index([projectId])
   @@index([active])
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  projectId String?
-  project   Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  type      NotificationType
-  title     String
-  message   String
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
+  id          String               @id @default(cuid())
+  projectId   String?
+  project     Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  shareLinkId String?
+  shareLink   ShareLink?           @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  category    NotificationCategory @default(IMPORTANT)
+  title       String
+  message     String
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
 
   @@index([createdAt])
   @@index([readAt])
   @@index([projectId])
+  @@index([shareLinkId])
+  @@index([category, readAt])
+}
+
+model ShareEvent {
+  id          String         @id @default(cuid())
+  shareLinkId String
+  shareLink   ShareLink      @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  type        ShareEventType
+  createdAt   DateTime       @default(now())
+
+  @@index([shareLinkId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model SyncLog {

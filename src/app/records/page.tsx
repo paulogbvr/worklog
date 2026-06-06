@@ -71,7 +71,7 @@ export default async function RecordsPage({
           </div>
         </div>
         <Link
-          className="inline-flex h-10 w-fit items-center gap-2 rounded-md bg-[var(--primary-bg)] px-3 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+          className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium"
           href="/operations"
         >
           <Plus className="size-4" />

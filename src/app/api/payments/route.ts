@@ -1,49 +1,63 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { readPaymentInput } from "@/server/payments/validation";
+import {
+  deletePaymentReceiptSafely,
+  uploadPaymentReceipt
+} from "@/server/storage/payment-receipts";
 
 export const runtime = "nodejs";
 
-function optionalText(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
 export async function POST(request: Request) {
-  try {
-    const body = (await request.json()) as Record<string, unknown>;
-    const projectId = optionalText(body.projectId);
-    const amount = Number(body.amount);
-    const paidAt = typeof body.paidAt === "string" ? new Date(`${body.paidAt}T12:00:00.000Z`) : null;
+  let uploadedPath: string | null = null;
 
-    if (!projectId || !Number.isFinite(amount) || amount <= 0 || !paidAt || Number.isNaN(paidAt.getTime())) {
-      return NextResponse.json(
-        {
-          error: "Informe projeto, valor e data válidos.",
-          ok: false
-        },
-        { status: 400 }
-      );
-    }
+  try {
+    const input = await readPaymentInput(request);
+    const receipt = input.receipt
+      ? await uploadPaymentReceipt(input.receipt, input.projectId)
+      : null;
+    uploadedPath = receipt?.path ?? null;
 
     await prisma.payment.create({
       data: {
-        amount,
-        note: optionalText(body.note),
-        paidAt,
-        projectId
+        amount: input.amount,
+        method: input.method,
+        note: input.note,
+        paidAt: input.paidAt,
+        projectId: input.projectId,
+        receiptMimeType: receipt?.mimeType,
+        receiptName: receipt?.name,
+        receiptPath: receipt?.path
       }
     });
     revalidatePath("/", "page");
     revalidatePath("/payments", "page");
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    await deletePaymentReceiptSafely(uploadedPath);
+    const isValidationError =
+      error instanceof Error &&
+      (error.message.startsWith("Selecione") ||
+        error.message.startsWith("Informe") ||
+        error.message.startsWith("Envie") ||
+        error.message.startsWith("O comprovante") ||
+        error.message.startsWith("Comprovantes"));
+    const isMissingProject =
+      error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003";
+
     return NextResponse.json(
       {
-        error: "Não foi possível registrar o pagamento.",
+        error: isValidationError
+          ? error.message
+          : isMissingProject
+            ? "O projeto selecionado não foi encontrado."
+            : "Não foi possível registrar o pagamento.",
         ok: false
       },
-      { status: 500 }
+      { status: isValidationError || isMissingProject ? 400 : 500 }
     );
   }
 }

@@ -85,8 +85,9 @@ Supabase PostgreSQL
 Regras:
 
 - utilizar PostgreSQL
-- Supabase será utilizado apenas como banco gerenciado
+- Supabase será utilizado como banco gerenciado e, opcionalmente, Storage privado para comprovantes
 - autenticação Supabase não será utilizada inicialmente
+- Supabase Client não deve ser enviado ao frontend
 
 ---
 
@@ -153,12 +154,21 @@ Opcional para Prisma CLI/migrations:
 DIRECT_URL=
 ```
 
+Opcionais para comprovantes:
+
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=payment-receipts
+```
+
 Regras:
 
 - utilizar `.env.local`
 - nunca commitar `.env.local`
 - manter `.env.example` atualizado
 - usar `DIRECT_URL` quando a `DATABASE_URL` de runtime não for adequada para migrations
+- manter `SUPABASE_SERVICE_ROLE_KEY` apenas no backend
 
 ---
 
@@ -217,6 +227,29 @@ Uso:
 - gráficos responsivos de horas
 - gráficos de valor gerado e recebido
 - composição visual inspirada no chart do Shadcn UI
+
+Storage:
+
+```txt
+@supabase/supabase-js
+```
+
+Uso:
+
+- somente em módulos server-side
+- upload, download e remoção de comprovantes em bucket privado
+- nenhuma chave ou URL sensível é enviada ao navegador
+
+PDF:
+
+```txt
+pdf-lib
+```
+
+Uso:
+
+- gerar o relatório do portal público no backend
+- não persistir PDFs ou imagens Open Graph duplicadas
 
 ---
 

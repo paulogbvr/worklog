@@ -1,7 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { NotificationType, Prisma } from "@prisma/client";
+import {
+  NotificationCategory,
+  NotificationType,
+  Prisma
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logPrismaError } from "@/lib/prisma-error";
 
@@ -66,31 +70,32 @@ export async function POST(
     const slug = current?.slug ??
       `${slugBase(project.name) || "projeto"}-${randomBytes(5).toString("hex")}`;
 
-    await prisma.$transaction([
-      current
-        ? prisma.shareLink.update({
-            data: {
-              active: true
-            },
-            where: {
-              id: current.id
-            }
-          })
-        : prisma.shareLink.create({
-            data: {
-              projectId: project.id,
-              slug
-            }
-          }),
-      prisma.notification.create({
+    const link = current
+      ? await prisma.shareLink.update({
+          data: {
+            active: true
+          },
+          where: {
+            id: current.id
+          }
+        })
+      : await prisma.shareLink.create({
+          data: {
+            projectId: project.id,
+            slug
+          }
+        });
+
+    await prisma.notification.create({
         data: {
+          category: NotificationCategory.IMPORTANT,
           message: `Um link somente leitura foi criado para ${project.name}.`,
           projectId: project.id,
+          shareLinkId: link.id,
           title: "Novo link compartilhado",
           type: NotificationType.SHARE_CREATED
         }
-      })
-    ]);
+      });
 
     revalidatePath("/", "page");
     revalidatePath("/projects", "page");
@@ -114,11 +119,37 @@ export async function POST(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
+    const permanent = new URL(request.url).searchParams.get("permanent") === "1";
+
+    if (permanent) {
+      const result = await prisma.shareLink.deleteMany({
+        where: {
+          projectId: id
+        }
+      });
+
+      if (result.count === 0) {
+        return NextResponse.json(
+          {
+            error: "Nenhum link encontrado para este projeto.",
+            ok: false
+          },
+          { status: 404 }
+        );
+      }
+
+      revalidatePath("/", "page");
+      revalidatePath("/projects", "page");
+      revalidatePath("/notifications", "page");
+
+      return NextResponse.json({ ok: true });
+    }
+
     const result = await prisma.shareLink.updateMany({
       data: {
         active: false

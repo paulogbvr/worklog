@@ -293,6 +293,10 @@ O endpoint direto do Supabase pode ser IPv6-only. Em ambientes locais ou CI sem 
 
 Instruções Oficiais para Codex
 
+#### Status
+
+Substituída pela `DECISION-033`.
+
 #### Decisão
 
 O arquivo `AGENTS.md` será a instrução operacional oficial para o Codex.
@@ -724,6 +728,10 @@ Permitir transparência com clientes sem criar autenticação ou expor telas adm
 
 Notificações Persistidas sem Infraestrutura de Filas
 
+#### Status
+
+Substituída pela `DECISION-031`.
+
 #### Decisão
 
 Notificações essenciais são persistidas no PostgreSQL e lidas diretamente via Prisma. O MVP não
@@ -745,3 +753,99 @@ Entregar histórico e badge de atividade com baixa complexidade operacional.
 - leitura individual e em lote usa `readAt`
 - falha ao criar notificação não derruba sincronização nem portal
 - novos tipos podem ser adicionados ao enum quando houver caso real
+
+---
+
+### DECISION-030
+
+#### Título
+
+Comprovantes Privados e Forma de Pagamento
+
+#### Decisão
+
+Pagamentos possuem forma explícita e podem referenciar um comprovante privado no Supabase Storage.
+O PostgreSQL armazena apenas caminho, nome e MIME. Upload, visualização, download, substituição e
+remoção passam por Route Handlers server-side.
+
+#### Motivo
+
+Preservar a simplicidade do model financeiro e impedir exposição de `SUPABASE_SERVICE_ROLE_KEY` ou
+objetos privados no frontend.
+
+#### Impacto
+
+- Storage é opcional e pagamentos sem arquivo continuam funcionando
+- bucket padrão: `payment-receipts`
+- tamanho máximo: 10 MB
+- formatos atuais: PDF, PNG, JPEG, WEBP e TXT
+- remover um pagamento também tenta remover o comprovante
+
+---
+
+### DECISION-031
+
+#### Título
+
+Notificações Importantes Separadas de Atualizações
+
+#### Decisão
+
+Notificações usam as categorias `IMPORTANT` e `UPDATE`. Apenas eventos importantes entram no badge.
+Sincronizações concluídas ficam em `Atualizações`; falhas, ambiente inválido e eventos do portal
+público permanecem importantes.
+
+O menu consulta novidades a cada 30 segundos e também responde a eventos locais, sem websocket.
+
+#### Motivo
+
+Manter o contador útil e atualizado sem introduzir filas, realtime ou infraestrutura adicional.
+
+#### Impacto
+
+- badge conta somente `IMPORTANT` não lidas
+- novas importantes geram toast
+- dropdown fecha por clique externo e ESC
+- sincronização normal não polui o contador
+
+---
+
+### DECISION-032
+
+#### Título
+
+Portal Público com Assets Dinâmicos e Eventos Vinculados
+
+#### Decisão
+
+Cada projeto compartilhado gera metadata e Open Graph dinamicamente. PDF também é gerado sob
+demanda no backend. Nenhuma imagem ou PDF por link é persistido.
+
+Acesso, cópia e download do PDF são `ShareEvent` vinculados ao `ShareLink`.
+
+#### Motivo
+
+Entregar preview e relatório personalizados sem duplicar arquivos ou acumular lixo no Storage.
+
+#### Impacto
+
+- exclusão permanente do link remove eventos e notificações relacionadas por cascade
+- desativação mantém o histórico
+- o portal continua somente leitura
+- PDF possui identificação de geração pelo backend
+
+---
+
+### DECISION-033
+
+#### Título
+
+AGENTS.md como Única Instrução de Agentes
+
+#### Decisão
+
+`CLAUDE.md` foi removido. `AGENTS.md` é a única instrução operacional para Codex e outros agentes.
+
+#### Motivo
+
+Eliminar ponte específica de ferramenta e impedir divergência documental.

@@ -21,9 +21,9 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Projetos              | ✅ Cobrança independente por tipo de hora |
 | Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ✅ CRUD concluído |
-| Pagamentos            | ✅ Controle básico |
-| Portal Compartilhável | ✅ Somente leitura |
-| Notificações          | ✅ Eventos essenciais |
+| Pagamentos            | ✅ Métodos, edição, comprovantes e WhatsApp |
+| Portal Compartilhável | ✅ Metadata dinâmica, eventos e PDF |
+| Notificações          | ✅ Importantes e atualizações |
 | Deploy                | ⚙️ Publicado, proteção pendente |
 
 Site publicado:
@@ -35,7 +35,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-███████████████████░ 94%
+███████████████████▓ 98%
 ```
 
 ---
@@ -46,7 +46,6 @@ https://worklog-projects.vercel.app/
 /
 ├── README.md
 ├── AGENTS.md
-├── CLAUDE.md
 ├── package.json
 ├── package-lock.json
 ├── next.config.ts
@@ -87,14 +86,17 @@ https://worklog-projects.vercel.app/
 │       ├── 20260605162000_billing_modes_and_work_operations/
 │       ├── 20260605170000_client_profile_fields/
 │       ├── 20260605203000_dual_billing_rates/
-│       └── 20260606013000_project_sharing_notifications/
+│       ├── 20260606013000_project_sharing_notifications/
+│       └── 20260606183000_payments_notifications_public_sharing/
 ├── src/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── clients/
+│   │   │   ├── environment/
 │   │   │   ├── notifications/
 │   │   │   ├── payments/
 │   │   │   ├── projects/
+│   │   │   ├── share/
 │   │   │   └── wakatime/
 │   │   ├── about/
 │   │   ├── clients/
@@ -115,6 +117,7 @@ https://worklog-projects.vercel.app/
 │   │   ├── brand-logo.tsx
 │   │   ├── dashboard-charts.tsx
 │   │   ├── dashboard-filters.tsx
+│   │   ├── installation-code-block.tsx
 │   │   ├── notification-menu.tsx
 │   │   ├── notifications-center.tsx
 │   │   ├── operations-panel.tsx
@@ -123,22 +126,26 @@ https://worklog-projects.vercel.app/
 │   │   └── wakatime/
 │   │       └── sync-now-button.tsx
 │   ├── lib/
+│   │   ├── clipboard.ts
 │   │   ├── env.ts
+│   │   ├── payment.ts
 │   │   └── prisma.ts
 │   ├── content/
 │   │   └── site.ts
 │   └── server/
 │       ├── dashboard/
 │       │   └── summary.ts
+│       ├── payments/
+│       ├── storage/
 │       └── wakatime/
 │           ├── client.ts
 │           └── sync.ts
 └── public/
-    ├── creator-photo.jpeg
+    ├── creator-photo.jpg
     ├── favicon.ico
+    ├── apple-icon.png
     ├── icon-worklog.png
     ├── og-worklog-v5.png
-    ├── og-worklog-v4.svg
     └── worklog-mark.svg
 ```
 
@@ -161,7 +168,8 @@ Antes de implementar qualquer coisa, consultar:
 11. docs/references/LINKS.md
 12. docs/project-memory/FINDINGS.md
 
-`CLAUDE.md` existe apenas como arquivo legado de compatibilidade. Para o Codex, a fonte operacional é `AGENTS.md`.
+`AGENTS.md` é a única fonte operacional para agentes. A ponte legada `CLAUDE.md` foi removida
+para evitar instruções duplicadas.
 
 ---
 
@@ -259,13 +267,14 @@ Histórico de Pagamentos
 
 Visualizar:
 
-- resumo histórico de horas WakaTime e dedicadas
-- valor pendente em todo o histórico
+- resumo de horas WakaTime e dedicadas no período selecionado
+- valor pendente no período selecionado
 - operação atual por projeto
 - gráficos com séries por projeto
 - filtros de 7 dias, 30 dias e todo o histórico
 - filtro por projeto
 - última atualização do WakaTime
+- refresh por ícone integrado aos filtros
 
 ---
 
@@ -409,18 +418,25 @@ Sem acesso administrativo.
 
 Cada acesso atualiza a contagem do link e gera uma notificação no painel administrativo.
 
+Cada página pública possui metadata e imagem Open Graph dinâmicas com o nome do projeto. O cliente
+também pode copiar o link e salvar um PDF gerado pelo backend. Acesso, cópia e PDF ficam registrados
+como eventos relacionados ao link.
+
 ---
 
 ## Notificações
 
-Eventos atuais:
+Notificações importantes:
 
-- sincronização concluída
 - erro de sincronização
 - novo link compartilhado
 - projeto compartilhado acessado
+- link público copiado
+- PDF público salvo
+- variável de ambiente inválida
 
-Disponíveis no badge da sidebar, dropdown de atividade e página completa.
+Sincronizações concluídas ficam na seção `Atualizações` e não poluem o badge. O contador é
+atualizado por polling leve, sem websocket ou infraestrutura de filas.
 
 ---
 
@@ -430,7 +446,22 @@ Registrar:
 
 - data
 - valor
+- forma de pagamento
 - observações
+- comprovante opcional
+
+Formas atuais:
+
+- Pix
+- Cartão de crédito
+- TED
+- Dinheiro
+- Boleto
+- Outro
+
+Pagamentos podem ser editados ou excluídos com confirmação. Comprovantes privados podem ser
+visualizados e baixados sem sair do WorkLog. O botão `Avisar cliente` abre o WhatsApp com a mensagem
+do recebimento e o link público do projeto, quando disponível.
 
 O sistema recalcula automaticamente:
 
@@ -505,6 +536,7 @@ Estado atual:
 - migration `20260605170000_client_profile_fields` aplicada no Supabase
 - migration `20260605203000_dual_billing_rates` aplicada no Supabase
 - migration `20260606013000_project_sharing_notifications` aplicada no Supabase
+- migration `20260606183000_payments_notifications_public_sharing` aplicada no Supabase
 - Prisma Client regenerado automaticamente antes de cada build
 - sincronização real validada usando Prisma e Supabase
 - projetos removidos do WakaTime são arquivados sem perda de histórico
@@ -526,6 +558,11 @@ DATABASE_URL="postgresql://usuario:senha@host:porta/postgres"
 
 # Opcional para Prisma CLI/migrations
 DIRECT_URL="postgresql://usuario:senha@host:porta/postgres"
+
+# Opcionais para comprovantes privados no Supabase Storage
+SUPABASE_URL="https://seu-projeto.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="sua_service_role"
+SUPABASE_STORAGE_BUCKET="payment-receipts"
 ```
 
 Criar também um `.env.example`:
@@ -534,6 +571,9 @@ Criar também um `.env.example`:
 WAKATIME_API_KEY=
 DATABASE_URL=
 DIRECT_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=payment-receipts
 ```
 
 Regras:
@@ -541,7 +581,11 @@ Regras:
 - a API Key real deve ficar apenas no `.env.local`
 - a DATABASE_URL real deve ficar apenas no `.env.local`
 - a DIRECT_URL real deve ficar apenas no `.env.local`
+- a SUPABASE_SERVICE_ROLE_KEY deve existir somente no backend
 - nunca commitar `.env.local`
+
+Para comprovantes, crie um bucket privado chamado `payment-receipts` no Supabase Storage. O app
+continua registrando pagamentos normalmente quando essas variáveis opcionais não estão presentes.
 
 ---
 
@@ -619,7 +663,7 @@ Priorizar:
 Assets de identidade:
 
 - marca oficial baseada no ícone `FaCode`, aplicada na sidebar desktop/mobile
-- favicon e ícone do app em `public/favicon.ico` e `public/icon-worklog.png`
+- favicon e ícones do app em `public/favicon.ico`, `public/icon-worklog.png` e `public/apple-icon.png`
 - imagem de preview social versionada em `public/og-worklog-v5.png`
 - metadata Open Graph e Twitter Card configurados no App Router com imagem absoluta, `secureUrl`, tipo MIME e dimensões
 - manifest do app configurado
@@ -632,6 +676,7 @@ Assets de identidade:
 - migration `20260605162000_billing_modes_and_work_operations` aplicada no Supabase
 - migration `20260605203000_dual_billing_rates` aplicada no Supabase
 - migration `20260606013000_project_sharing_notifications` aplicada no Supabase
+- migration `20260606183000_payments_notifications_public_sharing` aplicada no Supabase
 - cliente WakaTime server-side criado
 - rota `POST /api/wakatime/sync` criada
 - botão manual `Atualizar agora` conectado ao backend
@@ -650,7 +695,8 @@ Assets de identidade:
 - configuração de nome, cliente, valor/hora, status e observações de projetos
 - projeto pode voltar ao estado pendente/sem cobrança ao limpar cliente e valor por hora
 - erros específicos para cliente, valor/hora e projeto inexistente
-- cadastro e remoção de pagamentos
+- criação, edição e remoção confirmada de pagamentos
+- forma de pagamento, comprovante privado opcional e aviso por WhatsApp
 - CRUD de registros de trabalho com edição, exclusão e travessia de meia-noite
 - operações de trabalho com múltiplos intervalos e observação única
 - tarifas independentes para WakaTime e horas dedicadas
@@ -663,12 +709,16 @@ Assets de identidade:
 - páginas dedicadas de projetos, operações, clientes, registros e pagamentos
 - campo de repositório Git por projeto
 - links públicos somente leitura com ativação e desativação
-- portal `/share/{slug}` com horas, valores, pagamentos e última sincronização
-- notificações para compartilhamento, acesso público e sincronização
-- badge, dropdown e página completa de notificações
+- portal `/share/{slug}` com horas, valores, pagamentos, histórico, ações e última sincronização
+- metadata e Open Graph dinâmicos por projeto, sem arquivos duplicados
+- PDF público gerado no backend
+- notificações importantes separadas de atualizações operacionais
+- badge com polling leve, toast, dropdown com clique externo e ESC
 - páginas públicas `Fluxo`, `Instalação` e `Sobre`
 - repositório oficial destacado na página de instalação
-- foto oficial do criador em `public/creator-photo.jpeg`
+- blocos de instalação copiáveis e URL oficial aplicada
+- página Sobre com história, capacidades, CTA de instalação e seção open source
+- foto oficial do criador em `public/creator-photo.jpg`
 - card de variáveis alinhado na sidebar expandida do desktop
 - header móvel, safe-area e `theme-color` sincronizados com o tema antes da hidratação
 
@@ -685,6 +735,8 @@ Assets de identidade:
 - Supabase
 - Vercel
 - Recharts
+- pdf-lib
+- Supabase Storage via SDK server-side
 
 ---
 
