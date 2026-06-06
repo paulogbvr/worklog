@@ -41,14 +41,14 @@ const profileLinks: Array<{
     label: "GitHub"
   },
   {
-    href: creatorProfile.instagramUrl,
-    icon: FaInstagram,
-    label: "Instagram"
-  },
-  {
     href: creatorProfile.linkedinUrl,
     icon: FaLinkedin,
     label: "LinkedIn"
+  },
+  {
+    href: creatorProfile.instagramUrl,
+    icon: FaInstagram,
+    label: "Instagram"
   }
 ];
 
@@ -139,23 +139,23 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="border-y border-[color:var(--border)] py-8">
+      <section className="border-y border-[color:var(--border)] py-7">
         <div>
           <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
             Visão completa
           </p>
-          <h2 className="mt-2 text-xl font-semibold">O que você consegue controlar</h2>
+          <h2 className="mt-2 text-lg font-semibold">O que você consegue controlar</h2>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {capabilities.map((capability) => (
             <article
-              className="flex min-h-20 items-start gap-3 rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-4"
+              className="flex items-center gap-2.5 rounded-md border border-[color:var(--border)] bg-[var(--surface)] px-3 py-2.5"
               key={capability}
             >
-              <span className="grid size-6 shrink-0 place-items-center rounded-md bg-emerald-500/10 text-emerald-400">
-                <Check className="size-3.5" strokeWidth={2.2} />
+              <span className="grid size-5 shrink-0 place-items-center rounded bg-emerald-500/10 text-emerald-400">
+                <Check className="size-3" strokeWidth={2.2} />
               </span>
-              <p className="text-sm leading-6 text-[color:var(--text-muted)]">{capability}</p>
+              <p className="text-sm leading-5 text-[color:var(--text-muted)]">{capability}</p>
             </article>
           ))}
         </div>
@@ -166,14 +166,15 @@ export default function AboutPage() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
               <p className="text-xs uppercase tracking-[0.16em] text-emerald-400">
-                Comece em poucos minutos
+                Open source
               </p>
               <h2 className="mt-2 text-xl font-semibold sm:text-2xl">
-                Quer usar o WorkLog nos seus projetos?
+                Use o WorkLog no seu próprio fluxo
               </h2>
               <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
-                Clone o projeto, conecte seu WakaTime, configure o banco de dados e comece a
-                acompanhar tempo, valor gerado, pagamentos e rentabilidade em poucos minutos.
+                O projeto é open source e pode ser clonado, estudado e adaptado para o seu jeito de
+                trabalhar. Configure seu ambiente, conecte o WakaTime e acompanhe horas, pagamentos
+                e a evolução dos seus projetos com mais clareza.
               </p>
             </div>
             <Link
@@ -181,7 +182,7 @@ export default function AboutPage() {
               href="/installation"
               prefetch
             >
-              Criar meu WorkLog
+              Ver como instalar
               <ArrowRight className="size-4" />
             </Link>
           </div>

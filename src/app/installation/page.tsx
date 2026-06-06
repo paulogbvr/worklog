@@ -80,7 +80,7 @@ export default function InstallationPage() {
             <p className="text-xs text-[color:var(--text-faint)]">01</p>
             <h2 className="mt-2 font-semibold">Código e Git</h2>
           </div>
-          <div className="max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
+          <div className="min-w-0 max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
             <p>
               Faça um fork para sua conta, clone o repositório e instale as dependências com npm.
             </p>
@@ -102,7 +102,7 @@ git push -u origin main`}</InstallationCodeBlock>
             <p className="text-xs text-[color:var(--text-faint)]">02</p>
             <h2 className="mt-2 font-semibold">Supabase</h2>
           </div>
-          <div className="max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
+          <div className="min-w-0 max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
             <p>
               Crie um projeto e copie as strings de conexão em Database Settings. Use o
               Transaction Pooler em `DATABASE_URL` para o runtime serverless. Use uma conexão
@@ -123,7 +123,7 @@ DIRECT_URL="postgresql://..."`}</InstallationCodeBlock>
             <p className="text-xs text-[color:var(--text-faint)]">03</p>
             <h2 className="mt-2 font-semibold">Prisma</h2>
           </div>
-          <div className="max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
+          <div className="min-w-0 max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
             <p>
               Gere o Prisma Client e aplique as migrations versionadas no banco configurado.
             </p>
@@ -140,7 +140,7 @@ npm run prisma:deploy`}</InstallationCodeBlock>
             <p className="text-xs text-[color:var(--text-faint)]">04</p>
             <h2 className="mt-2 font-semibold">WakaTime</h2>
           </div>
-          <div className="max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
+          <div className="min-w-0 max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
             <p>
               Crie uma conta, instale o plugin oficial no editor e copie sua API Key para o
               backend do WorkLog.
@@ -175,7 +175,7 @@ npm run prisma:deploy`}</InstallationCodeBlock>
             <p className="text-xs text-[color:var(--text-faint)]">05</p>
             <h2 className="mt-2 font-semibold">Vercel</h2>
           </div>
-          <div className="max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
+          <div className="min-w-0 max-w-3xl text-sm leading-6 text-[color:var(--text-soft)]">
             <p>
               Importe o repositório GitHub na Vercel e adicione as três variáveis nos ambientes
               Production e Preview. Faça um novo deploy sempre que alterar variáveis.

@@ -15,10 +15,12 @@ import type {
 } from "@/server/dashboard/summary";
 
 const tooltipStyle = {
-  background: "var(--modal-bg)",
-  border: "1px solid var(--border-strong)",
-  borderRadius: "8px",
-  boxShadow: "var(--card-shadow)",
+  WebkitBackdropFilter: "blur(8px)",
+  backdropFilter: "blur(8px)",
+  background: "var(--chart-tooltip-bg)",
+  border: "1px solid var(--chart-tooltip-border)",
+  borderRadius: "10px",
+  boxShadow: "var(--toast-shadow)",
   color: "var(--app-text-strong)"
 };
 

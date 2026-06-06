@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleDollarSign, History } from "lucide-react";
 
 export type SharedTimelineFilter = "all" | "payments" | "updates";
@@ -25,6 +25,7 @@ export function SharedProjectTimeline({
   items: SharedTimelineItem[];
 }) {
   const [filter, setFilter] = useState(initialFilter);
+  const filtersRef = useRef<HTMLDivElement>(null);
   const counts = useMemo(
     () => ({
       all: items.length,
@@ -47,6 +48,13 @@ export function SharedProjectTimeline({
     return () => window.removeEventListener("popstate", syncFromHistory);
   }, []);
 
+  useEffect(() => {
+    const active = filtersRef.current?.querySelector<HTMLButtonElement>(
+      `[data-filter="${filter}"]`
+    );
+    active?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [filter]);
+
   function selectFilter(nextFilter: SharedTimelineFilter) {
     const url = new URL(window.location.href);
     url.searchParams.set("filter", nextFilter);
@@ -68,7 +76,10 @@ export function SharedProjectTimeline({
         <h2 className="text-lg font-semibold text-amber-400">Histórico de atualizações</h2>
       </div>
 
-      <div className="-mx-1 mt-4 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        className="-mx-1 mt-4 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        ref={filtersRef}
+      >
         <div className="inline-flex w-max gap-1 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
           {(
             [
@@ -80,11 +91,12 @@ export function SharedProjectTimeline({
             <button
               aria-pressed={filter === value}
               className={[
-                "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded px-3.5 text-xs transition-colors",
+                "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded px-3.5 text-xs transition-all duration-200 ease-out active:scale-95",
                 filter === value
-                  ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
+                  ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
                   : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
               ].join(" ")}
+              data-filter={value}
               key={value}
               onClick={() => selectFilter(value)}
               type="button"

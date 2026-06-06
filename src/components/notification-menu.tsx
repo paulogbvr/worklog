@@ -245,10 +245,10 @@ export function NotificationMenu({
             ].map(([value, label]) => (
               <button
                 className={[
-                  "h-9 rounded text-xs transition-colors",
+                  "h-9 rounded text-xs transition-all duration-200 ease-out active:scale-95",
                   showUnread === value
-                    ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
-                    : "text-[color:var(--text-muted)]"
+                    ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
+                    : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
                 ].join(" ")}
                 key={label as string}
                 onClick={() => setShowUnread(value as boolean)}

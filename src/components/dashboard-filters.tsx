@@ -52,7 +52,7 @@ export function DashboardFilters({
       <label className="relative block min-w-52">
         <span className="sr-only">Filtrar por projeto</span>
         <select
-          className="h-11 w-full appearance-none rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 pr-10 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors focus:border-[color:var(--border-focus)]"
+          className="h-11 w-full appearance-none rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 pr-10 text-sm text-[color:var(--app-text-strong)] outline-none transition-all duration-200 hover:border-[color:var(--border-strong)] focus:border-[color:var(--border-focus)]"
           onChange={(event) => selectProject(event.target.value)}
           value={projectId ?? ""}
         >
@@ -84,9 +84,9 @@ export function DashboardFilters({
             <Link
               aria-current={period === value ? "page" : undefined}
               className={[
-                "min-w-12 rounded px-3 py-2 text-center text-xs font-medium transition-colors",
+                "min-w-12 rounded px-3 py-2 text-center text-xs font-medium transition-all duration-200 ease-out active:scale-95",
                 period === value
-                  ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
+                  ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
                   : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
               ].join(" ")}
               href={buildHref(value)}

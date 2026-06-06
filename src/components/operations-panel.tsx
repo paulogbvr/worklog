@@ -230,7 +230,7 @@ function Modal({
 }
 
 const fieldClass =
-  "h-11 w-full rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]";
+  "h-11 w-full min-w-0 rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]";
 const selectClass = `${fieldClass} appearance-none pr-10`;
 const textareaClass =
   "min-h-24 w-full resize-y rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]";
@@ -689,6 +689,10 @@ export function OperationsPanel({
     });
     setView("records");
     setRecordComposerOpen(true);
+    window.setTimeout(() => {
+      const form = document.getElementById("registros");
+      form?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
   }
 
   function resetWorkOperation() {
@@ -915,7 +919,9 @@ export function OperationsPanel({
     <>
       <section
         className={[
-          "rounded-lg border border-[color:var(--border)] bg-[var(--surface)]",
+          fixedView === "records"
+            ? "space-y-6"
+            : "rounded-lg border border-[color:var(--border)] bg-[var(--surface)]",
           fixedView ? "" : "mt-4"
         ].join(" ")}
         id="operacao"
@@ -941,9 +947,9 @@ export function OperationsPanel({
                   return (
                     <button
                       className={[
-                        "h-9 rounded px-3 text-sm transition-colors",
+                        "h-9 rounded px-3 text-sm transition-all duration-200 ease-out active:scale-95",
                         view === item
-                          ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
+                          ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
                           : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
                       ].join(" ")}
                       key={item}
@@ -1057,9 +1063,20 @@ export function OperationsPanel({
         ) : null}
 
         {view === "records" ? (
-          <div className="p-5" id="registros">
+          <>
+          <div
+            className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5"
+            id="registros"
+          >
             {fixedView === "records" ? (
-              <div className="mb-5 flex flex-col gap-3 border-b border-[color:var(--border)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                className={[
+                  "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+                  recordComposerOpen
+                    ? "mb-5 border-b border-[color:var(--border)] pb-5"
+                    : ""
+                ].join(" ")}
+              >
                 <div>
                   <h2 className="text-lg font-semibold">Operações de trabalho</h2>
                   <p className="mt-1 text-sm text-[color:var(--text-soft)]">
@@ -1067,7 +1084,7 @@ export function OperationsPanel({
                   </p>
                 </div>
                 <button
-                  className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium"
+                  className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium transition-transform duration-200 active:scale-95"
                   onClick={() => {
                     resetWorkOperation();
                     setRecordComposerOpen((current) => !current);
@@ -1081,11 +1098,7 @@ export function OperationsPanel({
             ) : null}
 
             {recordComposerOpen ? (
-              <form
-                className="grid gap-4 border-b border-[color:var(--border)] pb-5"
-                noValidate
-                onSubmit={saveWorkOperation}
-              >
+              <form className="grid gap-4" noValidate onSubmit={saveWorkOperation}>
               <label className="block max-w-md">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                   Projeto
@@ -1267,15 +1280,15 @@ export function OperationsPanel({
               </div>
               </form>
             ) : null}
+          </div>
 
-            <div className={recordComposerOpen ? "pt-5" : ""}>
-              <h3 className="mb-1 text-sm font-semibold text-amber-400">Histórico</h3>
-              <p className="mb-3 text-xs text-[color:var(--text-soft)]">
-                Todas as operações registradas no período carregado.
-              </p>
-            </div>
+          <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+            <h3 className="mb-1 text-base font-semibold text-amber-400">Histórico</h3>
+            <p className="mb-3 text-xs text-[color:var(--text-soft)]">
+              Todas as operações registradas no período carregado.
+            </p>
 
-            <div className="divide-y divide-[color:var(--border)]">
+            <div className="divide-y divide-[color:var(--border)] border-t border-[color:var(--border)]">
               {workOperations.length > 0 ? (
                 workOperations.map((operation) => (
                   <div
@@ -1339,6 +1352,7 @@ export function OperationsPanel({
               )}
             </div>
           </div>
+          </>
         ) : null}
 
         {view === "clients" ? (

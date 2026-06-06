@@ -84,10 +84,10 @@ export function NotificationsCenter({
               ).map(([value, label]) => (
                 <button
                   className={[
-                    "h-9 rounded px-3 text-sm transition-colors",
+                    "h-9 rounded px-3 text-sm transition-all duration-200 ease-out active:scale-95",
                     mode === value
-                      ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
-                      : "text-[color:var(--text-muted)]"
+                      ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
+                      : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
                   ].join(" ")}
                   key={value}
                   onClick={() => setMode(value)}

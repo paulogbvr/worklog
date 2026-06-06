@@ -64,14 +64,21 @@ export default async function Home({
             </h1>
           </div>
           <DashboardFilters
-            actions={<SyncNowButton />}
+            actions={
+              <span className="xl:hidden">
+                <SyncNowButton />
+              </span>
+            }
             period={dashboard.period}
             projectId={dashboard.selectedProjectId}
             projects={dashboard.projectOptions}
           />
         </div>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex flex-col items-end gap-2">
+          <div className="hidden xl:block">
+            <SyncNowButton />
+          </div>
           <div className="inline-flex w-fit max-w-full items-center gap-2.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[color:var(--text-muted)]">
             <StatusPulse tone={syncTone} />
             <span className="truncate">Última sincronização</span>

@@ -37,19 +37,19 @@ export function buildPaymentMessage(input: PaymentMessageInput) {
   const lines = [
     "*→ Pagamento Registrado com Sucesso!* 💸",
     "",
-    `> *PROJETO:* ${singleLine(input.projectName)}`,
-    `> _registrado em → *${singleLine(input.date)}*_`,
+    `> *Projeto: →* ${singleLine(input.projectName)}`,
+    `> _*${singleLine(input.date)}*_`,
     ""
   ];
 
-  lines.push(`*Valor:* *R$ ${amount}*`);
+  lines.push(`*Valor: →* *R$* ${amount}`);
 
   if (methodLabel) {
-    lines.push(`*Forma de pagamento:* ${singleLine(methodLabel)}`);
+    lines.push(`*Forma de pagamento: →* ${singleLine(methodLabel)}`);
   }
 
   if (note) {
-    lines.push("", `*Observação:* ${note}`);
+    lines.push(`*Observação: →* ${note}`);
   }
 
   if (shareUrl) {
@@ -58,7 +58,6 @@ export function buildPaymentMessage(input: PaymentMessageInput) {
     lines.push(
       "",
       "*Você pode acompanhar todas as atualizações do projeto pelo link abaixo:* ↓",
-      "",
       singleLine(shareUrl)
     );
   }
