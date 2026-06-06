@@ -53,6 +53,8 @@ export async function POST(request: Request) {
       }))
     });
     revalidatePath("/", "page");
+    revalidatePath("/operations", "page");
+    revalidatePath("/records", "page");
 
     return NextResponse.json({
       operationId,

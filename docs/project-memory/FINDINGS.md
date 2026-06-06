@@ -591,6 +591,44 @@ para o shell.
 
 ---
 
+## 2026-06-06
+
+### Descoberta
+
+As categorias “aprovados”, “marketing” e “administradores” não pertencem ao modelo de clientes do
+WorkLog.
+
+### Impacto
+
+Persistir essas categorias criaria conceitos de CRM e permissões sem relação com horas,
+faturamento ou pagamentos.
+
+### Ação
+
+A página de clientes usa indicadores derivados de dados reais: total, com projetos, com cobrança,
+sem projeto e últimos cadastrados.
+
+---
+
+## 2026-06-06
+
+### Descoberta
+
+Validar apenas o status HTTP de uma página dinâmica com streaming não garante que todos os efeitos
+server-side do render tenham concluído.
+
+### Evidência
+
+No primeiro teste do portal público, o status `200` foi lido sem consumir o HTML. A contabilização
+do acesso ainda estava em execução quando o banco foi consultado.
+
+### Ação
+
+Nos testes de páginas compartilhadas, consumir o corpo completo antes de verificar `accessCount` e
+notificações persistidas.
+
+---
+
 # Regra
 
 Sempre que uma descoberta relevante acontecer:

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import {
+  Bell,
+  BriefcaseBusiness,
   Clock3,
   CreditCard,
   Download,
@@ -21,6 +23,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { NotificationMenu } from "@/components/notification-menu";
 import { StatusPulse } from "@/components/status-pulse";
 import { ToastProvider } from "@/components/toast-provider";
 import type { ServerEnvStatus } from "@/lib/env";
@@ -34,39 +37,26 @@ type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  operationView?: "clients" | "payments" | "projects" | "records";
   path: string;
 };
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/#dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Dashboard", href: "/", icon: LayoutDashboard, path: "/" },
+  { label: "Projetos", href: "/projects", icon: FolderKanban, path: "/projects" },
   {
-    label: "Projetos",
-    href: "/?view=projects#operacao",
-    icon: FolderKanban,
-    operationView: "projects",
-    path: "/"
+    label: "Operações",
+    href: "/operations",
+    icon: BriefcaseBusiness,
+    path: "/operations"
   },
+  { label: "Clientes", href: "/clients", icon: Users, path: "/clients" },
+  { label: "Registros", href: "/records", icon: Clock3, path: "/records" },
+  { label: "Pagamentos", href: "/payments", icon: CreditCard, path: "/payments" },
   {
-    label: "Clientes",
-    href: "/?view=clients#operacao",
-    icon: Users,
-    operationView: "clients",
-    path: "/"
-  },
-  {
-    label: "Registros",
-    href: "/?view=records#operacao",
-    icon: Clock3,
-    operationView: "records",
-    path: "/"
-  },
-  {
-    label: "Pagamentos",
-    href: "/?view=payments#operacao",
-    icon: CreditCard,
-    operationView: "payments",
-    path: "/"
+    label: "Notificações",
+    href: "/notifications",
+    icon: Bell,
+    path: "/notifications"
   },
   { label: "Fluxo", href: "/flow", icon: Workflow, path: "/flow" },
   { label: "Instalação", href: "/installation", icon: Download, path: "/installation" },
@@ -155,14 +145,6 @@ function NavLink({
   const Icon = item.icon;
 
   function handleClick() {
-    if (item.operationView) {
-      window.dispatchEvent(
-        new CustomEvent("worklog-operation-view", {
-          detail: item.operationView
-        })
-      );
-    }
-
     onSelect?.();
   }
 
@@ -170,7 +152,7 @@ function NavLink({
     <Link
       aria-current={active ? "page" : undefined}
       className={[
-        "sidebar-nav-link group relative flex h-11 items-center gap-3 rounded-md px-3 text-sm transition-colors duration-200",
+        "sidebar-nav-link group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors duration-200",
         active
           ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm shadow-black/10"
           : "text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
@@ -287,11 +269,9 @@ function ThemeToggle({ onToggle }: { onToggle: () => void }) {
 }
 
 export function AppShell({
-  activeOperationView = null,
   children,
   envStatus
 }: {
-  activeOperationView?: NavItem["operationView"] | null;
   children: ReactNode;
   envStatus: ServerEnvStatus;
 }) {
@@ -311,19 +291,7 @@ export function AppShell({
   }
 
   function isNavItemActive(item: NavItem) {
-    if (pathname !== item.path) {
-      return false;
-    }
-
-    if (item.path !== "/") {
-      return true;
-    }
-
-    if (item.operationView) {
-      return activeOperationView === item.operationView;
-    }
-
-    return !activeOperationView;
+    return pathname === item.path;
   }
 
   return (
@@ -374,13 +342,14 @@ export function AppShell({
             </div>
           </div>
 
-          <nav className="min-h-0 flex-1 space-y-1 overflow-visible px-3 py-3">
+          <nav className="min-h-0 flex-1 space-y-0.5 overflow-visible px-3 py-2">
             {navItems.map((item) => (
               <NavLink active={isNavItemActive(item)} item={item} key={item.label} />
             ))}
           </nav>
 
           <div className="space-y-3 overflow-visible px-3 pb-4">
+            <NotificationMenu />
             <ThemeToggle onToggle={handleThemeToggle} />
             <EnvPanel envStatus={envStatus} />
           </div>
@@ -455,6 +424,7 @@ export function AppShell({
             </nav>
 
             <div className="mt-auto space-y-3 px-4 pb-5">
+              <NotificationMenu mobile />
               <ThemeControl
                 className="flex"
                 onToggle={handleThemeToggle}

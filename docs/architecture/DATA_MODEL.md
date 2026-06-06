@@ -104,6 +104,7 @@ Campos:
 - clientId opcional
 - name
 - notes opcional
+- repositoryUrl opcional
 - hourlyRate opcional para WakaTime
 - dedicatedHourlyRate opcional
 - billDedicated com padrão `false`
@@ -128,6 +129,7 @@ Regras:
   `dedicatedHourlyRate` for positivo
 - projeto WakaTime ausente da lista atual deve ficar com `active = false`
 - inativar não remove horas, pagamentos ou configuração
+- repositório é apenas referência pública e deve usar URL HTTP/HTTPS válida
 
 ## WorkLogEntry
 
@@ -194,6 +196,8 @@ Campos:
 - projectId
 - slug
 - active
+- accessCount
+- lastAccessedAt
 - createdAt
 - updatedAt
 
@@ -202,6 +206,28 @@ Regras:
 - slug deve ser unico
 - preferir slug nao obvio para evitar exposicao acidental
 - portal nao pode permitir escrita
+- cada acesso concluído incrementa `accessCount` e atualiza `lastAccessedAt`
+
+## Notification
+
+Representa eventos relevantes para a operação pessoal do WorkLog.
+
+Campos:
+
+- id
+- projectId opcional
+- type
+- title
+- message
+- readAt opcional
+- createdAt
+
+Regras:
+
+- não armazenar dados sensíveis
+- sincronização e compartilhamento não devem falhar se a notificação falhar
+- leitura é controlada por `readAt`
+- não criar infraestrutura de filas no MVP
 
 ## SyncLog
 
@@ -227,6 +253,12 @@ ProjectConfigurationStatus:
 
 SyncProvider:
 - WAKATIME
+
+NotificationType:
+- SHARE_ACCESSED
+- SHARE_CREATED
+- SYNC_SUCCESS
+- SYNC_ERROR
 ```
 
 ---

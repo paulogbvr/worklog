@@ -80,6 +80,8 @@ export async function PATCH(
       })
     ]);
     revalidatePath("/", "page");
+    revalidatePath("/operations", "page");
+    revalidatePath("/records", "page");
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -119,6 +121,8 @@ export async function DELETE(
     }
 
     revalidatePath("/", "page");
+    revalidatePath("/operations", "page");
+    revalidatePath("/records", "page");
 
     return NextResponse.json({ ok: true });
   } catch (error) {

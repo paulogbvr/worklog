@@ -26,6 +26,8 @@ export async function POST(request: Request) {
       data: parsed.data
     });
     revalidatePath("/", "page");
+    revalidatePath("/clients", "page");
+    revalidatePath("/projects", "page");
 
     return NextResponse.json({
       client: {

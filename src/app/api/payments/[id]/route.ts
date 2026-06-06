@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -15,6 +16,8 @@ export async function DELETE(
         id
       }
     });
+    revalidatePath("/", "page");
+    revalidatePath("/payments", "page");
 
     return NextResponse.json({ ok: true });
   } catch {

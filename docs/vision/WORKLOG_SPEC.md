@@ -30,6 +30,7 @@ Campos:
 - valor_hora_dedicada
 - cobrar_horas_dedicadas
 - wakatime_project_name
+- repositorio_git
 - ativo
 
 Cada projeto deve possuir:
@@ -165,6 +166,31 @@ O cliente poderá visualizar:
 - última atualização
 
 O cliente não poderá editar informações.
+
+Cada projeto poderá:
+
+- gerar um link não óbvio
+- copiar e abrir o link
+- desativar o compartilhamento
+- contabilizar acessos
+
+---
+
+### Notificações
+
+Eventos do MVP:
+
+- sincronização concluída
+- erro de sincronização
+- novo link compartilhado
+- projeto compartilhado acessado
+
+Interface:
+
+- badge na sidebar
+- dropdown com não lidas e todas
+- página completa
+- marcação individual ou em lote como lida
 
 ---
 

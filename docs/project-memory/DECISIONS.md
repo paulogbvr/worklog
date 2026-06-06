@@ -608,7 +608,7 @@ WakaTime, horas dedicadas, pagamentos e valores financeiros na mesma consulta.
 
 #### Impacto
 
-- período padrão: 30 dias
+- período padrão: 7 dias
 - filtro via query string `period`
 - contadores estruturais de projetos e clientes permanecem globais
 
@@ -662,3 +662,86 @@ pagamento mais recente. Quando não houver pagamento, todo o histórico é consi
 - o último pagamento é derivado de `Payment.paidAt`
 - a métrica não exige novo campo persistido
 - totais históricos permanecem disponíveis separadamente do filtro do dashboard
+
+---
+
+## 2026-06-06
+
+### DECISION-027
+
+#### Título
+
+Dashboard como Visão, não como Área Administrativa
+
+#### Decisão
+
+O dashboard contém somente resumo histórico, operação atual e gráficos. Projetos, operações,
+clientes, registros e pagamentos possuem páginas próprias.
+
+O período padrão é 7 dias e o filtro opcional por projeto deve afetar horas, valores, gráficos e
+operação atual.
+
+#### Motivo
+
+Reduzir densidade visual, melhorar navegação e separar leitura financeira de tarefas de cadastro.
+
+#### Impacto
+
+- formulários deixam a home
+- navegação usa rotas dedicadas e prefetch do Next.js
+- gráficos exibem séries identificáveis por projeto
+- o resumo histórico inclui valor pendente total
+
+---
+
+### DECISION-028
+
+#### Título
+
+Compartilhamento Público com Slug Não Óbvio
+
+#### Decisão
+
+Cada projeto pode manter um link público ativo em `/share/{slug}`. O portal é somente leitura,
+pode ser desativado e registra contagem e data do último acesso.
+
+#### Motivo
+
+Permitir transparência com clientes sem criar autenticação ou expor telas administrativas.
+
+#### Impacto
+
+- `Project.repositoryUrl` guarda referência opcional do repositório
+- `ShareLink.accessCount` e `lastAccessedAt` registram uso
+- acessos e criação de links geram notificações
+- nenhum segredo ou controle de escrita é enviado ao portal
+
+---
+
+### DECISION-029
+
+#### Título
+
+Notificações Persistidas sem Infraestrutura de Filas
+
+#### Decisão
+
+Notificações essenciais são persistidas no PostgreSQL e lidas diretamente via Prisma. O MVP não
+usa polling contínuo, filas, websockets ou provedores externos.
+
+Eventos iniciais:
+
+- sincronização concluída
+- erro de sincronização
+- link compartilhado criado
+- projeto compartilhado acessado
+
+#### Motivo
+
+Entregar histórico e badge de atividade com baixa complexidade operacional.
+
+#### Impacto
+
+- leitura individual e em lote usa `readAt`
+- falha ao criar notificação não derruba sincronização nem portal
+- novos tipos podem ser adicionados ao enum quando houver caso real

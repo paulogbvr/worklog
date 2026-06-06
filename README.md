@@ -22,7 +22,8 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ✅ CRUD concluído |
 | Pagamentos            | ✅ Controle básico |
-| Portal Compartilhável | ⏳ Em andamento |
+| Portal Compartilhável | ✅ Somente leitura |
+| Notificações          | ✅ Eventos essenciais |
 | Deploy                | ⚙️ Publicado, proteção pendente |
 
 Site publicado:
@@ -34,7 +35,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-█████████████████░░░ 86%
+███████████████████░ 94%
 ```
 
 ---
@@ -85,17 +86,26 @@ https://worklog-projects.vercel.app/
 │       ├── 20260605011210_project_notes/
 │       ├── 20260605162000_billing_modes_and_work_operations/
 │       ├── 20260605170000_client_profile_fields/
-│       └── 20260605203000_dual_billing_rates/
+│       ├── 20260605203000_dual_billing_rates/
+│       └── 20260606013000_project_sharing_notifications/
 ├── src/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── clients/
+│   │   │   ├── notifications/
 │   │   │   ├── payments/
 │   │   │   ├── projects/
 │   │   │   └── wakatime/
 │   │   ├── about/
+│   │   ├── clients/
 │   │   ├── flow/
 │   │   ├── installation/
+│   │   ├── notifications/
+│   │   ├── operations/
+│   │   ├── payments/
+│   │   ├── projects/
+│   │   ├── records/
+│   │   ├── share/
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   ├── manifest.ts
@@ -104,6 +114,9 @@ https://worklog-projects.vercel.app/
 │   │   ├── app-shell.tsx
 │   │   ├── brand-logo.tsx
 │   │   ├── dashboard-charts.tsx
+│   │   ├── dashboard-filters.tsx
+│   │   ├── notification-menu.tsx
+│   │   ├── notifications-center.tsx
 │   │   ├── operations-panel.tsx
 │   │   ├── status-pulse.tsx
 │   │   ├── toast-provider.tsx
@@ -121,7 +134,7 @@ https://worklog-projects.vercel.app/
 │           ├── client.ts
 │           └── sync.ts
 └── public/
-    ├── creator-paulogbvr.jpg
+    ├── creator-photo.jpeg
     ├── favicon.ico
     ├── icon-worklog.png
     ├── og-worklog-v5.png
@@ -246,15 +259,12 @@ Histórico de Pagamentos
 
 Visualizar:
 
-- horas totais
-- horas WakaTime
-- horas dedicadas
-- valor total
-- valor recebido
-- valor pendente
-- projetos ativos
-- projetos pendentes de configuração
-- clientes ativos
+- resumo histórico de horas WakaTime e dedicadas
+- valor pendente em todo o histórico
+- operação atual por projeto
+- gráficos com séries por projeto
+- filtros de 7 dias, 30 dias e todo o histórico
+- filtro por projeto
 - última atualização do WakaTime
 
 ---
@@ -268,6 +278,8 @@ Cada projeto possui:
 - valor/hora WakaTime opcional
 - valor/hora dedicada opcional
 - opção para cobrar horas dedicadas
+- repositório Git opcional
+- link público somente leitura
 - nome do projeto no WakaTime
 - horas acumuladas pelo WakaTime
 - horas dedicadas manualmente
@@ -395,6 +407,21 @@ O cliente poderá visualizar:
 
 Sem acesso administrativo.
 
+Cada acesso atualiza a contagem do link e gera uma notificação no painel administrativo.
+
+---
+
+## Notificações
+
+Eventos atuais:
+
+- sincronização concluída
+- erro de sincronização
+- novo link compartilhado
+- projeto compartilhado acessado
+
+Disponíveis no badge da sidebar, dropdown de atividade e página completa.
+
 ---
 
 ## Pagamentos
@@ -477,6 +504,7 @@ Estado atual:
 - migration `20260605011210_project_notes` registrada e aplicada no Supabase
 - migration `20260605170000_client_profile_fields` aplicada no Supabase
 - migration `20260605203000_dual_billing_rates` aplicada no Supabase
+- migration `20260606013000_project_sharing_notifications` aplicada no Supabase
 - Prisma Client regenerado automaticamente antes de cada build
 - sincronização real validada usando Prisma e Supabase
 - projetos removidos do WakaTime são arquivados sem perda de histórico
@@ -603,6 +631,7 @@ Assets de identidade:
 - migration `20260604231000_init` aplicada no Supabase
 - migration `20260605162000_billing_modes_and_work_operations` aplicada no Supabase
 - migration `20260605203000_dual_billing_rates` aplicada no Supabase
+- migration `20260606013000_project_sharing_notifications` aplicada no Supabase
 - cliente WakaTime server-side criado
 - rota `POST /api/wakatime/sync` criada
 - botão manual `Atualizar agora` conectado ao backend
@@ -627,9 +656,19 @@ Assets de identidade:
 - tarifas independentes para WakaTime e horas dedicadas
 - toggle para incluir ou não horas dedicadas na cobrança
 - filtros de dashboard para 7 dias, 30 dias e todo o período
-- gráficos responsivos de horas e movimento financeiro com Recharts
+- período padrão de 7 dias e filtro opcional por projeto
+- gráficos responsivos com linha, cor, legenda e tooltip por projeto
 - métricas desde o último pagamento e totais históricos por projeto
+- dashboard focado em resumo histórico, operação atual e gráficos
+- páginas dedicadas de projetos, operações, clientes, registros e pagamentos
+- campo de repositório Git por projeto
+- links públicos somente leitura com ativação e desativação
+- portal `/share/{slug}` com horas, valores, pagamentos e última sincronização
+- notificações para compartilhamento, acesso público e sincronização
+- badge, dropdown e página completa de notificações
 - páginas públicas `Fluxo`, `Instalação` e `Sobre`
+- repositório oficial destacado na página de instalação
+- foto oficial do criador em `public/creator-photo.jpeg`
 - card de variáveis alinhado na sidebar expandida do desktop
 - header móvel, safe-area e `theme-color` sincronizados com o tema antes da hidratação
 
@@ -653,8 +692,8 @@ Assets de identidade:
 
 Implementar:
 
-- portal compartilhável somente leitura
 - proteção administrativa antes de ampliar o uso público
+- validar o novo fluxo no deploy da Vercel
 
 Após conclusão de cada etapa importante, atualizar:
 

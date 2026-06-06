@@ -25,6 +25,35 @@ function parseHourlyRate(value: unknown) {
   return parsed === 0 ? null : parsed;
 }
 
+function parseRepositoryUrl(value: unknown) {
+  const repositoryUrl = optionalText(value);
+
+  if (!repositoryUrl) {
+    return {
+      ok: true as const,
+      value: null
+    };
+  }
+
+  try {
+    const url = new URL(repositoryUrl);
+
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      throw new Error("invalid protocol");
+    }
+
+    return {
+      ok: true as const,
+      value: url.toString()
+    };
+  } catch {
+    return {
+      error: "Informe uma URL válida para o repositório Git.",
+      ok: false as const
+    };
+  }
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -38,11 +67,22 @@ export async function PATCH(
     const dedicatedHourlyRate = parseHourlyRate(body.dedicatedHourlyRate);
     const billDedicated = body.billDedicated === true;
     const active = body.active !== false;
+    const repositoryUrl = parseRepositoryUrl(body.repositoryUrl);
 
     if (!name) {
       return NextResponse.json(
         {
           error: "Informe o nome exibido do projeto.",
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!repositoryUrl.ok) {
+      return NextResponse.json(
+        {
+          error: repositoryUrl.error,
           ok: false
         },
         { status: 400 }
@@ -129,13 +169,15 @@ export async function PATCH(
         dedicatedHourlyRate,
         hourlyRate,
         name,
-        notes: optionalText(body.notes)
+        notes: optionalText(body.notes),
+        repositoryUrl: repositoryUrl.value
       },
       where: {
         id
       }
     });
     revalidatePath("/", "page");
+    revalidatePath("/projects", "page");
 
     return NextResponse.json({
       billDedicated,

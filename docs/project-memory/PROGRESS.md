@@ -1032,8 +1032,6 @@ Implementar:
 1. portal compartilhável somente leitura
 2. proteção administrativa antes de ampliar o uso público
 
----
-
 ## 2026-06-05
 
 ### Dashboard, Cobrança Avançada e Páginas Públicas
@@ -1126,3 +1124,92 @@ Implementar:
 
 1. portal compartilhável somente leitura
 2. proteção administrativa antes de ampliar o uso público
+
+---
+
+## 2026-06-06
+
+### Dashboard Modular, Compartilhamento e Notificações
+
+Concluído:
+
+- filtro padrão alterado para 7 dias
+- filtro por projeto aplicado a horas, valores, operação atual e gráficos
+- cinco cards superiores removidos da home
+- resumo histórico com WakaTime, horas dedicadas e valor pendente
+- gráficos com linha, cor, legenda e tooltip por projeto
+- interação dos gráficos protegida contra seleção de texto no mobile
+- `StatusPulse` aplicado ao estado da última sincronização
+- páginas dedicadas `/projects`, `/operations`, `/clients`, `/records` e `/payments`
+- compositor de operação recolhível e fechamento automático após salvar
+- registros detalhados com período e projeto
+- campo `repositoryUrl` por projeto
+- criação, cópia, abertura e desativação de links públicos
+- portal somente leitura em `/share/{slug}`
+- contabilização de acessos ao portal
+- notificações persistidas para sync, erro, compartilhamento e acesso
+- badge, dropdown e página `/notifications`
+- navegação dedicada com `Link` e prefetch nativo
+- foto oficial atualizada para `public/creator-photo.jpeg`
+- Instagram apresentado como `Instagram`
+- repositório oficial destacado na página de instalação
+- migration `20260606013000_project_sharing_notifications` aplicada no Supabase
+
+Validação funcional reversível:
+
+```txt
+criação do link: HTTP 200
+portal público: HTTP 200
+notificações geradas: 2
+acessos contabilizados: 1
+desativação do link: HTTP 200
+projeto, link e notificações temporários removidos
+```
+
+Validação técnica:
+
+```bash
+npm run prisma:validate
+npm run prisma:generate
+npm run prisma:deploy
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Resultado:
+
+```txt
+sucesso
+rotas principais e /api/notifications respondendo HTTP 200
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+96%
+```
+
+Implementação:
+
+```txt
+92%
+```
+
+Projeto Geral:
+
+```txt
+███████████████████░ 94%
+```
+
+### Próximo Passo
+
+Implementar proteção administrativa simples e validar o fluxo no deploy da Vercel.

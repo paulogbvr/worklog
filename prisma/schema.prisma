@@ -17,6 +17,13 @@ enum SyncProvider {
   WAKATIME
 }
 
+enum NotificationType {
+  SHARE_ACCESSED
+  SHARE_CREATED
+  SYNC_SUCCESS
+  SYNC_ERROR
+}
+
 model Client {
   id        String    @id @default(cuid())
   name      String
@@ -37,6 +44,7 @@ model Project {
   client              Client?                    @relation(fields: [clientId], references: [id], onDelete: SetNull)
   name                String
   notes               String?
+  repositoryUrl       String?
   hourlyRate          Decimal?                   @db.Decimal(10, 2)
   dedicatedHourlyRate Decimal?                   @db.Decimal(10, 2)
   billDedicated       Boolean                    @default(false)
@@ -49,6 +57,7 @@ model Project {
   wakatimeDays        WakaTimeProjectDay[]
   payments            Payment[]
   shareLinks          ShareLink[]
+  notifications       Notification[]
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
 
@@ -100,16 +109,33 @@ model Payment {
 }
 
 model ShareLink {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  slug      String   @unique
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String    @id @default(cuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slug           String    @unique
+  active         Boolean   @default(true)
+  accessCount    Int       @default(0)
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([projectId])
   @@index([active])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  projectId String?
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  type      NotificationType
+  title     String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([createdAt])
+  @@index([readAt])
+  @@index([projectId])
 }
 
 model SyncLog {

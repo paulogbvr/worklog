@@ -1,5 +1,7 @@
 import { ExternalLink } from "lucide-react";
+import { FaGithub } from "react-icons/fa6";
 import { AppShell } from "@/components/app-shell";
+import { creatorProfile } from "@/content/site";
 import { getServerEnvStatus } from "@/lib/env";
 
 const links = {
@@ -56,6 +58,30 @@ export default function InstallationPage() {
       </header>
 
       <div className="divide-y divide-[color:var(--border)]">
+        <section className="py-8">
+          <div className="flex flex-col gap-5 rounded-lg border border-[color:var(--border-strong)] bg-[var(--surface-soft)] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
+                Repositório oficial
+              </p>
+              <h2 className="mt-2 text-lg font-semibold">paulogbvr/worklog</h2>
+              <p className="mt-2 text-sm text-[color:var(--text-soft)]">
+                Código-fonte, histórico de versões e instruções atualizadas.
+              </p>
+            </div>
+            <a
+              className="inline-flex h-11 w-fit items-center gap-2 rounded-md bg-[var(--primary-bg)] px-4 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+              href={creatorProfile.repositoryUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <FaGithub className="size-4" />
+              Abrir no GitHub
+              <ExternalLink className="size-3.5" />
+            </a>
+          </div>
+        </section>
+
         <section className="grid gap-6 py-8 lg:grid-cols-[180px_minmax(0,1fr)]">
           <div>
             <p className="text-xs text-[color:var(--text-faint)]">01</p>

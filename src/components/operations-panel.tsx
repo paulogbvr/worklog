@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   Clock3,
+  Copy,
+  ExternalLink,
+  Link2,
   Pencil,
   Plus,
   Settings2,
@@ -36,6 +39,9 @@ type ProjectDraft = {
   id: string;
   name: string;
   notes: string;
+  repositoryUrl: string;
+  shareAccessCount: number;
+  sharePath: string | null;
 };
 
 type ClientDraft = {
@@ -140,7 +146,11 @@ function formatDraftDuration(totalSeconds: number | null) {
 }
 
 async function readResponse(response: Response) {
-  const payload = (await response.json()) as { error?: string; ok?: boolean };
+  const payload = (await response.json()) as {
+    error?: string;
+    ok?: boolean;
+    path?: string;
+  };
 
   if (!response.ok || !payload.ok) {
     throw new Error(payload.error ?? "Não foi possível concluir a ação.");
@@ -190,18 +200,21 @@ const textareaClass =
 
 export function OperationsPanel({
   clients,
+  fixedView,
   initialView = "projects",
   payments,
   projects,
   workOperations
 }: {
   clients: DashboardClient[];
+  fixedView?: OperationView;
   initialView?: OperationView;
   payments: DashboardPayment[];
   projects: DashboardProject[];
   workOperations: DashboardWorkOperation[];
 }) {
-  const [view, setView] = useState<OperationView>(initialView);
+  const [viewState, setView] = useState<OperationView>(initialView);
+  const view = fixedView ?? viewState;
   const [projectDraft, setProjectDraft] = useState<ProjectDraft | null>(null);
   const [clientDraft, setClientDraft] = useState<ClientDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -214,6 +227,7 @@ export function OperationsPanel({
   );
   const [operationConfirmation, setOperationConfirmation] =
     useState<OperationConfirmation | null>(null);
+  const [recordComposerOpen, setRecordComposerOpen] = useState(fixedView !== "records");
   const router = useRouter();
   const { toast } = useToast();
 
@@ -276,7 +290,10 @@ export function OperationsPanel({
       hourlyRate: project.hourlyRate?.toString() ?? "",
       id: project.id,
       name: project.name,
-      notes: project.notes ?? ""
+      notes: project.notes ?? "",
+      repositoryUrl: project.repositoryUrl ?? "",
+      shareAccessCount: project.shareAccessCount,
+      sharePath: project.sharePath
     });
   }
 
@@ -482,6 +499,7 @@ export function OperationsPanel({
       projectId: operation.projectId
     });
     setView("records");
+    setRecordComposerOpen(true);
   }
 
   function resetWorkOperation() {
@@ -570,6 +588,9 @@ export function OperationsPanel({
         tone: "success"
       });
       resetWorkOperation();
+      if (fixedView === "records") {
+        setRecordComposerOpen(false);
+      }
       router.refresh();
     } catch (error) {
       toast({
@@ -623,52 +644,137 @@ export function OperationsPanel({
     await deleteWorkOperation(operation);
   }
 
+  async function createShareLink() {
+    if (!projectDraft) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const payload = await readResponse(
+        await fetch(`/api/projects/${projectDraft.id}/share`, {
+          method: "POST"
+        })
+      );
+      const path = payload.path ?? null;
+
+      setProjectDraft((current) => (current ? { ...current, sharePath: path } : current));
+      window.dispatchEvent(new Event("worklog-notifications-refresh"));
+      toast({
+        message: "O projeto agora possui uma visualização pública somente leitura.",
+        title: "Link compartilhado criado",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : "Não foi possível criar o link.",
+        title: "Erro ao compartilhar",
+        tone: "error"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function disableShareLink() {
+    if (!projectDraft) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await readResponse(
+        await fetch(`/api/projects/${projectDraft.id}/share`, {
+          method: "DELETE"
+        })
+      );
+      setProjectDraft((current) => (current ? { ...current, sharePath: null } : current));
+      toast({
+        message: "O endereço público deixou de aceitar acessos.",
+        title: "Link desativado",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : "Não foi possível desativar o link.",
+        title: "Erro ao desativar",
+        tone: "error"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function copyShareLink() {
+    if (!projectDraft?.sharePath) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(`${window.location.origin}${projectDraft.sharePath}`);
+    toast({
+      message: "O endereço somente leitura está na área de transferência.",
+      title: "Link copiado",
+      tone: "success"
+    });
+  }
+
   return (
     <>
       <section
-        className="mt-4 rounded-lg border border-[color:var(--border)] bg-[var(--surface)]"
+        className={[
+          "rounded-lg border border-[color:var(--border)] bg-[var(--surface)]",
+          fixedView ? "" : "mt-4"
+        ].join(" ")}
         id="operacao"
       >
-        <div className="flex flex-col gap-4 border-b border-[color:var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Operação</h2>
-            <p className="mt-1 text-sm text-[color:var(--text-soft)]">
-              Configure projetos, horas dedicadas, clientes e recebimentos.
-            </p>
-          </div>
-          <div className="grid w-full grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1 sm:flex sm:w-fit">
-            {(["projects", "records", "clients", "payments"] as OperationView[]).map((item) => {
-              const labels: Record<OperationView, string> = {
-                clients: "Clientes",
-                payments: "Pagamentos",
-                projects: "Projetos",
-                records: "Registros"
-              };
+        {!fixedView ? (
+          <div className="flex flex-col gap-4 border-b border-[color:var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Operação</h2>
+              <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                Configure projetos, horas dedicadas, clientes e recebimentos.
+              </p>
+            </div>
+            <div className="grid w-full grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1 sm:flex sm:w-fit">
+              {(["projects", "records", "clients", "payments"] as OperationView[]).map(
+                (item) => {
+                  const labels: Record<OperationView, string> = {
+                    clients: "Clientes",
+                    payments: "Pagamentos",
+                    projects: "Projetos",
+                    records: "Registros"
+                  };
 
-              return (
-                <button
-                  className={[
-                    "h-9 rounded px-3 text-sm transition-colors",
-                    view === item
-                      ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
-                      : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
-                  ].join(" ")}
-                  key={item}
-                  onClick={() => {
-                    if (item === "records" && view !== "records") {
-                      resetWorkOperation();
-                    }
+                  return (
+                    <button
+                      className={[
+                        "h-9 rounded px-3 text-sm transition-colors",
+                        view === item
+                          ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
+                          : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+                      ].join(" ")}
+                      key={item}
+                      onClick={() => {
+                        if (item === "records" && view !== "records") {
+                          resetWorkOperation();
+                        }
 
-                    setView(item);
-                  }}
-                  type="button"
-                >
-                  {labels[item]}
-                </button>
-              );
-            })}
+                        setView(item);
+                      }}
+                      type="button"
+                    >
+                      {labels[item]}
+                    </button>
+                  );
+                }
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {view === "projects" ? (
           <div className="divide-y divide-[color:var(--border)] px-5">
@@ -757,11 +863,34 @@ export function OperationsPanel({
 
         {view === "records" ? (
           <div className="p-5" id="registros">
-            <form
-              className="grid gap-4 border-b border-[color:var(--border)] pb-5"
-              noValidate
-              onSubmit={saveWorkOperation}
-            >
+            {fixedView === "records" ? (
+              <div className="mb-5 flex flex-col gap-3 border-b border-[color:var(--border)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Operações de trabalho</h2>
+                  <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                    Registre intervalos dedicados e acompanhe o histórico.
+                  </p>
+                </div>
+                <button
+                  className="inline-flex h-10 w-fit items-center gap-2 rounded-md bg-[var(--primary-bg)] px-3 text-sm font-medium text-[color:var(--primary-text)] hover:bg-[var(--primary-hover)]"
+                  onClick={() => {
+                    resetWorkOperation();
+                    setRecordComposerOpen((current) => !current);
+                  }}
+                  type="button"
+                >
+                  {recordComposerOpen ? <X className="size-4" /> : <Plus className="size-4" />}
+                  {recordComposerOpen ? "Fechar operação" : "Adicionar operação"}
+                </button>
+              </div>
+            ) : null}
+
+            {recordComposerOpen ? (
+              <form
+                className="grid gap-4 border-b border-[color:var(--border)] pb-5"
+                noValidate
+                onSubmit={saveWorkOperation}
+              >
               <label className="block max-w-md">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                   Projeto
@@ -917,7 +1046,12 @@ export function OperationsPanel({
                   {workOperationDraft.id ? (
                     <button
                       className="h-11 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
-                      onClick={resetWorkOperation}
+                      onClick={() => {
+                        resetWorkOperation();
+                        if (fixedView === "records") {
+                          setRecordComposerOpen(false);
+                        }
+                      }}
                       type="button"
                     >
                       Cancelar
@@ -936,7 +1070,17 @@ export function OperationsPanel({
                   </button>
                 </div>
               </div>
-            </form>
+              </form>
+            ) : null}
+
+            <div className={recordComposerOpen ? "pt-5" : ""}>
+              <h3 className="mb-1 text-sm font-semibold text-[color:var(--app-text-strong)]">
+                Histórico
+              </h3>
+              <p className="mb-3 text-xs text-[color:var(--text-soft)]">
+                Todas as operações registradas no período carregado.
+              </p>
+            </div>
 
             <div className="divide-y divide-[color:var(--border)]">
               {workOperations.length > 0 ? (
@@ -1293,6 +1437,22 @@ export function OperationsPanel({
             </div>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                Repositório Git
+              </span>
+              <input
+                className={fieldClass}
+                onChange={(event) =>
+                  setProjectDraft((current) =>
+                    current ? { ...current, repositoryUrl: event.target.value } : current
+                  )
+                }
+                placeholder="https://github.com/usuario/projeto"
+                type="url"
+                value={projectDraft.repositoryUrl}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                 Observações
               </span>
               <textarea
@@ -1319,6 +1479,66 @@ export function OperationsPanel({
               />
               Projeto ativo
             </label>
+            <div className="rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-medium text-[color:var(--app-text-strong)]">
+                    <Link2 className="size-4" />
+                    Compartilhamento
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
+                    Link somente leitura para horas, valores e pagamentos.
+                  </p>
+                  {projectDraft.sharePath ? (
+                    <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                      {projectDraft.shareAccessCount}{" "}
+                      {projectDraft.shareAccessCount === 1 ? "acesso" : "acessos"}
+                    </p>
+                  ) : null}
+                </div>
+                {projectDraft.sharePath ? (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      aria-label="Copiar link compartilhável"
+                      className="grid size-10 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                      onClick={() => void copyShareLink()}
+                      title="Copiar link"
+                      type="button"
+                    >
+                      <Copy className="size-4" />
+                    </button>
+                    <a
+                      aria-label="Abrir link compartilhável"
+                      className="grid size-10 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                      href={projectDraft.sharePath}
+                      rel="noreferrer"
+                      target="_blank"
+                      title="Abrir link"
+                    >
+                      <ExternalLink className="size-4" />
+                    </a>
+                    <button
+                      className="h-10 rounded-md border border-red-500/25 px-3 text-sm text-red-400 hover:bg-red-500/10"
+                      disabled={isSaving}
+                      onClick={() => void disableShareLink()}
+                      type="button"
+                    >
+                      Desativar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border-strong)] px-3 text-sm font-medium text-[color:var(--app-text-strong)] hover:bg-[var(--hover-bg)] disabled:opacity-60"
+                    disabled={isSaving}
+                    onClick={() => void createShareLink()}
+                    type="button"
+                  >
+                    <Link2 className="size-4" />
+                    Compartilhar
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="flex justify-end gap-2 pt-2">
               <button
                 className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)]"

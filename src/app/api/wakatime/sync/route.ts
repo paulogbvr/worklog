@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { NotificationType } from "@prisma/client";
+import { createNotificationSafely } from "@/server/notifications";
 import { WakaTimeApiError } from "@/server/wakatime/client";
 import { syncWakaTime } from "@/server/wakatime/sync";
 
@@ -39,7 +41,15 @@ function getPublicErrorMessage(error: unknown) {
 export async function POST() {
   try {
     const result = await syncWakaTime();
+    await createNotificationSafely({
+      message: `${result.projectsFound} projetos e ${result.daysSynced} registros diários foram atualizados.`,
+      title: "Sincronização concluída",
+      type: NotificationType.SYNC_SUCCESS
+    });
     revalidatePath("/", "page");
+    revalidatePath("/notifications", "page");
+    revalidatePath("/projects", "page");
+    revalidatePath("/records", "page");
 
     return NextResponse.json(
       {
@@ -53,6 +63,13 @@ export async function POST() {
       }
     );
   } catch (error) {
+    await createNotificationSafely({
+      message: getPublicErrorMessage(error),
+      title: "Erro de sincronização",
+      type: NotificationType.SYNC_ERROR
+    });
+    revalidatePath("/notifications", "page");
+
     return NextResponse.json(
       {
         error: getPublicErrorMessage(error),

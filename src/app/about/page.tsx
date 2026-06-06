@@ -19,7 +19,7 @@ export default function AboutPage() {
         <aside>
           <Image
             alt={`Foto de ${creatorProfile.name}`}
-            className="aspect-square w-full max-w-[220px] rounded-lg border border-[color:var(--border)] object-cover"
+            className="aspect-square w-full max-w-[220px] rounded-lg border border-[color:var(--border)] object-cover object-[32%_center]"
             height={460}
             priority
             src={creatorProfile.image}
@@ -46,7 +46,7 @@ export default function AboutPage() {
                 target="_blank"
               >
                 <FaInstagram className="size-4" />
-                {creatorProfile.instagramHandle}
+                Instagram
                 <ExternalLink className="size-3" />
               </a>
             ) : null}

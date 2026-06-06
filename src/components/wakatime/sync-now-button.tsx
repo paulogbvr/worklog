@@ -59,6 +59,7 @@ export function SyncNowButton() {
         title: "Sincronização concluída",
         tone: "success"
       });
+      window.dispatchEvent(new Event("worklog-notifications-refresh"));
       startRefresh(() => {
         router.refresh();
       });
@@ -69,6 +70,7 @@ export function SyncNowButton() {
         title: "Falha na sincronização",
         tone: "error"
       });
+      window.dispatchEvent(new Event("worklog-notifications-refresh"));
     } finally {
       setIsSyncing(false);
     }

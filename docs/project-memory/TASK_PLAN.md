@@ -65,10 +65,9 @@ Aplicação inicializada:
 - cobrança independente para horas WakaTime e horas dedicadas
 - gráficos responsivos com Recharts
 - páginas públicas de fluxo, instalação e créditos
-
-Ainda pendente:
-
-- portal compartilhável
+- páginas dedicadas para projetos, operações, clientes, registros e pagamentos
+- portal compartilhável somente leitura
+- notificações de sincronização e compartilhamento
 
 ---
 
@@ -234,6 +233,9 @@ Entregáveis:
 - métricas desde o último pagamento
 - totais históricos globais e por projeto
 - gráficos de horas e movimento financeiro
+- filtro por projeto
+- linhas, cores, legendas e tooltips por projeto
+- período padrão de 7 dias
 
 Critério de aceite:
 
@@ -252,6 +254,9 @@ Resultado:
 - filtro de período recalcula horas, pagamentos e valores
 - sincronização atualiza métricas e lista de projetos imediatamente
 - erros auxiliares do banco não apagam projetos e horas já disponíveis
+- cards superiores redundantes removidos
+- resumo histórico destaca WakaTime, dedicadas e valor pendente
+- dashboard não contém mais formulários administrativos
 
 ---
 
@@ -338,7 +343,7 @@ Resultado:
 Status:
 
 ```txt
-Pendente
+Concluído
 ```
 
 Objetivo:
@@ -359,6 +364,14 @@ Critério de aceite:
 - portal não permite edição
 - slug é único
 - link pode ser desativado
+
+Resultado:
+
+- campo de repositório Git disponível na configuração do projeto
+- criação, cópia, abertura e desativação do link público
+- portal `/share/{slug}` com horas, valores, pagamentos e última sincronização
+- acessos contabilizados sem permitir escrita
+- notificações para link criado e projeto acessado
 
 ---
 
@@ -390,6 +403,11 @@ Estado:
 - dashboard compacto, gráficos e métricas históricas concluídos
 - páginas `/flow`, `/installation` e `/about` concluídas
 - créditos de Paulo Oliveira com GitHub, Instagram e LinkedIn concluídos
+- foto oficial do criador e repositório oficial publicados
+- dashboard reorganizado e filtrável por projeto
+- páginas dedicadas para cada fluxo administrativo
+- navegação via `Link` e prefetch nativo
+- badge, dropdown e página completa de notificações
 - proteção administrativa continua pendente
 
 Deploy inicial já disponível:
