@@ -23,6 +23,14 @@ enum ProjectStatus {
   CANCELED
 }
 
+enum ClientStatus {
+  ACTIVE
+  NO_PROJECT
+  NEGOTIATING
+  PAUSED
+  INACTIVE
+}
+
 enum SyncProvider {
   WAKATIME
 }
@@ -67,6 +75,7 @@ model Client {
   birthDate DateTime? @db.Date
   address   String?
   notes     String?
+  status    ClientStatus?
   projects  Project[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

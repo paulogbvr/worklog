@@ -32,6 +32,10 @@ import {
   getTaxIdFeedback
 } from "@/lib/client-profile";
 import {
+  CLIENT_STATUSES,
+  type ClientStatusValue
+} from "@/lib/client-status";
+import {
   buildPaymentMessage,
   PAYMENT_METHODS,
   type PaymentMethodValue
@@ -73,6 +77,7 @@ type ClientDraft = {
   name: string;
   notes: string;
   phone: string;
+  status: ClientStatusValue | "";
   taxId: string;
 };
 
@@ -105,6 +110,7 @@ const emptyClient: ClientDraft = {
   name: "",
   notes: "",
   phone: "",
+  status: "",
   taxId: ""
 };
 
@@ -355,6 +361,7 @@ export function OperationsPanel({
             name: client.name,
             notes: client.notes ?? "",
             phone: client.phone ? formatPhone(client.phone) : "",
+            status: client.status ?? "",
             taxId: client.taxId ? formatTaxId(client.taxId) : ""
           }
         : emptyClient
@@ -1111,8 +1118,8 @@ export function OperationsPanel({
             ) : null}
 
             {recordComposerOpen ? (
-              <form className="grid gap-4" noValidate onSubmit={saveWorkOperation}>
-              <label className="block max-w-md">
+              <form className="grid grid-cols-1 gap-4" noValidate onSubmit={saveWorkOperation}>
+              <label className="block min-w-0 max-w-md">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                   Projeto
                 </span>
@@ -1141,7 +1148,7 @@ export function OperationsPanel({
                 </span>
               </label>
 
-              <div>
+              <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
@@ -1167,7 +1174,7 @@ export function OperationsPanel({
 
                     return (
                       <div
-                        className="grid min-w-0 gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+                        className="grid min-w-0 grid-cols-1 gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
                         key={interval.key}
                       >
                         <label className="block min-w-0">
@@ -1387,20 +1394,26 @@ export function OperationsPanel({
                     className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
                     key={client.id}
                   >
-                    <div>
-                      <p className="font-medium text-[color:var(--app-text-strong)]">
-                        {client.name}
-                      </p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-[color:var(--app-text-strong)]">
+                          {client.name}
+                        </p>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                          <StatusPulse tone={client.statusTone} />
+                          {client.statusLabel}
+                        </span>
+                      </div>
                       <p className="mt-1 text-xs text-[color:var(--text-soft)]">
                         {client.projectCount} projetos
                         {client.email ? ` · ${client.email}` : ""}
                         {client.taxId ? ` · ${formatTaxId(client.taxId)}` : ""}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <button
                         aria-label={`Editar ${client.name}`}
-                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                         onClick={() => openClient(client)}
                         type="button"
                       >
@@ -1685,17 +1698,36 @@ export function OperationsPanel({
                         {payment.note ?? "Sem observação"}
                       </p>
                       {payment.hasReceipt ? (
-                        <p className="mt-2 inline-flex min-w-0 items-center gap-2 rounded-md border border-emerald-500/15 bg-emerald-500/6 px-2.5 py-1.5 text-xs text-emerald-400">
-                          <FileText className="size-3.5 shrink-0" />
-                          <span className="truncate">
-                            {payment.receiptName ?? "Comprovante anexado"}
-                          </span>
-                          {formatFileSize(payment.receiptSize) ? (
-                            <span className="shrink-0 text-emerald-400/60">
-                              · {formatFileSize(payment.receiptSize)}
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-md border border-emerald-500/15 bg-emerald-500/6 px-2.5 py-1.5 text-xs text-emerald-400">
+                            <FileText className="size-3.5 shrink-0" />
+                            <span className="truncate">
+                              {payment.receiptName ?? "Comprovante anexado"}
                             </span>
-                          ) : null}
-                        </p>
+                            {formatFileSize(payment.receiptSize) ? (
+                              <span className="shrink-0 text-emerald-400/60">
+                                · {formatFileSize(payment.receiptSize)}
+                              </span>
+                            ) : null}
+                          </span>
+                          <button
+                            aria-label={`Visualizar comprovante de ${payment.projectName}`}
+                            className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                            onClick={() => openReceiptPreview(payment)}
+                            title="Visualizar comprovante"
+                            type="button"
+                          >
+                            <Eye className="size-4" />
+                          </button>
+                          <a
+                            aria-label={`Baixar comprovante de ${payment.projectName}`}
+                            className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                            href={`/api/payments/${payment.id}/receipt?download=1`}
+                            title="Baixar comprovante"
+                          >
+                            <Download className="size-4" />
+                          </a>
+                        </div>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1717,27 +1749,6 @@ export function OperationsPanel({
                         <FaWhatsapp className="size-4" />
                         {payment.notified ? "Reenviar" : "Enviar"}
                       </button>
-                      {payment.hasReceipt ? (
-                        <>
-                          <button
-                            aria-label={`Visualizar comprovante de ${payment.projectName}`}
-                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
-                            onClick={() => openReceiptPreview(payment)}
-                            title="Visualizar comprovante"
-                            type="button"
-                          >
-                            <Eye className="size-4" />
-                          </button>
-                          <a
-                            aria-label={`Baixar comprovante de ${payment.projectName}`}
-                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
-                            href={`/api/payments/${payment.id}/receipt?download=1`}
-                            title="Baixar comprovante"
-                          >
-                            <Download className="size-4" />
-                          </a>
-                        </>
-                      ) : null}
                       <button
                         aria-label={`Editar pagamento de ${payment.amountLabel}`}
                         className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
@@ -2238,6 +2249,42 @@ export function OperationsPanel({
                 required
                 value={clientDraft.name}
               />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                Status do cliente
+              </span>
+              <span className="relative block">
+                <select
+                  className={selectClass}
+                  onChange={(event) =>
+                    setClientDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            status: event.target.value as ClientStatusValue | ""
+                          }
+                        : current
+                    )
+                  }
+                  value={clientDraft.status}
+                >
+                  <option value="">Automático (por vínculo com projeto)</option>
+                  {CLIENT_STATUSES.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                />
+              </span>
+              <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
+                Em automático, o status acompanha o vínculo: com projeto fica Ativo, sem projeto
+                fica Sem projeto.
+              </span>
             </label>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">

@@ -119,6 +119,39 @@
   }
 }
 
+@keyframes worklog-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.worklog-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+
+.worklog-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--hover-bg),
+    transparent
+  );
+  animation: worklog-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .worklog-skeleton::after {
+    animation: none;
+  }
+}
+
 @keyframes toast-enter {
   from {
     opacity: 0;
@@ -310,6 +343,17 @@ a {
 
 button {
   font: inherit;
+}
+
+/* Native date/time inputs (notably iOS Safari) carry an intrinsic min-width
+   that ignores width:100% and pushes them past their container. Force them to
+   respect the parent box so cards never overflow on mobile. */
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 button:not(:disabled),

@@ -1,5 +1,9 @@
 import { SyncProvider } from "@prisma/client";
 import type { StatusTone } from "@/components/status-pulse";
+import {
+  resolveClientStatus,
+  type ClientStatusValue
+} from "@/lib/client-status";
 import { prisma } from "@/lib/prisma";
 import {
   getPaymentMethodLabel,
@@ -48,6 +52,9 @@ export type DashboardClient = {
   notes: string | null;
   phone: string | null;
   projectCount: number;
+  status: ClientStatusValue | null;
+  statusLabel: string;
+  statusTone: StatusTone;
   taxId: string | null;
 };
 
@@ -498,6 +505,7 @@ export async function getDashboardSummary(
           name: true,
           notes: true,
           phone: true,
+          status: true,
           taxId: true
         }
       }),
@@ -814,19 +822,27 @@ export async function getDashboardSummary(
         ])
       ),
     chartSeries,
-    clients: clients.map((client) => ({
-      address: client.address,
-      birthDate: client.birthDate?.toISOString().slice(0, 10) ?? null,
-      createdAt: client.createdAt.toISOString(),
-      createdAtLabel: formatClientCreatedAt(client.createdAt),
-      email: client.email,
-      id: client.id,
-      name: client.name,
-      notes: client.notes,
-      phone: client.phone,
-      projectCount: activeProjectCountByClient.get(client.id) ?? 0,
-      taxId: client.taxId
-    })),
+    clients: clients.map((client) => {
+      const projectCount = activeProjectCountByClient.get(client.id) ?? 0;
+      const clientStatus = resolveClientStatus(client.status, projectCount);
+
+      return {
+        address: client.address,
+        birthDate: client.birthDate?.toISOString().slice(0, 10) ?? null,
+        createdAt: client.createdAt.toISOString(),
+        createdAtLabel: formatClientCreatedAt(client.createdAt),
+        email: client.email,
+        id: client.id,
+        name: client.name,
+        notes: client.notes,
+        phone: client.phone,
+        projectCount,
+        status: client.status,
+        statusLabel: clientStatus.label,
+        statusTone: clientStatus.tone,
+        taxId: client.taxId
+      };
+    }),
     configuredProjects,
     databaseAvailable: true,
     globalDedicatedLabel: formatDuration(globalDedicatedSeconds),

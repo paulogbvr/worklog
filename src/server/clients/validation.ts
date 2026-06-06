@@ -4,6 +4,7 @@ import {
   getTaxIdFeedback,
   onlyDigits
 } from "@/lib/client-profile";
+import { isClientStatusValue } from "@/lib/client-status";
 
 function optionalText(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -70,6 +71,8 @@ export function parseClientInput(body: Record<string, unknown>) {
   }
 
   const phone = optionalText(body.phone);
+  const statusText = optionalText(body.status);
+  const status = statusText && isClientStatusValue(statusText) ? statusText : null;
 
   return {
     data: {
@@ -79,6 +82,7 @@ export function parseClientInput(body: Record<string, unknown>) {
       name,
       notes: optionalText(body.notes),
       phone: phone ? formatPhone(phone) : null,
+      status,
       taxId
     },
     ok: true as const
