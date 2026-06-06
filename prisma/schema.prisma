@@ -13,6 +13,16 @@ enum ProjectConfigurationStatus {
   CONFIGURED
 }
 
+enum ProjectStatus {
+  DEVELOPMENT
+  IN_PROGRESS
+  WAITING_CLIENT
+  WAITING_PAYMENT
+  PAUSED
+  COMPLETED
+  CANCELED
+}
+
 enum SyncProvider {
   WAKATIME
 }
@@ -22,6 +32,7 @@ enum NotificationType {
   SHARE_COPIED
   SHARE_CREATED
   SHARE_PDF_DOWNLOADED
+  PROJECT_STATUS_CHANGED
   ENV_WARNING
   SYNC_SUCCESS
   SYNC_ERROR
@@ -74,6 +85,7 @@ model Project {
   wakatimeProjectId   String?                    @unique
   wakatimeProjectName String?                    @unique
   active              Boolean                    @default(true)
+  status              ProjectStatus              @default(IN_PROGRESS)
   configurationStatus ProjectConfigurationStatus @default(PENDING)
   lastSyncAt          DateTime?
   workLogEntries      WorkLogEntry[]
@@ -81,12 +93,25 @@ model Project {
   payments            Payment[]
   shareLinks          ShareLink[]
   notifications       Notification[]
+  statusEvents         ProjectStatusEvent[]
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
 
   @@index([clientId])
   @@index([active])
   @@index([configurationStatus])
+}
+
+model ProjectStatusEvent {
+  id         String        @id @default(cuid())
+  projectId  String
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromStatus ProjectStatus?
+  toStatus   ProjectStatus
+  createdAt  DateTime      @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
 }
 
 model WorkLogEntry {
@@ -127,8 +152,10 @@ model Payment {
   method          PaymentMethod @default(OTHER)
   note            String?
   receiptPath     String?
+  receiptData     Bytes?
   receiptName     String?
   receiptMimeType String?
+  receiptSize     Int?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

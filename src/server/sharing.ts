@@ -5,6 +5,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getPaymentMethodLabel } from "@/lib/payment";
+import { getProjectStatusMeta } from "@/lib/project-status";
 import { formatCurrency, formatDuration } from "@/server/dashboard/summary";
 
 const TIME_ZONE = "America/Sao_Paulo";
@@ -58,10 +59,25 @@ export async function getPublicProject(slug: string) {
               id: true,
               method: true,
               note: true,
-              paidAt: true
+              paidAt: true,
+              receiptPath: true,
+              receiptSize: true
             }
           },
           repositoryUrl: true,
+          status: true,
+          statusEvents: {
+            orderBy: {
+              createdAt: "desc"
+            },
+            select: {
+              createdAt: true,
+              fromStatus: true,
+              id: true,
+              toStatus: true
+            }
+          },
+          updatedAt: true,
           wakatimeDays: {
             select: {
               totalSeconds: true
@@ -114,6 +130,7 @@ export async function getPublicProject(slug: string) {
     (total, payment) => total + Number(payment.amount),
     0
   );
+  const projectStatus = getProjectStatusMeta(project.status);
 
   return {
     clientName: project.client?.name ?? "Projeto independente",
@@ -129,6 +146,7 @@ export async function getPublicProject(slug: string) {
     payments: project.payments.map((payment) => ({
       amountLabel: formatCurrency(Number(payment.amount)),
       dateLabel: formatDate(payment.paidAt),
+      hasReceipt: Boolean(payment.receiptPath || payment.receiptSize),
       id: payment.id,
       methodLabel: getPaymentMethodLabel(payment.method),
       note: payment.note
@@ -137,11 +155,30 @@ export async function getPublicProject(slug: string) {
     projectId: project.id,
     receivedValueLabel: formatCurrency(receivedValue),
     repositoryUrl: project.repositoryUrl,
-    statusLabel: project.active ? "Em andamento" : "Arquivado",
+    statusBadgeClass: projectStatus.badgeClass,
+    statusLabel: projectStatus.label,
+    statusSymbol: projectStatus.symbol,
     timeline: [
+      ...project.statusEvents.map((event) => {
+        const nextStatus = getProjectStatusMeta(event.toStatus);
+        const previousStatus = event.fromStatus
+          ? getProjectStatusMeta(event.fromStatus)
+          : null;
+
+        return {
+          category: "updates" as const,
+          date: event.createdAt,
+          detail: previousStatus
+            ? `${previousStatus.label} → ${nextStatus.label}`
+            : `Status definido como ${nextStatus.label}.`,
+          id: `status-${event.id}`,
+          title: `Status alterado para ${nextStatus.label}`
+        };
+      }),
       ...(project.lastSyncAt
         ? [
             {
+              category: "updates" as const,
               date: project.lastSyncAt,
               detail: `Horas do projeto atualizadas em ${formatDateTime(project.lastSyncAt)}.`,
               id: "last-sync",
@@ -149,13 +186,32 @@ export async function getPublicProject(slug: string) {
             }
           ]
         : []),
+      ...(project.notes?.trim()
+        ? [
+            {
+              category: "updates" as const,
+              date: project.updatedAt,
+              detail: project.notes.trim(),
+              id: "project-note",
+              title: "Observação do projeto"
+            }
+          ]
+        : []),
       ...project.payments.map((payment) => ({
+        category: "payments" as const,
         date: payment.paidAt,
-        detail: `${formatCurrency(Number(payment.amount))} via ${getPaymentMethodLabel(payment.method)}.`,
+        detail: [
+          `${formatCurrency(Number(payment.amount))} via ${getPaymentMethodLabel(payment.method)}.`,
+          payment.note,
+          payment.receiptPath || payment.receiptSize ? "Comprovante anexado." : null
+        ]
+          .filter((item): item is string => Boolean(item))
+          .join(" "),
         id: `payment-${payment.id}`,
         title: "Pagamento registrado"
       })),
-      ...project.workLogEntries.slice(0, 8).map((entry) => ({
+      ...project.workLogEntries.slice(0, 20).map((entry) => ({
+        category: "updates" as const,
         date: entry.startedAt,
         detail: `${formatDuration(entry.durationSeconds)}${entry.note ? ` · ${entry.note}` : ""}`,
         id: `work-${entry.id}`,
@@ -163,8 +219,9 @@ export async function getPublicProject(slug: string) {
       }))
     ]
       .sort((first, second) => second.date.getTime() - first.date.getTime())
-      .slice(0, 10)
+      .slice(0, 50)
       .map((item) => ({
+        category: item.category,
         dateLabel: formatDateTime(item.date),
         detail: item.detail,
         id: item.id,

@@ -237,8 +237,9 @@ Storage:
 Uso:
 
 - somente em módulos server-side
-- upload, download e remoção de comprovantes em bucket privado
+- upload, download e remoção de comprovantes em bucket privado quando configurado
 - nenhuma chave ou URL sensível é enviada ao navegador
+- fallback privado em `BYTEA` no PostgreSQL para manter o MVP funcional sem Storage
 
 PDF:
 

@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { downloadPaymentReceipt } from "@/server/storage/payment-receipts";
+import { getPaymentReceiptBytes } from "@/server/storage/payment-receipts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function safeDownloadName(name: string) {
-  return name.replace(/["\r\n]/g, "");
+  return (
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(-120) || "comprovante"
+  );
 }
 
 export async function GET(
@@ -17,6 +24,7 @@ export async function GET(
     const { id } = await context.params;
     const payment = await prisma.payment.findUnique({
       select: {
+        receiptData: true,
         receiptMimeType: true,
         receiptName: true,
         receiptPath: true
@@ -26,7 +34,7 @@ export async function GET(
       }
     });
 
-    if (!payment?.receiptPath) {
+    if (!payment || (!payment.receiptPath && !payment.receiptData)) {
       return NextResponse.json(
         {
           error: "Comprovante não encontrado.",
@@ -36,15 +44,20 @@ export async function GET(
       );
     }
 
-    const file = await downloadPaymentReceipt(payment.receiptPath);
+    const file = await getPaymentReceiptBytes({
+      data: payment.receiptData,
+      path: payment.receiptPath
+    });
     const download = new URL(request.url).searchParams.get("download") === "1";
     const disposition = download ? "attachment" : "inline";
-    const name = safeDownloadName(payment.receiptName ?? "comprovante");
+    const originalName = payment.receiptName ?? "comprovante";
+    const name = safeDownloadName(originalName);
+    const encodedName = encodeURIComponent(originalName).replace(/['()]/g, escape);
 
-    return new NextResponse(await file.arrayBuffer(), {
+    return new NextResponse(Buffer.from(file), {
       headers: {
         "Cache-Control": "private, no-store",
-        "Content-Disposition": `${disposition}; filename="${name}"`,
+        "Content-Disposition": `${disposition}; filename="${name}"; filename*=UTF-8''${encodedName}`,
         "Content-Type": payment.receiptMimeType ?? "application/octet-stream"
       }
     });

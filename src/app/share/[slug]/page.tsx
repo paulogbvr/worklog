@@ -5,18 +5,29 @@ import {
   Clock3,
   Code2,
   ExternalLink,
-  History,
+  Paperclip,
   ReceiptText,
   ShieldCheck
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { SharedProjectActions } from "@/app/share/[slug]/shared-project-actions";
+import {
+  SharedProjectTimeline,
+  type SharedTimelineFilter
+} from "@/app/share/[slug]/shared-project-timeline";
 import { getPublicProject, recordShareAccess } from "@/server/sharing";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const siteUrl = "https://worklog-projects.vercel.app";
+
+function parseTimelineFilter(
+  value: string | string[] | undefined
+): SharedTimelineFilter {
+  const filter = Array.isArray(value) ? value[0] : value;
+  return filter === "payments" || filter === "updates" ? filter : "all";
+}
 
 export async function generateMetadata({
   params
@@ -68,11 +79,14 @@ export async function generateMetadata({
 }
 
 export default async function SharedProjectPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ filter?: string | string[] }>;
 }) {
   const { slug } = await params;
+  const query = await searchParams;
   const project = await getPublicProject(slug);
 
   if (!project) {
@@ -115,8 +129,11 @@ export default async function SharedProjectPage({
                 {project.clientName}
               </p>
             </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/8 px-3 py-2 text-xs text-emerald-400">
+            <div
+              className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs ${project.statusBadgeClass}`}
+            >
               <ShieldCheck className="size-4" />
+              <span aria-hidden>{project.statusSymbol}</span>
               {project.statusLabel} · somente leitura
             </div>
           </div>
@@ -179,7 +196,7 @@ export default async function SharedProjectPage({
         </section>
 
         <section className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_.8fr]">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
               <ReceiptText className="size-5 text-[color:var(--text-muted)]" />
               <h2 className="text-lg font-semibold">Histórico de pagamentos</h2>
@@ -198,6 +215,12 @@ export default async function SharedProjectPage({
                       <p className="mt-1 text-xs text-[color:var(--text-faint)]">
                         {payment.dateLabel} · {payment.methodLabel}
                       </p>
+                      {payment.hasReceipt ? (
+                        <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-emerald-400">
+                          <Paperclip className="size-3.5" />
+                          Comprovante anexado
+                        </p>
+                      ) : null}
                     </div>
                     <strong>{payment.amountLabel}</strong>
                   </article>
@@ -210,36 +233,10 @@ export default async function SharedProjectPage({
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center gap-3">
-              <History className="size-5 text-[color:var(--text-muted)]" />
-              <h2 className="text-lg font-semibold">Histórico de atualizações</h2>
-            </div>
-            <div className="mt-4 space-y-0 border-y border-[color:var(--border)]">
-              {project.timeline.length > 0 ? (
-                project.timeline.map((item) => (
-                  <article
-                    className="border-b border-[color:var(--border)] py-4 last:border-0"
-                    key={item.id}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-medium">{item.title}</h3>
-                      <span className="shrink-0 text-[10px] text-[color:var(--text-faint)]">
-                        {item.dateLabel}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
-                      {item.detail}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <p className="py-8 text-sm text-[color:var(--text-soft)]">
-                  Nenhuma atualização disponível.
-                </p>
-              )}
-            </div>
-          </div>
+          <SharedProjectTimeline
+            initialFilter={parseTimelineFilter(query.filter)}
+            items={project.timeline}
+          />
         </section>
       </div>
     </main>

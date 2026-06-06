@@ -21,6 +21,14 @@ function slugBase(name: string) {
     .slice(0, 32);
 }
 
+function revalidateSharedProject(slugs: string[]) {
+  for (const slug of slugs) {
+    revalidatePath(`/share/${slug}`, "page");
+    revalidatePath(`/share/${slug}/opengraph-image`);
+    revalidatePath(`/share/${slug}/pdf`);
+  }
+}
+
 export async function POST(
   _request: Request,
   context: { params: Promise<{ id: string }> }
@@ -127,13 +135,16 @@ export async function DELETE(
     const permanent = new URL(request.url).searchParams.get("permanent") === "1";
 
     if (permanent) {
-      const result = await prisma.shareLink.deleteMany({
+      const links = await prisma.shareLink.findMany({
+        select: {
+          slug: true
+        },
         where: {
           projectId: id
         }
       });
 
-      if (result.count === 0) {
+      if (links.length === 0) {
         return NextResponse.json(
           {
             error: "Nenhum link encontrado para este projeto.",
@@ -143,11 +154,38 @@ export async function DELETE(
         );
       }
 
+      const result = await prisma.shareLink.deleteMany({
+        where: {
+          projectId: id
+        }
+      });
+
       revalidatePath("/", "page");
       revalidatePath("/projects", "page");
       revalidatePath("/notifications", "page");
+      revalidateSharedProject(links.map((link) => link.slug));
 
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, removed: result.count });
+    }
+
+    const links = await prisma.shareLink.findMany({
+      select: {
+        slug: true
+      },
+      where: {
+        active: true,
+        projectId: id
+      }
+    });
+
+    if (links.length === 0) {
+      return NextResponse.json(
+        {
+          error: "Nenhum link ativo encontrado para este projeto.",
+          ok: false
+        },
+        { status: 404 }
+      );
     }
 
     const result = await prisma.shareLink.updateMany({
@@ -160,20 +198,11 @@ export async function DELETE(
       }
     });
 
-    if (result.count === 0) {
-      return NextResponse.json(
-        {
-          error: "Nenhum link ativo encontrado para este projeto.",
-          ok: false
-        },
-        { status: 404 }
-      );
-    }
-
     revalidatePath("/", "page");
     revalidatePath("/projects", "page");
+    revalidateSharedProject(links.map((link) => link.slug));
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, disabled: result.count });
   } catch (error) {
     logPrismaError("share link disable", error);
 

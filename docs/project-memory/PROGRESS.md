@@ -1319,3 +1319,67 @@ Projeto Geral:
 1. configurar o bucket privado de comprovantes na Vercel
 2. implementar proteção administrativa simples
 3. validar o fluxo no deploy público
+
+---
+
+## 2026-06-06
+
+### Status, Compartilhamento e Comprovantes
+
+Concluído:
+
+- sete status operacionais configuráveis por projeto
+- status exibido em Projetos, Operação atual e portal público
+- eventos e notificações automáticos em mudanças de status
+- timeline pública filtrável por Todos, Atualizações e Pagamentos
+- filtro persistido em `?filter=` e controles móveis com rolagem horizontal
+- Open Graph sem valor monetário, mantendo apenas `R$`
+- mensagem profissional de pagamento para WhatsApp com campos opcionais
+- upload privado de PDF, PNG, JPG, JPEG e WEBP
+- fallback PostgreSQL quando Supabase Storage não estiver configurado
+- preview inline de PDF e imagem com zoom
+- histórico financeiro com método, observação, data, valor e comprovante
+- migration `20260606210000_project_status_and_receipts` aplicada no Supabase
+
+Validação funcional:
+
+```txt
+comprovante PNG: upload HTTP 200
+persistência privada: conteúdo íntegro
+preview: image/png
+mudança de status: HTTP 200
+evento de status: criado
+notificação de status: criada
+dados temporários de QA: removidos
+```
+
+### Status Atual
+
+Documentação:
+
+```txt
+100%
+```
+
+Infraestrutura:
+
+```txt
+99%
+```
+
+Implementação:
+
+```txt
+99%
+```
+
+Projeto Geral:
+
+```txt
+███████████████████▓ 99%
+```
+
+### Próximo Passo
+
+1. implementar proteção administrativa simples
+2. validar o fluxo completo no deploy da Vercel

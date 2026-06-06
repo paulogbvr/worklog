@@ -681,13 +681,45 @@ O Supabase Storage ainda não está configurado no ambiente local atual.
 
 ### Impacto
 
-Cadastro, edição e exclusão de pagamentos funcionam normalmente, mas o input de comprovante fica
-desabilitado até que as variáveis opcionais sejam adicionadas.
+Antes da correção, cadastro, edição e exclusão funcionavam, mas o input de comprovante ficava
+desabilitado sem as variáveis opcionais.
 
 ### Ação
 
-Criar o bucket privado `payment-receipts` e configurar `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_STORAGE_BUCKET` na Vercel e no `.env.local`.
+Resolvido com fallback PostgreSQL. O bucket privado `payment-receipts` continua recomendado para
+produção, mas deixou de ser pré-requisito funcional.
+
+---
+
+## 2026-06-06
+
+### Descoberta
+
+O upload de comprovante ficava indisponível por decisão de interface quando as variáveis opcionais
+do Storage não existiam.
+
+### Impacto
+
+Mesmo arquivos válidos não podiam ser selecionados, embora o restante do pagamento funcionasse.
+
+### Ação
+
+Usar Storage quando configurado e fallback binário privado no PostgreSQL, mantendo upload,
+preview, download, substituição e exclusão no backend.
+
+---
+
+## 2026-06-06
+
+### Descoberta
+
+O badge público “Em andamento” era derivado apenas de `Project.active` e não representava a fase
+real comunicada ao cliente.
+
+### Ação
+
+Separar status operacional, atividade WakaTime e configuração financeira. Persistir mudanças em
+`ProjectStatusEvent` e exibi-las no histórico compartilhado.
 
 ---
 

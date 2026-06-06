@@ -762,6 +762,10 @@ Entregar histórico e badge de atividade com baixa complexidade operacional.
 
 Comprovantes Privados e Forma de Pagamento
 
+#### Status
+
+Substituída pela `DECISION-035`.
+
 #### Decisão
 
 Pagamentos possuem forma explícita e podem referenciar um comprovante privado no Supabase Storage.
@@ -777,8 +781,7 @@ objetos privados no frontend.
 
 - Storage é opcional e pagamentos sem arquivo continuam funcionando
 - bucket padrão: `payment-receipts`
-- tamanho máximo: 10 MB
-- formatos atuais: PDF, PNG, JPEG, WEBP e TXT
+- limite e formatos originais foram substituídos pela `DECISION-035`
 - remover um pagamento também tenta remover o comprovante
 
 ---
@@ -849,3 +852,51 @@ AGENTS.md como Única Instrução de Agentes
 #### Motivo
 
 Eliminar ponte específica de ferramenta e impedir divergência documental.
+
+---
+
+### DECISION-034
+
+#### Título
+
+Status Operacional Independente do Projeto
+
+#### Decisão
+
+O projeto possui um status operacional próprio, separado de `active` e de
+`configurationStatus`. Mudanças reais criam `ProjectStatusEvent` e notificação.
+
+#### Motivo
+
+Atividade no WakaTime, configuração financeira e fase comunicada ao cliente são conceitos
+diferentes.
+
+#### Impacto
+
+- o status aparece em Projetos, Operação atual e portal compartilhado
+- a timeline pública registra cada mudança
+- o portal comunica espera, pausa, conclusão ou cancelamento sem afetar cálculos
+
+---
+
+### DECISION-035
+
+#### Título
+
+Comprovantes Privados com Storage Preferencial e Fallback PostgreSQL
+
+#### Decisão
+
+O Supabase Storage permanece o destino preferencial. Sem suas credenciais opcionais, comprovantes
+de até 4 MB são persistidos em `Payment.receiptData` e servidos exclusivamente pelo backend.
+
+#### Motivo
+
+O upload precisa funcionar no MVP pessoal mesmo quando o bucket ainda não foi configurado.
+
+#### Impacto
+
+- não há campo desabilitado por ausência de Storage
+- apenas um backend guarda cada arquivo
+- substituição e exclusão removem a referência ativa
+- formatos aceitos: PDF, PNG, JPG, JPEG e WEBP

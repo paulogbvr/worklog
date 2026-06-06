@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { Prisma, ProjectConfigurationStatus } from "@prisma/client";
+import {
+  NotificationCategory,
+  NotificationType,
+  Prisma,
+  ProjectConfigurationStatus,
+  ProjectStatus
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logPrismaError } from "@/lib/prisma-error";
+import { getProjectStatusMeta } from "@/lib/project-status";
 
 export const runtime = "nodejs";
 
@@ -68,6 +75,11 @@ export async function PATCH(
     const billDedicated = body.billDedicated === true;
     const active = body.active !== false;
     const repositoryUrl = parseRepositoryUrl(body.repositoryUrl);
+    const status =
+      typeof body.status === "string" &&
+      Object.values(ProjectStatus).includes(body.status as ProjectStatus)
+        ? (body.status as ProjectStatus)
+        : null;
 
     if (!name) {
       return NextResponse.json(
@@ -83,6 +95,16 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: repositoryUrl.error,
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
+    if (body.status !== undefined && !status) {
+      return NextResponse.json(
+        {
+          error: "Selecione um status de projeto válido.",
           ok: false
         },
         { status: 400 }
@@ -114,7 +136,17 @@ export async function PATCH(
 
     const project = await prisma.project.findUnique({
       select: {
-        id: true
+        id: true,
+        name: true,
+        shareLinks: {
+          select: {
+            slug: true
+          },
+          where: {
+            active: true
+          }
+        },
+        status: true
       },
       where: {
         id
@@ -159,8 +191,8 @@ export async function PATCH(
       clientId && hasBillableRate
         ? ProjectConfigurationStatus.CONFIGURED
         : ProjectConfigurationStatus.PENDING;
-
-    await prisma.project.update({
+    const nextStatus = status ?? project.status;
+    const projectUpdate = prisma.project.update({
       data: {
         active,
         billDedicated,
@@ -170,19 +202,55 @@ export async function PATCH(
         hourlyRate,
         name,
         notes: optionalText(body.notes),
-        repositoryUrl: repositoryUrl.value
+        repositoryUrl: repositoryUrl.value,
+        status: nextStatus
       },
       where: {
         id
       }
     });
+
+    if (nextStatus !== project.status) {
+      const statusMeta = getProjectStatusMeta(nextStatus);
+
+      await prisma.$transaction([
+        projectUpdate,
+        prisma.projectStatusEvent.create({
+          data: {
+            fromStatus: project.status,
+            projectId: id,
+            toStatus: nextStatus
+          }
+        }),
+        prisma.notification.create({
+          data: {
+            category: NotificationCategory.IMPORTANT,
+            message: `Projeto ${name} alterado para ${statusMeta.label}.`,
+            projectId: id,
+            title: "Status do projeto atualizado",
+            type: NotificationType.PROJECT_STATUS_CHANGED
+          }
+        })
+      ]);
+    } else {
+      await projectUpdate;
+    }
+
     revalidatePath("/", "page");
     revalidatePath("/projects", "page");
+    revalidatePath("/notifications", "page");
+
+    for (const shareLink of project.shareLinks) {
+      revalidatePath(`/share/${shareLink.slug}`, "page");
+      revalidatePath(`/share/${shareLink.slug}/opengraph-image`);
+      revalidatePath(`/share/${shareLink.slug}/pdf`);
+    }
 
     return NextResponse.json({
       billDedicated,
       configurationStatus,
-      ok: true
+      ok: true,
+      status: nextStatus
     });
   } catch (error) {
     logPrismaError("project configuration", error);

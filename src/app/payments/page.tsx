@@ -67,7 +67,6 @@ export default async function PaymentsPage() {
         fixedView="payments"
         payments={dashboard.payments}
         projects={dashboard.projects}
-        receiptStorageConfigured={dashboard.receiptStorageConfigured}
         workOperations={dashboard.workOperations}
       />
     </AppShell>

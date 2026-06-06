@@ -92,7 +92,7 @@ cp .env.example .env.local`}</InstallationCodeBlock>
               Para publicar sua cópia em outro repositório, altere o remote e envie a branch
               principal.
             </p>
-            <InstallationCodeBlock>{`git remote set-url origin URL_DO_SEU_REPOSITORIO
+            <InstallationCodeBlock>{`git remote set-url origin https://github.com/paulogbvr/worklog
 git push -u origin main`}</InstallationCodeBlock>
           </div>
         </section>

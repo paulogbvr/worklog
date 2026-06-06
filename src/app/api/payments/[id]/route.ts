@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { readPaymentInput } from "@/server/payments/validation";
 import {
   deletePaymentReceiptSafely,
-  uploadPaymentReceipt
+  preparePaymentReceipt
 } from "@/server/storage/payment-receipts";
 
 export const runtime = "nodejs";
@@ -41,7 +41,7 @@ export async function PATCH(
     }
 
     const receipt = input.receipt
-      ? await uploadPaymentReceipt(input.receipt, input.projectId)
+      ? await preparePaymentReceipt(input.receipt, input.projectId)
       : null;
     uploadedPath = receipt?.path ?? null;
 
@@ -54,15 +54,19 @@ export async function PATCH(
         projectId: input.projectId,
         ...(receipt
           ? {
+              receiptData: receipt.data,
               receiptMimeType: receipt.mimeType,
               receiptName: receipt.name,
-              receiptPath: receipt.path
+              receiptPath: receipt.path,
+              receiptSize: receipt.size
             }
           : input.removeReceipt
             ? {
+                receiptData: null,
                 receiptMimeType: null,
                 receiptName: null,
-                receiptPath: null
+                receiptPath: null,
+                receiptSize: null
               }
             : {})
       },
@@ -86,6 +90,7 @@ export async function PATCH(
       (error.message.startsWith("Selecione") ||
         error.message.startsWith("Informe") ||
         error.message.startsWith("Envie") ||
+        error.message.startsWith("Não foi possível enviar") ||
         error.message.startsWith("O comprovante") ||
         error.message.startsWith("Comprovantes"));
     const isMissingRecord =

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { readPaymentInput } from "@/server/payments/validation";
 import {
   deletePaymentReceiptSafely,
-  uploadPaymentReceipt
+  preparePaymentReceipt
 } from "@/server/storage/payment-receipts";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const input = await readPaymentInput(request);
     const receipt = input.receipt
-      ? await uploadPaymentReceipt(input.receipt, input.projectId)
+      ? await preparePaymentReceipt(input.receipt, input.projectId)
       : null;
     uploadedPath = receipt?.path ?? null;
 
@@ -27,9 +27,11 @@ export async function POST(request: Request) {
         note: input.note,
         paidAt: input.paidAt,
         projectId: input.projectId,
+        receiptData: receipt?.data,
         receiptMimeType: receipt?.mimeType,
         receiptName: receipt?.name,
-        receiptPath: receipt?.path
+        receiptPath: receipt?.path,
+        receiptSize: receipt?.size
       }
     });
     revalidatePath("/", "page");
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
       (error.message.startsWith("Selecione") ||
         error.message.startsWith("Informe") ||
         error.message.startsWith("Envie") ||
+        error.message.startsWith("Não foi possível enviar") ||
         error.message.startsWith("O comprovante") ||
         error.message.startsWith("Comprovantes"));
     const isMissingProject =

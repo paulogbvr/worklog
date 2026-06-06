@@ -21,8 +21,8 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Projetos              | ✅ Cobrança independente por tipo de hora |
 | Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ✅ CRUD concluído |
-| Pagamentos            | ✅ Métodos, edição, comprovantes e WhatsApp |
-| Portal Compartilhável | ✅ Metadata dinâmica, eventos e PDF |
+| Pagamentos            | ✅ Métodos, comprovantes privados e WhatsApp |
+| Portal Compartilhável | ✅ Status, filtros, metadata dinâmica, eventos e PDF |
 | Notificações          | ✅ Importantes e atualizações |
 | Deploy                | ⚙️ Publicado, proteção pendente |
 
@@ -35,7 +35,7 @@ https://worklog-projects.vercel.app/
 ### Progresso Geral
 
 ```txt
-███████████████████▓ 98%
+███████████████████▓ 99%
 ```
 
 ---
@@ -296,6 +296,7 @@ Cada projeto possui:
 - valor recebido
 - saldo pendente
 - status ativo/inativo
+- status operacional compartilhável
 - status de configuração
 
 Além das horas importadas pelo WakaTime, cada projeto poderá possuir registros manuais de trabalho.
@@ -422,6 +423,9 @@ Cada página pública possui metadata e imagem Open Graph dinâmicas com o nome 
 também pode copiar o link e salvar um PDF gerado pelo backend. Acesso, cópia e PDF ficam registrados
 como eventos relacionados ao link.
 
+O status operacional configurado aparece automaticamente no portal. Mudanças entram na timeline,
+que pode ser filtrada por todas as atividades, atualizações ou pagamentos usando `?filter=`.
+
 ---
 
 ## Notificações
@@ -433,6 +437,7 @@ Notificações importantes:
 - projeto compartilhado acessado
 - link público copiado
 - PDF público salvo
+- status de projeto alterado
 - variável de ambiente inválida
 
 Sincronizações concluídas ficam na seção `Atualizações` e não poluem o badge. O contador é
@@ -460,8 +465,9 @@ Formas atuais:
 - Outro
 
 Pagamentos podem ser editados ou excluídos com confirmação. Comprovantes privados podem ser
-visualizados e baixados sem sair do WorkLog. O botão `Avisar cliente` abre o WhatsApp com a mensagem
-do recebimento e o link público do projeto, quando disponível.
+visualizados e baixados sem sair do WorkLog. PDF, PNG, JPG, JPEG e WEBP de até 4 MB usam o
+Supabase Storage quando configurado e o PostgreSQL privado como fallback. O botão do WhatsApp abre
+uma mensagem profissional do recebimento e o link público do projeto, quando disponível.
 
 O sistema recalcula automaticamente:
 
@@ -584,8 +590,8 @@ Regras:
 - a SUPABASE_SERVICE_ROLE_KEY deve existir somente no backend
 - nunca commitar `.env.local`
 
-Para comprovantes, crie um bucket privado chamado `payment-receipts` no Supabase Storage. O app
-continua registrando pagamentos normalmente quando essas variáveis opcionais não estão presentes.
+Para comprovantes, é recomendado criar um bucket privado chamado `payment-receipts` no Supabase
+Storage. Sem essas variáveis opcionais, o MVP mantém o arquivo no PostgreSQL privado.
 
 ---
 

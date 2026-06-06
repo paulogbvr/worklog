@@ -13,9 +13,12 @@ import {
   Link2,
   Pencil,
   Plus,
+  Share2,
   Settings2,
   Trash2,
-  X
+  X,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa6";
 import { useToast } from "@/components/toast-provider";
@@ -26,10 +29,15 @@ import {
   getTaxIdFeedback
 } from "@/lib/client-profile";
 import {
+  buildPaymentMessage,
   PAYMENT_METHODS,
   type PaymentMethodValue
 } from "@/lib/payment";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import {
+  PROJECT_STATUSES,
+  type ProjectStatusValue
+} from "@/lib/project-status";
 import type {
   DashboardClient,
   DashboardPayment,
@@ -48,6 +56,7 @@ type ProjectDraft = {
   id: string;
   name: string;
   notes: string;
+  status: ProjectStatusValue;
   repositoryUrl: string;
   shareAccessCount: number;
   sharePath: string | null;
@@ -100,6 +109,18 @@ function todayInputValue() {
   const now = new Date();
   const timezoneOffset = now.getTimezoneOffset() * 60_000;
   return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10);
+}
+
+function formatFileSize(bytes: number | null) {
+  if (!bytes) {
+    return null;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
 function dateTimeInputValue(date = new Date()) {
@@ -217,7 +238,6 @@ export function OperationsPanel({
   initialView = "projects",
   payments,
   projects,
-  receiptStorageConfigured = false,
   workOperations
 }: {
   clients: DashboardClient[];
@@ -225,7 +245,6 @@ export function OperationsPanel({
   initialView?: OperationView;
   payments: DashboardPayment[];
   projects: DashboardProject[];
-  receiptStorageConfigured?: boolean;
   workOperations: DashboardWorkOperation[];
 }) {
   const [viewState, setView] = useState<OperationView>(initialView);
@@ -245,6 +264,7 @@ export function OperationsPanel({
   const [paymentConfirmation, setPaymentConfirmation] =
     useState<PaymentConfirmation | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<DashboardPayment | null>(null);
+  const [receiptZoom, setReceiptZoom] = useState(100);
   const [workOperationDraft, setWorkOperationDraft] = useState<WorkOperationDraft>(
     createWorkOperationDraft
   );
@@ -314,6 +334,7 @@ export function OperationsPanel({
       id: project.id,
       name: project.name,
       notes: project.notes ?? "",
+      status: project.projectStatus,
       repositoryUrl: project.repositoryUrl ?? "",
       shareAccessCount: project.shareAccessCount,
       sharePath: project.sharePath
@@ -583,22 +604,60 @@ export function OperationsPanel({
     const shareUrl = payment.sharePath
       ? `${window.location.origin}${payment.sharePath}`
       : null;
-    const client = payment.clientName ?? "cliente";
-    const lines = [
-      `Olá, ${client}! Seu pagamento de ${payment.amountLabel} foi registrado no projeto ${payment.projectName}.`,
-      "",
-      `Forma de pagamento: ${payment.methodLabel}`,
-      payment.note ? `Observação: ${payment.note}` : null,
-      shareUrl ? "" : null,
-      shareUrl ? "Você pode acompanhar o projeto por aqui:" : null,
+    const message = buildPaymentMessage({
+      amount: payment.amount,
+      date: payment.messageDateLabel,
+      methodLabel: payment.methodLabel,
+      note: payment.note,
+      projectName: payment.projectName,
       shareUrl
-    ].filter((line): line is string => line !== null);
+    });
 
     window.open(
-      `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`,
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
       "_blank",
       "noopener,noreferrer"
     );
+  }
+
+  async function sharePayment(payment: DashboardPayment) {
+    const shareUrl = payment.sharePath
+      ? `${window.location.origin}${payment.sharePath}`
+      : null;
+    const message = buildPaymentMessage({
+      amount: payment.amount,
+      date: payment.messageDateLabel,
+      methodLabel: payment.methodLabel,
+      note: payment.note,
+      projectName: payment.projectName,
+      shareUrl
+    });
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          text: message,
+          title: `Pagamento de ${payment.projectName}`
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    await copyTextToClipboard(message);
+    toast({
+      message: "A mensagem formatada está pronta para colar.",
+      title: "Pagamento copiado",
+      tone: "success"
+    });
+  }
+
+  function openReceiptPreview(payment: DashboardPayment) {
+    setReceiptZoom(100);
+    setReceiptPreview(payment);
   }
 
   function editWorkOperation(operation: DashboardWorkOperation) {
@@ -911,6 +970,11 @@ export function OperationsPanel({
                       ].join(" ")}
                     >
                       {project.statusLabel}
+                    </span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs ${project.projectStatusBadgeClass}`}
+                    >
+                      {project.projectStatusSymbol} {project.projectStatusLabel}
                     </span>
                   </div>
                   <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
@@ -1445,15 +1509,27 @@ export function OperationsPanel({
                 <label className="block">
                   <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
                     <span>Comprovante</span>
-                    <span className="text-[color:var(--text-faint)]">até 10 MB</span>
+                    <span className="text-[color:var(--text-faint)]">até 4 MB</span>
                   </span>
                   <input
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,application/pdf,image/png,image/jpeg,image/webp,text/plain"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
                     className="block h-11 w-full rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] text-xs text-[color:var(--text-muted)] file:mr-3 file:h-full file:border-0 file:border-r file:border-[color:var(--border)] file:bg-[var(--surface-subtle)] file:px-3 file:text-xs file:font-medium file:text-[color:var(--app-text-strong)]"
-                    disabled={!receiptStorageConfigured}
                     key={paymentReceiptInputKey}
                     onChange={(event) => {
-                      setPaymentReceipt(event.target.files?.[0] ?? null);
+                      const file = event.target.files?.[0] ?? null;
+
+                      if (file && file.size > 4 * 1024 * 1024) {
+                        setPaymentReceipt(null);
+                        setPaymentReceiptInputKey((current) => current + 1);
+                        toast({
+                          message: "Selecione um arquivo de até 4 MB.",
+                          title: "Comprovante muito grande",
+                          tone: "error"
+                        });
+                        return;
+                      }
+
+                      setPaymentReceipt(file);
                       setRemovePaymentReceipt(false);
                     }}
                     type="file"
@@ -1473,15 +1549,8 @@ export function OperationsPanel({
                 </button>
               </div>
 
-              {!receiptStorageConfigured ? (
-                <p className="mt-3 text-xs leading-5 text-[color:var(--text-soft)]">
-                  Comprovantes ficam disponíveis após configurar o bucket privado do Supabase
-                  Storage. O pagamento pode ser salvo normalmente sem arquivo.
-                </p>
-              ) : null}
-
               {paymentEditingId &&
-              payments.find((payment) => payment.id === paymentEditingId)?.receiptPath ? (
+              payments.find((payment) => payment.id === paymentEditingId)?.hasReceipt ? (
                 <label className="mt-3 inline-flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
                   <input
                     checked={removePaymentReceipt}
@@ -1521,31 +1590,48 @@ export function OperationsPanel({
                         </span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-[color:var(--text-soft)]">
+                        <span className="text-[color:var(--text-faint)]">Observação: </span>
                         {payment.note ?? "Sem observação"}
                       </p>
-                      {payment.receiptName ? (
-                        <p className="mt-2 inline-flex min-w-0 items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                      {payment.hasReceipt ? (
+                        <p className="mt-2 inline-flex min-w-0 items-center gap-2 rounded-md border border-emerald-500/15 bg-emerald-500/6 px-2.5 py-1.5 text-xs text-emerald-400">
                           <FileText className="size-3.5 shrink-0" />
-                          <span className="truncate">{payment.receiptName}</span>
+                          <span className="truncate">
+                            {payment.receiptName ?? "Comprovante anexado"}
+                          </span>
+                          {formatFileSize(payment.receiptSize) ? (
+                            <span className="shrink-0 text-emerald-400/60">
+                              · {formatFileSize(payment.receiptSize)}
+                            </span>
+                          ) : null}
                         </p>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                       <strong className="mr-2 text-base">{payment.amountLabel}</strong>
                       <button
+                        aria-label={`Compartilhar pagamento de ${payment.amountLabel}`}
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        onClick={() => void sharePayment(payment)}
+                        title="Compartilhar pagamento"
+                        type="button"
+                      >
+                        <Share2 className="size-4" />
+                      </button>
+                      <button
                         className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
                         onClick={() => notifyClient(payment)}
                         type="button"
                       >
                         <FaWhatsapp className="size-4" />
-                        Avisar cliente
+                        Reenviar
                       </button>
-                      {payment.receiptPath ? (
+                      {payment.hasReceipt ? (
                         <>
                           <button
                             aria-label={`Visualizar comprovante de ${payment.projectName}`}
                             className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
-                            onClick={() => setReceiptPreview(payment)}
+                            onClick={() => openReceiptPreview(payment)}
                             title="Visualizar comprovante"
                             type="button"
                           >
@@ -1632,6 +1718,37 @@ export function OperationsPanel({
                     {clients.map((client) => (
                       <option key={client.id} value={client.id}>
                         {client.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                  />
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                  Status do Projeto
+                </span>
+                <span className="relative block">
+                  <select
+                    className={selectClass}
+                    onChange={(event) =>
+                      setProjectDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              status: event.target.value as ProjectStatusValue
+                            }
+                          : current
+                      )
+                    }
+                    value={projectDraft.status}
+                  >
+                    {PROJECT_STATUSES.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
                       </option>
                     ))}
                   </select>
@@ -1935,12 +2052,57 @@ export function OperationsPanel({
           title={receiptPreview.receiptName ?? "Comprovante"}
         >
           <div className="p-5">
-            <iframe
-              className="h-[62vh] min-h-80 w-full rounded-md border border-[color:var(--border)] bg-white"
-              src={`/api/payments/${receiptPreview.id}/receipt`}
-              title={`Comprovante de ${receiptPreview.projectName}`}
-            />
-            <div className="mt-4 flex justify-end">
+            {receiptPreview.receiptMimeType?.startsWith("image/") ? (
+              <>
+                <div className="mb-3 flex items-center justify-end gap-2">
+                  <button
+                    aria-label="Reduzir imagem"
+                    className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                    disabled={receiptZoom <= 75}
+                    onClick={() => setReceiptZoom((current) => Math.max(75, current - 25))}
+                    title="Reduzir"
+                    type="button"
+                  >
+                    <ZoomOut className="size-4" />
+                  </button>
+                  <span className="min-w-12 text-center text-xs text-[color:var(--text-soft)]">
+                    {receiptZoom}%
+                  </span>
+                  <button
+                    aria-label="Ampliar imagem"
+                    className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                    disabled={receiptZoom >= 200}
+                    onClick={() => setReceiptZoom((current) => Math.min(200, current + 25))}
+                    title="Ampliar"
+                    type="button"
+                  >
+                    <ZoomIn className="size-4" />
+                  </button>
+                </div>
+                <div className="max-h-[62vh] min-h-80 overflow-auto rounded-md border border-[color:var(--border)] bg-white p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={`Comprovante de ${receiptPreview.projectName}`}
+                    className="mx-auto block h-auto max-w-none"
+                    src={`/api/payments/${receiptPreview.id}/receipt`}
+                    style={{ width: `${receiptZoom}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <iframe
+                className="h-[62vh] min-h-80 w-full rounded-md border border-[color:var(--border)] bg-white"
+                src={`/api/payments/${receiptPreview.id}/receipt`}
+                title={`Comprovante de ${receiptPreview.projectName}`}
+              />
+            )}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-[color:var(--text-soft)]">
+                {receiptPreview.receiptMimeType ?? "Arquivo privado"}
+                {formatFileSize(receiptPreview.receiptSize)
+                  ? ` · ${formatFileSize(receiptPreview.receiptSize)}`
+                  : ""}
+              </p>
               <a
                 className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
                 href={`/api/payments/${receiptPreview.id}/receipt?download=1`}

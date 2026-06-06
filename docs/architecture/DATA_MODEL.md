@@ -111,6 +111,7 @@ Campos:
 - wakatimeProjectId opcional
 - wakatimeProjectName opcional
 - active
+- status operacional
 - configurationStatus
 - lastSyncAt
 - createdAt
@@ -128,8 +129,27 @@ Regras:
 - horas dedicadas geram cobrança somente quando `billDedicated` estiver ativo e
   `dedicatedHourlyRate` for positivo
 - projeto WakaTime ausente da lista atual deve ficar com `active = false`
+- status operacional é independente de `active` e da configuração financeira
 - inativar não remove horas, pagamentos ou configuração
 - repositório é apenas referência pública e deve usar URL HTTP/HTTPS válida
+
+## ProjectStatusEvent
+
+Representa uma mudança do status operacional compartilhado.
+
+Campos:
+
+- id
+- projectId
+- fromStatus opcional
+- toStatus
+- createdAt
+
+Regras:
+
+- criar somente quando o status realmente mudar
+- exibir no portal compartilhado
+- gerar notificação administrativa
 
 ## WorkLogEntry
 
@@ -186,17 +206,20 @@ Campos:
 - method
 - note
 - receiptPath opcional
+- receiptData opcional para fallback privado
 - receiptName opcional
 - receiptMimeType opcional
+- receiptSize opcional
 - createdAt
 - updatedAt
 
 Regras:
 
-- comprovante fica em bucket privado e o banco armazena apenas a referência
+- comprovante usa bucket privado quando o Storage estiver configurado
+- sem Storage, o conteúdo fica no PostgreSQL privado
 - upload e download passam pelo backend
 - excluir ou substituir comprovante tenta remover o objeto antigo do Storage
-- pagamento continua funcionando sem Storage configurado
+- formatos: PDF, PNG, JPG, JPEG e WEBP, com até 4 MB
 
 ## ShareLink
 
@@ -288,6 +311,15 @@ ProjectConfigurationStatus:
 - PENDING
 - CONFIGURED
 
+ProjectStatus:
+- DEVELOPMENT
+- IN_PROGRESS
+- WAITING_CLIENT
+- WAITING_PAYMENT
+- PAUSED
+- COMPLETED
+- CANCELED
+
 SyncProvider:
 - WAKATIME
 
@@ -296,6 +328,7 @@ NotificationType:
 - SHARE_COPIED
 - SHARE_CREATED
 - SHARE_PDF_DOWNLOADED
+- PROJECT_STATUS_CHANGED
 - ENV_WARNING
 - SYNC_SUCCESS
 - SYNC_ERROR

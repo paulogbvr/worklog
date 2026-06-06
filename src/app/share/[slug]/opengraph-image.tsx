@@ -8,6 +8,7 @@ export const size = {
   width: 1200
 };
 export const runtime = "nodejs";
+export const revalidate = 3600;
 
 export default async function OpenGraphImage({
   params
@@ -81,7 +82,7 @@ export default async function OpenGraphImage({
           }}
         >
           <span>Tempo real, valor visível</span>
-          <span>{project?.pendingValueLabel ?? "Somente leitura"}</span>
+          <span style={{ fontSize: 26, fontWeight: 700 }}>R$</span>
         </div>
       </div>
     ),

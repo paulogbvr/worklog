@@ -4,7 +4,10 @@ import {
   getPaymentMethodLabel,
   type PaymentMethodValue
 } from "@/lib/payment";
-import { isPaymentReceiptStorageConfigured } from "@/server/storage/payment-receipts";
+import {
+  getProjectStatusMeta,
+  type ProjectStatusValue
+} from "@/lib/project-status";
 
 const TIME_ZONE = "America/Sao_Paulo";
 
@@ -52,9 +55,11 @@ export type DashboardPayment = {
   amountLabel: string;
   clientName: string | null;
   clientPhone: string | null;
+  hasReceipt: boolean;
   id: string;
   method: PaymentMethodValue;
   methodLabel: string;
+  messageDateLabel: string;
   note: string | null;
   paidAt: string;
   paidAtLabel: string;
@@ -62,7 +67,7 @@ export type DashboardPayment = {
   projectName: string;
   receiptMimeType: string | null;
   receiptName: string | null;
-  receiptPath: string | null;
+  receiptSize: number | null;
   sharePath: string | null;
 };
 
@@ -86,6 +91,10 @@ export type DashboardProject = {
   notes: string | null;
   pendingValue: number;
   pendingValueLabel: string;
+  projectStatus: ProjectStatusValue;
+  projectStatusBadgeClass: string;
+  projectStatusLabel: string;
+  projectStatusSymbol: string;
   receivedValue: number;
   receivedValueLabel: string;
   repositoryUrl: string | null;
@@ -151,7 +160,6 @@ export type DashboardSummary = {
   periodWakaTimeLabel: string;
   projectOptions: Array<{ id: string; name: string }>;
   projects: DashboardProject[];
-  receiptStorageConfigured: boolean;
   selectedProjectId: string | null;
   workOperations: DashboardWorkOperation[];
 };
@@ -204,6 +212,16 @@ function formatDate(date: Date | null | undefined) {
     dateStyle: "short",
     timeZone: TIME_ZONE
   }).format(date);
+}
+
+function formatPaymentMessageDate(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: TIME_ZONE
+  })
+    .format(date)
+    .replace(",", " -");
 }
 
 function formatClientCreatedAt(date: Date) {
@@ -300,7 +318,6 @@ function getEmptySummary(
     periodWakaTimeLabel: "0h",
     projectOptions: [],
     projects: [],
-    receiptStorageConfigured: isPaymentReceiptStorageConfigured(),
     selectedProjectId: null,
     workOperations: []
   };
@@ -404,16 +421,19 @@ export async function getDashboardSummary(
           },
           select: {
             amount: true,
+            createdAt: true,
             id: true,
             method: true,
             note: true,
             paidAt: true,
             receiptMimeType: true,
             receiptName: true,
-            receiptPath: true
+            receiptPath: true,
+            receiptSize: true
           }
         },
         repositoryUrl: true,
+        status: true,
         shareLinks: {
           orderBy: {
             createdAt: "desc"
@@ -648,6 +668,7 @@ export async function getDashboardSummary(
     globalReceivedValue += allReceivedValue;
 
     const shareLink = project.shareLinks[0];
+    const projectStatus = getProjectStatusMeta(project.status);
 
     return {
       active: project.active,
@@ -669,6 +690,10 @@ export async function getDashboardSummary(
       notes: project.notes,
       pendingValue,
       pendingValueLabel: formatCurrency(pendingValue),
+      projectStatus: projectStatus.value,
+      projectStatusBadgeClass: projectStatus.badgeClass,
+      projectStatusLabel: projectStatus.label,
+      projectStatusSymbol: projectStatus.symbol,
       receivedValue,
       receivedValueLabel: formatCurrency(receivedValue),
       repositoryUrl: project.repositoryUrl,
@@ -845,9 +870,11 @@ export async function getDashboardSummary(
       amountLabel: formatCurrency(Number(payment.amount)),
       clientName: payment.clientName,
       clientPhone: payment.clientPhone,
+      hasReceipt: Boolean(payment.receiptPath || payment.receiptSize),
       id: payment.id,
       method: payment.method,
       methodLabel: getPaymentMethodLabel(payment.method),
+      messageDateLabel: formatPaymentMessageDate(payment.createdAt),
       note: payment.note,
       paidAt: payment.paidAt.toISOString().slice(0, 10),
       paidAtLabel: formatDate(payment.paidAt),
@@ -855,7 +882,7 @@ export async function getDashboardSummary(
       projectName: payment.projectName,
       receiptMimeType: payment.receiptMimeType,
       receiptName: payment.receiptName,
-      receiptPath: payment.receiptPath,
+      receiptSize: payment.receiptSize,
       sharePath: payment.sharePath
     })),
     pendingProjects,
@@ -872,7 +899,6 @@ export async function getDashboardSummary(
       name: project.name
     })),
     projects: projectSummaries,
-    receiptStorageConfigured: isPaymentReceiptStorageConfigured(),
     selectedProjectId,
     workOperations
   };

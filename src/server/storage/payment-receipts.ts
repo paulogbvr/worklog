@@ -4,14 +4,22 @@ import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const DEFAULT_BUCKET = "payment-receipts";
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "text/plain"
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MIME_TYPE_BY_EXTENSION = new Map([
+  ["jpeg", "image/jpeg"],
+  ["jpg", "image/jpeg"],
+  ["pdf", "application/pdf"],
+  ["png", "image/png"],
+  ["webp", "image/webp"]
 ]);
+
+export type PreparedPaymentReceipt = {
+  data: Uint8Array<ArrayBuffer> | null;
+  mimeType: string;
+  name: string;
+  path: string | null;
+  size: number;
+};
 
 function getStorageConfig() {
   const url = process.env.SUPABASE_URL?.trim();
@@ -69,33 +77,55 @@ export function validatePaymentReceipt(file: File) {
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error("O comprovante deve ter no máximo 10 MB.");
+    throw new Error("O comprovante deve ter no máximo 4 MB.");
   }
 
-  if (!ALLOWED_MIME_TYPES.has(file.type)) {
-    throw new Error("Envie um comprovante em PDF, PNG, JPG, WEBP ou TXT.");
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  const expectedMimeType = extension ? MIME_TYPE_BY_EXTENSION.get(extension) : null;
+
+  if (!expectedMimeType || (file.type && file.type !== expectedMimeType)) {
+    throw new Error("Envie um comprovante em PDF, PNG, JPG, JPEG ou WEBP.");
   }
+
+  return expectedMimeType;
 }
 
-export async function uploadPaymentReceipt(file: File, projectId: string) {
-  validatePaymentReceipt(file);
+export async function preparePaymentReceipt(
+  file: File,
+  projectId: string
+): Promise<PreparedPaymentReceipt> {
+  const mimeType = validatePaymentReceipt(file);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  if (!isPaymentReceiptStorageConfigured()) {
+    return {
+      data: bytes,
+      mimeType,
+      name: file.name,
+      path: null,
+      size: file.size
+    };
+  }
+
   const { bucket, client } = getStorageClient();
   const path = `${projectId}/${Date.now()}-${randomBytes(6).toString("hex")}-${safeFileName(file.name)}`;
-  const bytes = new Uint8Array(await file.arrayBuffer());
   const { error } = await client.storage.from(bucket).upload(path, bytes, {
     cacheControl: "3600",
-    contentType: file.type,
+    contentType: mimeType,
     upsert: false
   });
 
   if (error) {
+    console.error(`[payment-receipts] upload failed (${error.name || "storage-error"})`);
     throw new Error("Não foi possível enviar o comprovante para o Storage.");
   }
 
   return {
-    mimeType: file.type,
+    data: null,
+    mimeType,
     name: file.name,
-    path
+    path,
+    size: file.size
   };
 }
 
@@ -108,6 +138,22 @@ export async function downloadPaymentReceipt(path: string) {
   }
 
   return data;
+}
+
+export async function getPaymentReceiptBytes(input: {
+  data: Uint8Array<ArrayBuffer> | null;
+  path: string | null;
+}) {
+  if (input.path) {
+    const file = await downloadPaymentReceipt(input.path);
+    return new Uint8Array(await file.arrayBuffer());
+  }
+
+  if (input.data) {
+    return input.data;
+  }
+
+  throw new Error("Comprovante não encontrado.");
 }
 
 export async function deletePaymentReceipt(path: string) {

@@ -15,6 +15,7 @@ type NotificationItem = {
   title: string;
   type:
     | "ENV_WARNING"
+    | "PROJECT_STATUS_CHANGED"
     | "SHARE_ACCESSED"
     | "SHARE_COPIED"
     | "SHARE_CREATED"

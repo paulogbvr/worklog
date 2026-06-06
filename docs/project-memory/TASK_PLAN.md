@@ -69,8 +69,11 @@ Aplicação inicializada:
 - portal compartilhável somente leitura
 - notificações de sincronização e compartilhamento
 - pagamentos com forma, edição, comprovante opcional e WhatsApp
+- comprovantes privados com fallback PostgreSQL e preview inline
 - notificações importantes separadas de atualizações
 - metadata e Open Graph dinâmicos por projeto
+- status operacional com timeline e notificações
+- filtros do histórico público persistidos na URL
 - PDF público gerado no backend
 - página Sobre orientada ao propósito e à instalação
 
@@ -339,9 +342,9 @@ Resultado:
 
 - cadastro, edição e remoção confirmada de pagamentos concluídos
 - formas Pix, cartão, TED, dinheiro, boleto e outro
-- comprovante privado opcional preparado para Supabase Storage
-- visualização e download de comprovante sem sair da página
-- aviso ao cliente por WhatsApp
+- comprovante privado com Storage preferencial e fallback PostgreSQL
+- visualização inline de PDF e imagem com zoom
+- aviso ao cliente por WhatsApp com mensagem formatada
 - histórico recente disponível no painel
 - valor recebido e saldo pendente recalculados no resumo
 
@@ -385,6 +388,9 @@ Resultado:
 - botões para copiar link e salvar PDF
 - eventos de acesso, cópia e PDF
 - histórico público de pagamentos e atualizações
+- status operacional sincronizado com o portal
+- mudanças de status registradas e notificadas
+- filtros Todos, Atualizações e Pagamentos com contadores
 - PDF gerado sob demanda sem arquivo duplicado
 
 ---

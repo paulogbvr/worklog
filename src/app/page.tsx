@@ -170,9 +170,16 @@ export default async function Home({
                 key={project.id}
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-[color:var(--app-text-strong)]">
-                    {project.name}
-                  </p>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <p className="truncate font-medium text-[color:var(--app-text-strong)]">
+                      {project.name}
+                    </p>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${project.projectStatusBadgeClass}`}
+                    >
+                      {project.projectStatusSymbol} {project.projectStatusLabel}
+                    </span>
+                  </div>
                   <p className="mt-1 truncate text-xs text-[color:var(--text-soft)]">
                     {project.clientName ?? "Sem cliente"} · último pagamento:{" "}
                     {project.lastPaymentLabel}
