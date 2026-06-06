@@ -11,6 +11,8 @@ import {
   ExternalLink,
   FileText,
   Link2,
+  Loader2,
+  Paperclip,
   Pencil,
   Plus,
   Share2,
@@ -21,6 +23,7 @@ import {
   ZoomOut
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa6";
+import { StatusPulse } from "@/components/status-pulse";
 import { useToast } from "@/components/toast-provider";
 import {
   calculateAge,
@@ -585,7 +588,7 @@ export function OperationsPanel({
     }
   }
 
-  function notifyClient(payment: DashboardPayment) {
+  async function notifyClient(payment: DashboardPayment) {
     const phoneDigits = payment.clientPhone?.replace(/\D/g, "");
     const phone =
       phoneDigits && (phoneDigits.length === 10 || phoneDigits.length === 11)
@@ -618,6 +621,19 @@ export function OperationsPanel({
       "_blank",
       "noopener,noreferrer"
     );
+
+    if (!payment.notified) {
+      try {
+        await readResponse(
+          await fetch(`/api/payments/${payment.id}/notify`, {
+            method: "POST"
+          })
+        );
+        router.refresh();
+      } catch {
+        // O envio pelo WhatsApp já foi aberto; ignorar falha ao registrar o estado.
+      }
+    }
   }
 
   async function sharePayment(payment: DashboardPayment) {
@@ -972,9 +988,10 @@ export function OperationsPanel({
                       {project.statusLabel}
                     </span>
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-xs ${project.projectStatusBadgeClass}`}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${project.projectStatusBadgeClass}`}
                     >
-                      {project.projectStatusSymbol} {project.projectStatusLabel}
+                      <StatusPulse tone={project.projectStatusTone} />
+                      {project.projectStatusLabel}
                     </span>
                   </div>
                   <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
@@ -1252,9 +1269,7 @@ export function OperationsPanel({
             ) : null}
 
             <div className={recordComposerOpen ? "pt-5" : ""}>
-              <h3 className="mb-1 text-sm font-semibold text-[color:var(--app-text-strong)]">
-                Histórico
-              </h3>
+              <h3 className="mb-1 text-sm font-semibold text-amber-400">Histórico</h3>
               <p className="mb-3 text-xs text-[color:var(--text-soft)]">
                 Todas as operações registradas no período carregado.
               </p>
@@ -1291,7 +1306,7 @@ export function OperationsPanel({
                         </p>
                       ) : null}
                     </div>
-                    <div className="flex items-center justify-start gap-2">
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         aria-label={`Editar operação de ${operation.projectName}`}
                         className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
@@ -1506,35 +1521,84 @@ export function OperationsPanel({
                   />
                 </label>
 
-                <label className="block">
+                <div className="block">
                   <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
                     <span>Comprovante</span>
-                    <span className="text-[color:var(--text-faint)]">até 4 MB</span>
+                    <span className="text-[color:var(--text-faint)]">PDF, PNG, JPG, JPEG, WEBP · até 4 MB</span>
                   </span>
-                  <input
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
-                    className="block h-11 w-full rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] text-xs text-[color:var(--text-muted)] file:mr-3 file:h-full file:border-0 file:border-r file:border-[color:var(--border)] file:bg-[var(--surface-subtle)] file:px-3 file:text-xs file:font-medium file:text-[color:var(--app-text-strong)]"
-                    key={paymentReceiptInputKey}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
+                  <div className="flex items-center gap-2">
+                    <label
+                      className={[
+                        "group inline-flex h-11 min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md border px-3 text-sm transition-colors duration-200 active:scale-[0.99]",
+                        paymentReceipt
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                          : "border-[color:var(--border)] bg-[var(--input-bg)] text-[color:var(--text-muted)] hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                      ].join(" ")}
+                    >
+                      {isSaving && paymentReceipt ? (
+                        <Loader2 className="size-4 shrink-0 animate-spin" />
+                      ) : (
+                        <Paperclip className="size-4 shrink-0 transition-transform duration-200 group-hover:-rotate-12" />
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {paymentReceipt
+                          ? paymentReceipt.name
+                          : removePaymentReceipt
+                            ? "Comprovante será removido"
+                            : "Anexar comprovante"}
+                      </span>
+                      {paymentReceipt ? (
+                        <span className="shrink-0 text-xs text-emerald-400/70">
+                          {formatFileSize(paymentReceipt.size)}
+                        </span>
+                      ) : null}
+                      <input
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
+                        className="sr-only"
+                        key={paymentReceiptInputKey}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
 
-                      if (file && file.size > 4 * 1024 * 1024) {
-                        setPaymentReceipt(null);
-                        setPaymentReceiptInputKey((current) => current + 1);
-                        toast({
-                          message: "Selecione um arquivo de até 4 MB.",
-                          title: "Comprovante muito grande",
-                          tone: "error"
-                        });
-                        return;
-                      }
+                          if (file && file.size > 4 * 1024 * 1024) {
+                            setPaymentReceipt(null);
+                            setPaymentReceiptInputKey((current) => current + 1);
+                            toast({
+                              message: "Selecione um arquivo de até 4 MB.",
+                              title: "Comprovante muito grande",
+                              tone: "error"
+                            });
+                            return;
+                          }
 
-                      setPaymentReceipt(file);
-                      setRemovePaymentReceipt(false);
-                    }}
-                    type="file"
-                  />
-                </label>
+                          if (file) {
+                            toast({
+                              message: `${file.name} pronto para anexar.`,
+                              title: "Comprovante selecionado",
+                              tone: "success"
+                            });
+                          }
+
+                          setPaymentReceipt(file);
+                          setRemovePaymentReceipt(false);
+                        }}
+                        type="file"
+                      />
+                    </label>
+                    {paymentReceipt ? (
+                      <button
+                        aria-label="Remover comprovante selecionado"
+                        className="grid size-11 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        onClick={() => {
+                          setPaymentReceipt(null);
+                          setPaymentReceiptInputKey((current) => current + 1);
+                        }}
+                        type="button"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
 
                 <button
                   className="button-primary h-11 px-4 text-sm font-medium disabled:opacity-60"
@@ -1564,7 +1628,7 @@ export function OperationsPanel({
             </form>
 
             <div className="pt-6">
-              <h2 className="text-lg font-semibold">Histórico de pagamentos</h2>
+              <h2 className="text-lg font-semibold text-amber-400">Histórico de pagamentos</h2>
               <p className="mt-1 text-sm text-[color:var(--text-soft)]">
                 Edite dados, consulte comprovantes ou avise o cliente pelo WhatsApp.
               </p>
@@ -1607,8 +1671,8 @@ export function OperationsPanel({
                         </p>
                       ) : null}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                      <strong className="mr-2 text-base">{payment.amountLabel}</strong>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <strong className="mr-auto text-base lg:mr-2">{payment.amountLabel}</strong>
                       <button
                         aria-label={`Compartilhar pagamento de ${payment.amountLabel}`}
                         className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
@@ -1620,11 +1684,11 @@ export function OperationsPanel({
                       </button>
                       <button
                         className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
-                        onClick={() => notifyClient(payment)}
+                        onClick={() => void notifyClient(payment)}
                         type="button"
                       >
                         <FaWhatsapp className="size-4" />
-                        Reenviar
+                        {payment.notified ? "Reenviar" : "Enviar"}
                       </button>
                       {payment.hasReceipt ? (
                         <>
@@ -1757,6 +1821,20 @@ export function OperationsPanel({
                     className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
                   />
                 </span>
+                {(() => {
+                  const meta = PROJECT_STATUSES.find(
+                    (status) => status.value === projectDraft.status
+                  );
+
+                  return meta ? (
+                    <span
+                      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${meta.badgeClass}`}
+                    >
+                      <StatusPulse tone={meta.tone} />
+                      {meta.label}
+                    </span>
+                  ) : null;
+                })()}
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">

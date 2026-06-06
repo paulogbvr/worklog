@@ -1,9 +1,28 @@
-export type StatusTone = "error" | "neutral" | "success" | "warning";
+export type StatusTone =
+  | "attention"
+  | "done"
+  | "error"
+  | "info"
+  | "neutral"
+  | "success"
+  | "warning";
 
 const toneClasses: Record<StatusTone, { core: string; ring: string }> = {
+  attention: {
+    core: "bg-orange-500",
+    ring: "bg-orange-400/35"
+  },
+  done: {
+    core: "bg-emerald-600",
+    ring: "bg-emerald-500/40"
+  },
   error: {
     core: "bg-red-500",
     ring: "bg-red-400/35"
+  },
+  info: {
+    core: "bg-blue-500",
+    ring: "bg-blue-400/35"
   },
   neutral: {
     core: "bg-zinc-400",

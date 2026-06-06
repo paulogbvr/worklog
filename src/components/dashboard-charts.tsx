@@ -157,7 +157,7 @@ export function DashboardCharts({
           </p>
           <ProjectLegend series={series} />
         </div>
-        <div className="mt-5 h-[260px] min-w-0">
+        <div className="mt-5 h-[260px] min-w-0 outline-none" tabIndex={-1}>
           <ResponsiveContainer
             height="100%"
             initialDimension={{ height: 260, width: 620 }}
@@ -214,7 +214,7 @@ export function DashboardCharts({
           </p>
           <ProjectLegend series={series} />
         </div>
-        <div className="mt-5 h-[260px] min-w-0">
+        <div className="mt-5 h-[260px] min-w-0 outline-none" tabIndex={-1}>
           <ResponsiveContainer
             height="100%"
             initialDimension={{ height: 260, width: 620 }}

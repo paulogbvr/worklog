@@ -156,6 +156,7 @@ model Payment {
   receiptName     String?
   receiptMimeType String?
   receiptSize     Int?
+  whatsappNotifiedAt DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

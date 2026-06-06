@@ -64,12 +64,12 @@ export function SharedProjectTimeline({
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-3">
-        <History className="size-5 text-[color:var(--text-muted)]" />
-        <h2 className="text-lg font-semibold">Histórico de atualizações</h2>
+        <History className="size-5 text-amber-400" />
+        <h2 className="text-lg font-semibold text-amber-400">Histórico de atualizações</h2>
       </div>
 
       <div className="-mx-1 mt-4 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="inline-grid min-w-max grid-cols-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
+        <div className="inline-flex w-max gap-1 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
           {(
             [
               ["all", "Todos"],
@@ -80,7 +80,7 @@ export function SharedProjectTimeline({
             <button
               aria-pressed={filter === value}
               className={[
-                "h-9 rounded px-3 text-xs transition-colors",
+                "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded px-3.5 text-xs transition-colors",
                 filter === value
                   ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)]"
                   : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"

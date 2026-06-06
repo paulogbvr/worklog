@@ -58,8 +58,16 @@ export default async function ClientsPage() {
         })}
       </section>
 
+      <OperationsPanel
+        clients={dashboard.clients}
+        fixedView="clients"
+        payments={dashboard.payments}
+        projects={dashboard.projects}
+        workOperations={dashboard.workOperations}
+      />
+
       {recentClients.length > 0 ? (
-        <section className="mb-6 border-y border-[color:var(--border)] py-5">
+        <section className="mt-6 border-t border-[color:var(--border)] pt-5">
           <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
             Últimos cadastrados
           </p>
@@ -75,14 +83,6 @@ export default async function ClientsPage() {
           </div>
         </section>
       ) : null}
-
-      <OperationsPanel
-        clients={dashboard.clients}
-        fixedView="clients"
-        payments={dashboard.payments}
-        projects={dashboard.projects}
-        workOperations={dashboard.workOperations}
-      />
     </AppShell>
   );
 }

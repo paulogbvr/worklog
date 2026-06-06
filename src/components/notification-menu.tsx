@@ -66,7 +66,13 @@ function notificationTone(type: NotificationItem["type"]) {
   return "neutral" as const;
 }
 
-export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
+export function NotificationMenu({
+  className = "",
+  mobile = false
+}: {
+  className?: string;
+  mobile?: boolean;
+}) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -202,7 +208,7 @@ export function NotificationMenu({ mobile = false }: { mobile?: boolean }) {
   );
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className={["relative", className].join(" ")} ref={menuRef}>
       {button}
       {open ? (
         <div

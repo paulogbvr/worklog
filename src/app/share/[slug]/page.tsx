@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Clock3,
-  Code2,
-  ExternalLink,
-  Paperclip,
-  ReceiptText,
-  ShieldCheck
-} from "lucide-react";
+import { Clock3, Code2, ExternalLink, ReceiptText } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { StatusPulse } from "@/components/status-pulse";
+import { SharedPaymentReceipt } from "@/app/share/[slug]/shared-payment-receipt";
 import { SharedProjectActions } from "@/app/share/[slug]/shared-project-actions";
 import {
   SharedProjectTimeline,
@@ -132,23 +127,26 @@ export default async function SharedProjectPage({
             <div
               className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs ${project.statusBadgeClass}`}
             >
-              <ShieldCheck className="size-4" />
-              <span aria-hidden>{project.statusSymbol}</span>
+              <StatusPulse tone={project.statusTone} />
               {project.statusLabel} · somente leitura
             </div>
           </div>
         </header>
 
-        <section className="grid gap-3 py-7 sm:grid-cols-2 lg:grid-cols-5">
-          {metrics.map(([label, value]) => (
-            <article
-              className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-4"
-              key={label}
-            >
-              <p className="text-xs text-[color:var(--text-soft)]">{label}</p>
-              <p className="mt-3 text-xl font-semibold">{value}</p>
-            </article>
-          ))}
+        <section className="py-7">
+          <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[color:var(--border)] bg-[var(--surface)] sm:grid-cols-3 lg:grid-cols-5">
+            {metrics.map(([label, value]) => (
+              <div
+                className="border-b border-r border-[color:var(--border)] p-4 last:border-r-0 sm:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(3n)]:border-r lg:[&:nth-child(5n)]:border-r-0"
+                key={label}
+              >
+                <p className="truncate text-[11px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                  {label}
+                </p>
+                <p className="mt-1.5 text-lg font-semibold sm:text-xl">{value}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="grid gap-5 border-y border-[color:var(--border)] py-7 md:grid-cols-2">
@@ -198,8 +196,8 @@ export default async function SharedProjectPage({
         <section className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_.8fr]">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <ReceiptText className="size-5 text-[color:var(--text-muted)]" />
-              <h2 className="text-lg font-semibold">Histórico de pagamentos</h2>
+              <ReceiptText className="size-5 text-amber-400" />
+              <h2 className="text-lg font-semibold text-amber-400">Histórico de pagamentos</h2>
             </div>
             <div className="mt-4 divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
               {project.payments.length > 0 ? (
@@ -216,10 +214,11 @@ export default async function SharedProjectPage({
                         {payment.dateLabel} · {payment.methodLabel}
                       </p>
                       {payment.hasReceipt ? (
-                        <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-emerald-400">
-                          <Paperclip className="size-3.5" />
-                          Comprovante anexado
-                        </p>
+                        <SharedPaymentReceipt
+                          isImage={payment.receiptIsImage}
+                          paymentId={payment.id}
+                          projectName={project.name}
+                        />
                       ) : null}
                     </div>
                     <strong>{payment.amountLabel}</strong>

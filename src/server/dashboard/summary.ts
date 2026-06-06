@@ -1,4 +1,5 @@
 import { SyncProvider } from "@prisma/client";
+import type { StatusTone } from "@/components/status-pulse";
 import { prisma } from "@/lib/prisma";
 import {
   getPaymentMethodLabel,
@@ -61,6 +62,7 @@ export type DashboardPayment = {
   methodLabel: string;
   messageDateLabel: string;
   note: string | null;
+  notified: boolean;
   paidAt: string;
   paidAtLabel: string;
   projectId: string;
@@ -94,7 +96,7 @@ export type DashboardProject = {
   projectStatus: ProjectStatusValue;
   projectStatusBadgeClass: string;
   projectStatusLabel: string;
-  projectStatusSymbol: string;
+  projectStatusTone: StatusTone;
   receivedValue: number;
   receivedValueLabel: string;
   repositoryUrl: string | null;
@@ -429,7 +431,8 @@ export async function getDashboardSummary(
             receiptMimeType: true,
             receiptName: true,
             receiptPath: true,
-            receiptSize: true
+            receiptSize: true,
+            whatsappNotifiedAt: true
           }
         },
         repositoryUrl: true,
@@ -693,7 +696,7 @@ export async function getDashboardSummary(
       projectStatus: projectStatus.value,
       projectStatusBadgeClass: projectStatus.badgeClass,
       projectStatusLabel: projectStatus.label,
-      projectStatusSymbol: projectStatus.symbol,
+      projectStatusTone: projectStatus.tone,
       receivedValue,
       receivedValueLabel: formatCurrency(receivedValue),
       repositoryUrl: project.repositoryUrl,
@@ -876,6 +879,7 @@ export async function getDashboardSummary(
       methodLabel: getPaymentMethodLabel(payment.method),
       messageDateLabel: formatPaymentMessageDate(payment.createdAt),
       note: payment.note,
+      notified: Boolean(payment.whatsappNotifiedAt),
       paidAt: payment.paidAt.toISOString().slice(0, 10),
       paidAtLabel: formatDate(payment.paidAt),
       projectId: payment.projectId,

@@ -189,6 +189,27 @@ html[data-sidebar="collapsed"] .worklog-sidebar .sidebar-notification-badge {
   padding-inline: 4px;
 }
 
+.sidebar-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-controls-row .sidebar-notif {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+html[data-sidebar="collapsed"] .worklog-sidebar .sidebar-controls-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+html[data-sidebar="collapsed"] .worklog-sidebar .sidebar-controls-row .sidebar-notif {
+  flex: none;
+}
+
 .sidebar-notification-tooltip {
   display: none;
 }
@@ -324,11 +345,22 @@ button {
   -webkit-user-select: none;
   user-select: none;
   -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chart-interactive {
   -webkit-touch-callout: none;
   touch-action: pan-y;
+}
+
+.chart-interactive *:focus,
+.chart-interactive *:focus-visible,
+.chart-interactive .recharts-wrapper,
+.chart-interactive .recharts-surface,
+.chart-interactive svg,
+.chart-interactive svg * {
+  outline: none !important;
+  border: 0;
 }
 
 ::selection {

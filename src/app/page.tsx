@@ -136,8 +136,10 @@ export default async function Home({
         </div>
       </section>
 
+      <DashboardCharts data={dashboard.chartData} series={dashboard.chartSeries} />
+
       <section
-        className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)]"
+        className="mt-8 rounded-lg border border-[color:var(--border)] bg-[var(--surface)]"
         id="operacao-atual"
       >
         <div className="flex flex-col gap-4 border-b border-[color:var(--border)] p-5 lg:flex-row lg:items-center lg:justify-between">
@@ -175,9 +177,10 @@ export default async function Home({
                       {project.name}
                     </p>
                     <span
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${project.projectStatusBadgeClass}`}
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] ${project.projectStatusBadgeClass}`}
                     >
-                      {project.projectStatusSymbol} {project.projectStatusLabel}
+                      <StatusPulse tone={project.projectStatusTone} />
+                      {project.projectStatusLabel}
                     </span>
                   </div>
                   <p className="mt-1 truncate text-xs text-[color:var(--text-soft)]">
@@ -218,8 +221,6 @@ export default async function Home({
           )}
         </div>
       </section>
-
-      <DashboardCharts data={dashboard.chartData} series={dashboard.chartSeries} />
     </AppShell>
   );
 }

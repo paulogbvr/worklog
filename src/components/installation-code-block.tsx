@@ -29,16 +29,21 @@ export function InstallationCodeBlock({ children }: { children: string }) {
   }
 
   return (
-    <div className="relative mt-4 min-w-0">
-      <button
-        className="absolute right-2 top-2 z-10 inline-flex h-8 items-center gap-1.5 rounded-md border border-[color:var(--border)] bg-[var(--modal-bg)] px-2.5 text-[11px] font-medium text-[color:var(--text-muted)] shadow-sm transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
-        onClick={() => void copyCode()}
-        type="button"
-      >
-        {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-        {copied ? "Copiado" : "Copiar"}
-      </button>
-      <pre className="overflow-x-auto rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4 pr-24 text-xs leading-6 text-[color:var(--app-text-strong)]">
+    <div className="mt-4 min-w-0 overflow-hidden rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)]">
+      <div className="flex items-center justify-between gap-2 border-b border-[color:var(--border)] bg-[var(--surface)] px-3 py-2">
+        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
+          Código
+        </span>
+        <button
+          className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[color:var(--border)] bg-[var(--modal-bg)] px-2.5 text-[11px] font-medium text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+          onClick={() => void copyCode()}
+          type="button"
+        >
+          {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+          {copied ? "Copiado" : "Copiar"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-4 text-xs leading-6 text-[color:var(--app-text-strong)]">
         <code>{children}</code>
       </pre>
     </div>

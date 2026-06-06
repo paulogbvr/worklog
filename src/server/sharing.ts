@@ -60,6 +60,7 @@ export async function getPublicProject(slug: string) {
               method: true,
               note: true,
               paidAt: true,
+              receiptMimeType: true,
               receiptPath: true,
               receiptSize: true
             }
@@ -149,7 +150,9 @@ export async function getPublicProject(slug: string) {
       hasReceipt: Boolean(payment.receiptPath || payment.receiptSize),
       id: payment.id,
       methodLabel: getPaymentMethodLabel(payment.method),
-      note: payment.note
+      note: payment.note,
+      receiptIsImage: Boolean(payment.receiptMimeType?.startsWith("image/")),
+      receiptMimeType: payment.receiptMimeType
     })),
     pendingValueLabel: formatCurrency(generatedValue - receivedValue),
     projectId: project.id,
@@ -157,7 +160,7 @@ export async function getPublicProject(slug: string) {
     repositoryUrl: project.repositoryUrl,
     statusBadgeClass: projectStatus.badgeClass,
     statusLabel: projectStatus.label,
-    statusSymbol: projectStatus.symbol,
+    statusTone: projectStatus.tone,
     timeline: [
       ...project.statusEvents.map((event) => {
         const nextStatus = getProjectStatusMeta(event.toStatus);

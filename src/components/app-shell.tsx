@@ -217,23 +217,15 @@ function ThemeControl({
     <button
       aria-label="Alternar tema"
       className={[
-        "h-12 w-full items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 text-left text-[color:var(--text-muted)] transition-colors duration-200 hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]",
+        "h-11 items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 text-[color:var(--text-muted)] transition-colors duration-200 hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]",
         className
       ].join(" ")}
       onClick={onToggle}
+      title="Alternar tema"
       type="button"
     >
-      <span className="flex min-w-0 items-center gap-3">
-        <Moon className="theme-dark-only size-[18px] shrink-0" strokeWidth={1.8} />
-        <Sun className="theme-light-only size-[18px] shrink-0" strokeWidth={1.8} />
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-medium text-[color:var(--app-text-strong)]">
-            Tema <span className="theme-dark-only">escuro</span>
-            <span className="theme-light-only">claro</span>
-          </span>
-          <span className="block text-[11px] text-[color:var(--text-faint)]">Ativo</span>
-        </span>
-      </span>
+      <Moon className="theme-dark-only size-[18px] shrink-0" strokeWidth={1.8} />
+      <Sun className="theme-light-only size-[18px] shrink-0" strokeWidth={1.8} />
       <span
         aria-hidden
         className="theme-toggle-track relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-200"
@@ -351,8 +343,10 @@ export function AppShell({
           </nav>
 
           <div className="sidebar-footer shrink-0 space-y-3 overflow-visible px-3 pb-4">
-            <NotificationMenu />
-            <ThemeToggle onToggle={handleThemeToggle} />
+            <div className="sidebar-controls-row">
+              <NotificationMenu className="sidebar-notif" />
+              <ThemeToggle onToggle={handleThemeToggle} />
+            </div>
             <EnvPanel envStatus={envStatus} />
           </div>
         </aside>
@@ -426,11 +420,10 @@ export function AppShell({
             </nav>
 
             <div className="mt-auto space-y-3 px-4 pb-5">
-              <NotificationMenu mobile />
-              <ThemeControl
-                className="flex"
-                onToggle={handleThemeToggle}
-              />
+              <div className="flex items-center gap-2">
+                <NotificationMenu className="flex-1 min-w-0" mobile />
+                <ThemeControl className="flex shrink-0" onToggle={handleThemeToggle} />
+              </div>
               <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-faint)]">
                   Ambiente

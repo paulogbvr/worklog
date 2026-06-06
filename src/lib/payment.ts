@@ -35,7 +35,7 @@ export function buildPaymentMessage(input: PaymentMessageInput) {
     minimumFractionDigits: 2
   }).format(input.amount);
   const lines = [
-    "*→ Pagamento Registrado com Sucesso* 💸",
+    "*→ Pagamento Registrado com Sucesso!* 💸",
     "",
     `> *PROJETO:* ${singleLine(input.projectName)}`,
     `> _registrado em → *${singleLine(input.date)}*_`,
@@ -53,11 +53,13 @@ export function buildPaymentMessage(input: PaymentMessageInput) {
   }
 
   if (shareUrl) {
+    // O link fica sozinho na última linha e sem formatação de código para que
+    // o WhatsApp gere a prévia/imagem do compartilhamento normalmente.
     lines.push(
       "",
       "*Você pode acompanhar todas as atualizações do projeto pelo link abaixo:* ↓",
       "",
-      `\`${shareUrl}\``
+      singleLine(shareUrl)
     );
   }
 
