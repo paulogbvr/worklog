@@ -80,7 +80,7 @@ export function SharedProjectTimeline({
         className="-mx-1 mt-4 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         ref={filtersRef}
       >
-        <div className="inline-flex w-max gap-1 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
+        <div className="inline-flex w-max gap-0.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
           {(
             [
               ["all", "Todos"],
@@ -91,7 +91,7 @@ export function SharedProjectTimeline({
             <button
               aria-pressed={filter === value}
               className={[
-                "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded px-3.5 text-xs transition-all duration-200 ease-out active:scale-95",
+                "inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded px-2.5 text-xs transition-all duration-200 ease-out active:scale-95",
                 filter === value
                   ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
                   : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
@@ -101,7 +101,8 @@ export function SharedProjectTimeline({
               onClick={() => selectFilter(value)}
               type="button"
             >
-              {label} ({counts[value]})
+              {label}
+              <span className="text-[10px] tabular-nums opacity-60">{counts[value]}</span>
             </button>
           ))}
         </div>

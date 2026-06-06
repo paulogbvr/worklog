@@ -114,9 +114,14 @@ export default async function SharedProjectPage({
 
           <div className="mt-9 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm text-[color:var(--text-muted)]">
-                Acompanhamento compartilhado
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-[color:var(--text-muted)]">
+                  Acompanhamento compartilhado
+                </p>
+                <span className="inline-flex items-center rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[color:var(--text-soft)]">
+                  somente leitura
+                </span>
+              </div>
               <h1 className="mt-1 text-3xl font-semibold text-[color:var(--app-text-strong)]">
                 {project.name}
               </h1>
@@ -128,7 +133,7 @@ export default async function SharedProjectPage({
               className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs ${project.statusBadgeClass}`}
             >
               <StatusPulse tone={project.statusTone} />
-              {project.statusLabel} · somente leitura
+              {project.statusLabel}
             </div>
           </div>
         </header>

@@ -216,7 +216,7 @@ function Modal({
           <h3 className="font-semibold text-[color:var(--app-text-strong)]">{title}</h3>
           <button
             aria-label="Fechar"
-            className="grid size-8 place-items-center rounded-md text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+            className="grid size-8 place-items-center rounded-md text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
             onClick={onClose}
             type="button"
           >
@@ -972,91 +972,104 @@ export function OperationsPanel({
         ) : null}
 
         {view === "projects" ? (
-          <div className="divide-y divide-[color:var(--border)] px-5">
+          <div className="space-y-4 p-5">
             {projects.map((project) => (
               <div
-                className="grid gap-4 py-5 xl:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(100px,.5fr))_auto] xl:items-center"
+                className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4 transition-colors duration-200 hover:border-[color:var(--border-strong)]"
                 key={project.id}
               >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate font-medium text-[color:var(--app-text-strong)]">
-                      {project.name}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate font-medium text-[color:var(--app-text-strong)]">
+                        {project.name}
+                      </p>
+                      <span
+                        className={[
+                          "rounded-full border px-2 py-0.5 text-xs",
+                          project.statusTone === "warning"
+                            ? "border-[color:var(--warning-border)] bg-[var(--warning-bg)] text-[color:var(--warning-text)]"
+                            : "border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-muted)]"
+                        ].join(" ")}
+                      >
+                        {project.statusLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
+                      {project.clientName ?? "Sem cliente"} · WakaTime:{" "}
+                      {project.chargeWakaTime && project.hourlyRate
+                        ? `${new Intl.NumberFormat("pt-BR", {
+                            currency: "BRL",
+                            style: "currency"
+                          }).format(project.hourlyRate)}/h`
+                        : "sem cobrança"}{" "}
+                      · Dedicadas:{" "}
+                      {project.chargeDedicated && project.dedicatedHourlyRate
+                        ? `${new Intl.NumberFormat("pt-BR", {
+                            currency: "BRL",
+                            style: "currency"
+                          }).format(project.dedicatedHourlyRate)}/h`
+                        : "sem cobrança"}
                     </p>
-                    <span
-                      className={[
-                        "rounded-full border px-2 py-0.5 text-xs",
-                        project.statusTone === "warning"
-                          ? "border-[color:var(--warning-border)] bg-[var(--warning-bg)] text-[color:var(--warning-text)]"
-                          : "border-[color:var(--border)] bg-[var(--surface-subtle)] text-[color:var(--text-muted)]"
-                      ].join(" ")}
-                    >
-                      {project.statusLabel}
+                  </div>
+                  <button
+                    className="inline-flex h-10 w-fit shrink-0 items-center gap-2 rounded-md border border-[color:var(--border)] bg-[var(--surface)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                    onClick={() => openProject(project)}
+                    type="button"
+                  >
+                    {project.statusLabel === "Pendente" ? (
+                      <Settings2 className="size-4" />
+                    ) : (
+                      <Pencil className="size-4" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {project.statusLabel === "Pendente" ? "Configurar" : "Editar"}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${project.projectStatusBadgeClass}`}
-                    >
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                      Horas WakaTime
+                    </p>
+                    <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
+                    <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                      Total {project.globalWakaTimeLabel}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                      Horas Dedicadas
+                    </p>
+                    <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
+                    <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                      Total {project.globalDedicatedLabel}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                      Valor Gerado
+                    </p>
+                    <p className="mt-1 text-sm">{project.totalValueLabel}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                      Valor Recebido
+                    </p>
+                    <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                      Valor Pendente
+                    </p>
+                    <p className="mt-1 text-sm">{project.pendingValueLabel}</p>
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[color:var(--text-soft)]">
                       <StatusPulse tone={project.projectStatusTone} />
                       {project.projectStatusLabel}
-                    </span>
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
-                    {project.clientName ?? "Sem cliente"} · WakaTime:{" "}
-                    {project.chargeWakaTime && project.hourlyRate
-                      ? `${new Intl.NumberFormat("pt-BR", {
-                          currency: "BRL",
-                          style: "currency"
-                        }).format(project.hourlyRate)}/h`
-                      : "sem cobrança"}{" "}
-                    · Dedicadas:{" "}
-                    {project.chargeDedicated && project.dedicatedHourlyRate
-                      ? `${new Intl.NumberFormat("pt-BR", {
-                          currency: "BRL",
-                          style: "currency"
-                        }).format(project.dedicatedHourlyRate)}/h`
-                      : "sem cobrança"}
-                  </p>
                 </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">WakaTime</p>
-                  <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Total {project.globalWakaTimeLabel}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Dedicadas</p>
-                  <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Total {project.globalDedicatedLabel}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Financeiro</p>
-                  <p className="mt-1 text-sm">{project.totalValueLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Pendente {project.pendingValueLabel}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Desde o pagamento</p>
-                  <p className="mt-1 text-sm">{project.sinceLastPaymentValueLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    {project.lastPaymentLabel}
-                  </p>
-                </div>
-                <button
-                  className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
-                  onClick={() => openProject(project)}
-                  type="button"
-                >
-                  {project.statusLabel === "Pendente" ? (
-                    <Settings2 className="size-4" />
-                  ) : (
-                    <Pencil className="size-4" />
-                  )}
-                  {project.statusLabel === "Pendente" ? "Configurar" : "Editar"}
-                </button>
               </div>
             ))}
           </div>
@@ -1154,10 +1167,10 @@ export function OperationsPanel({
 
                     return (
                       <div
-                        className="grid gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                        className="grid min-w-0 gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
                         key={interval.key}
                       >
-                        <label className="block">
+                        <label className="block min-w-0">
                           <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                             Início {index + 1}
                           </span>
@@ -1180,7 +1193,7 @@ export function OperationsPanel({
                             value={interval.startedAt}
                           />
                         </label>
-                        <label className="block">
+                        <label className="block min-w-0">
                           <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
                             <span>Término {index + 1}</span>
                             {intervalDuration ? (
@@ -1224,7 +1237,7 @@ export function OperationsPanel({
                 </div>
 
                 <button
-                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                   onClick={addWorkInterval}
                   type="button"
                 >
@@ -1322,7 +1335,7 @@ export function OperationsPanel({
                     <div className="flex items-center justify-end gap-2">
                       <button
                         aria-label={`Editar operação de ${operation.projectName}`}
-                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                         onClick={() =>
                           setOperationConfirmation({ action: "edit", operation })
                         }
@@ -1333,7 +1346,7 @@ export function OperationsPanel({
                       </button>
                       <button
                         aria-label={`Remover operação de ${operation.projectName}`}
-                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
                         onClick={() =>
                           setOperationConfirmation({ action: "delete", operation })
                         }
@@ -1601,7 +1614,7 @@ export function OperationsPanel({
                     {paymentReceipt ? (
                       <button
                         aria-label="Remover comprovante selecionado"
-                        className="grid size-11 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        className="grid size-11 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
                         onClick={() => {
                           setPaymentReceipt(null);
                           setPaymentReceiptInputKey((current) => current + 1);
@@ -1689,7 +1702,7 @@ export function OperationsPanel({
                       <strong className="mr-auto text-base lg:mr-2">{payment.amountLabel}</strong>
                       <button
                         aria-label={`Compartilhar pagamento de ${payment.amountLabel}`}
-                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                         onClick={() => void sharePayment(payment)}
                         title="Compartilhar pagamento"
                         type="button"
@@ -1697,7 +1710,7 @@ export function OperationsPanel({
                         <Share2 className="size-4" />
                       </button>
                       <button
-                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-emerald-500/10 hover:text-emerald-400 active:scale-[0.97]"
                         onClick={() => void notifyClient(payment)}
                         type="button"
                       >
@@ -1708,7 +1721,7 @@ export function OperationsPanel({
                         <>
                           <button
                             aria-label={`Visualizar comprovante de ${payment.projectName}`}
-                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                             onClick={() => openReceiptPreview(payment)}
                             title="Visualizar comprovante"
                             type="button"
@@ -1717,7 +1730,7 @@ export function OperationsPanel({
                           </button>
                           <a
                             aria-label={`Baixar comprovante de ${payment.projectName}`}
-                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                            className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                             href={`/api/payments/${payment.id}/receipt?download=1`}
                             title="Baixar comprovante"
                           >
@@ -1727,7 +1740,7 @@ export function OperationsPanel({
                       ) : null}
                       <button
                         aria-label={`Editar pagamento de ${payment.amountLabel}`}
-                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                         onClick={() => editPayment(payment)}
                         title="Editar pagamento"
                         type="button"
@@ -1736,7 +1749,7 @@ export function OperationsPanel({
                       </button>
                       <button
                         aria-label={`Remover pagamento de ${payment.amountLabel}`}
-                        className="grid size-9 place-items-center rounded-md border border-red-500/20 text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        className="grid size-9 place-items-center rounded-md border border-red-500/20 text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
                         onClick={() => setPaymentConfirmation({ payment })}
                         title="Excluir pagamento"
                         type="button"

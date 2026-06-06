@@ -35,7 +35,7 @@ export function buildPaymentMessage(input: PaymentMessageInput) {
     minimumFractionDigits: 2
   }).format(input.amount);
   const lines = [
-    "*→ Pagamento Registrado com Sucesso!* 💸",
+    "*→ Pagamento Registrado!*",
     "",
     `> *Projeto: →* ${singleLine(input.projectName)}`,
     `> _*${singleLine(input.date)}*_`,

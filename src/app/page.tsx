@@ -195,29 +195,43 @@ export default async function Home({
                     {project.lastPaymentLabel}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">WakaTime</p>
-                  <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">{periodContext}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Dedicadas</p>
-                  <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">{periodContext}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Gerado</p>
-                  <p className="mt-1 text-sm">{project.totalValueLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    Pendente {project.pendingValueLabel}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[color:var(--text-faint)]">Recebido</p>
-                  <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
-                  <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                    {periodContext}
-                  </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-4 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4 md:contents md:gap-0 md:rounded-none md:border-0 md:bg-transparent md:p-0">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
+                      WakaTime
+                    </p>
+                    <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
+                    <p className="mt-1 hidden text-xs text-[color:var(--text-soft)] md:block">
+                      {periodContext}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
+                      Dedicadas
+                    </p>
+                    <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
+                    <p className="mt-1 hidden text-xs text-[color:var(--text-soft)] md:block">
+                      {periodContext}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
+                      Gerado
+                    </p>
+                    <p className="mt-1 text-sm">{project.totalValueLabel}</p>
+                    <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                      Pendente {project.pendingValueLabel}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
+                      Recebido
+                    </p>
+                    <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
+                    <p className="mt-1 hidden text-xs text-[color:var(--text-soft)] md:block">
+                      {periodContext}
+                    </p>
+                  </div>
                 </div>
               </article>
             ))
