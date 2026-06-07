@@ -66,6 +66,13 @@ function notificationTone(type: NotificationItem["type"]) {
   return "neutral" as const;
 }
 
+// Kept at module scope so the badge/list survive the component remounting on
+// client-side navigation (each page renders its own AppShell). This stops the
+// notification count from blinking to zero and back every time you change page.
+// Starts at the SSR-safe defaults so there is no hydration mismatch.
+let cachedUnreadCount = 0;
+let cachedItems: NotificationItem[] = [];
+
 export function NotificationMenu({
   className = "",
   mobile = false
@@ -73,10 +80,18 @@ export function NotificationMenu({
   className?: string;
   mobile?: boolean;
 }) {
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [items, setItems] = useState<NotificationItem[]>(cachedItems);
+  const [unreadCount, setUnreadCount] = useState(cachedUnreadCount);
   const [open, setOpen] = useState(false);
   const [showUnread, setShowUnread] = useState(true);
+
+  useEffect(() => {
+    cachedItems = items;
+  }, [items]);
+
+  useEffect(() => {
+    cachedUnreadCount = unreadCount;
+  }, [unreadCount]);
   const initializedRef = useRef(false);
   const knownIdsRef = useRef(new Set<string>());
   const menuRef = useRef<HTMLDivElement>(null);

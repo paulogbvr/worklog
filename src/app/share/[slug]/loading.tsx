@@ -23,8 +23,8 @@ export default function Loading() {
 
         <section className="py-7">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg sm:grid-cols-3 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton className="h-20" key={index} />
+            {["a", "b", "c", "d", "e"].map((key) => (
+              <Skeleton className="h-20" key={key} />
             ))}
           </div>
         </section>
@@ -32,15 +32,15 @@ export default function Loading() {
         <section className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_.8fr]">
           <div className="space-y-3">
             <Skeleton className="h-6 w-56" />
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton className="h-16" key={index} />
+            {["t1", "t2", "t3"].map((key) => (
+              <Skeleton className="h-16" key={key} />
             ))}
           </div>
           <div className="space-y-3">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-9 w-full" />
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton className="h-14" key={index} />
+            {["p1", "p2", "p3", "p4"].map((key) => (
+              <Skeleton className="h-14" key={key} />
             ))}
           </div>
         </section>

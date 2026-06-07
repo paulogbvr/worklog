@@ -137,6 +137,23 @@ function dateTimeInputValue(date = new Date()) {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
+// Intervals keep the combined "YYYY-MM-DDTHH:mm" format internally so that the
+// duration math, save and edit flows stay unchanged. The UI splits/joins it
+// into separate date + time inputs to avoid the native datetime-local width
+// issues on mobile.
+function splitDateTimeValue(value: string) {
+  const [date = "", time = ""] = value.split("T");
+  return { date, time };
+}
+
+function joinDateTimeValue(date: string, time: string) {
+  if (!date && !time) {
+    return "";
+  }
+
+  return `${date}T${time || "00:00"}`;
+}
+
 function createWorkInterval(key = "initial", start?: Date): WorkIntervalDraft {
   const startedAt = start ? new Date(start) : new Date();
   startedAt.setSeconds(0, 0);
@@ -1171,36 +1188,58 @@ export function OperationsPanel({
                     const intervalDuration = formatDraftDuration(
                       getIntervalDurationSeconds(interval.startedAt, interval.endedAt)
                     );
+                    const start = splitDateTimeValue(interval.startedAt);
+                    const end = splitDateTimeValue(interval.endedAt);
+                    const setIntervalValue = (
+                      field: "endedAt" | "startedAt",
+                      value: string
+                    ) =>
+                      setWorkOperationDraft((current) => ({
+                        ...current,
+                        intervals: current.intervals.map((currentInterval) =>
+                          currentInterval.key === interval.key
+                            ? { ...currentInterval, [field]: value }
+                            : currentInterval
+                        )
+                      }));
 
                     return (
                       <div
                         className="grid min-w-0 grid-cols-1 gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
                         key={interval.key}
                       >
-                        <label className="block min-w-0">
+                        <div className="min-w-0">
                           <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                             Início {index + 1}
                           </span>
-                          <input
-                            className={fieldClass}
-                            onChange={(event) =>
-                              setWorkOperationDraft((current) => ({
-                                ...current,
-                                intervals: current.intervals.map((currentInterval) =>
-                                  currentInterval.key === interval.key
-                                    ? {
-                                        ...currentInterval,
-                                        startedAt: event.target.value
-                                      }
-                                    : currentInterval
+                          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
+                            <input
+                              aria-label={`Data de início ${index + 1}`}
+                              className={fieldClass}
+                              onChange={(event) =>
+                                setIntervalValue(
+                                  "startedAt",
+                                  joinDateTimeValue(event.target.value, start.time)
                                 )
-                              }))
-                            }
-                            type="datetime-local"
-                            value={interval.startedAt}
-                          />
-                        </label>
-                        <label className="block min-w-0">
+                              }
+                              type="date"
+                              value={start.date}
+                            />
+                            <input
+                              aria-label={`Hora de início ${index + 1}`}
+                              className={fieldClass}
+                              onChange={(event) =>
+                                setIntervalValue(
+                                  "startedAt",
+                                  joinDateTimeValue(start.date, event.target.value)
+                                )
+                              }
+                              type="time"
+                              value={start.time}
+                            />
+                          </div>
+                        </div>
+                        <div className="min-w-0">
                           <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
                             <span>Término {index + 1}</span>
                             {intervalDuration ? (
@@ -1209,25 +1248,33 @@ export function OperationsPanel({
                               </span>
                             ) : null}
                           </span>
-                          <input
-                            className={fieldClass}
-                            onChange={(event) =>
-                              setWorkOperationDraft((current) => ({
-                                ...current,
-                                intervals: current.intervals.map((currentInterval) =>
-                                  currentInterval.key === interval.key
-                                    ? {
-                                        ...currentInterval,
-                                        endedAt: event.target.value
-                                      }
-                                    : currentInterval
+                          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
+                            <input
+                              aria-label={`Data de término ${index + 1}`}
+                              className={fieldClass}
+                              onChange={(event) =>
+                                setIntervalValue(
+                                  "endedAt",
+                                  joinDateTimeValue(event.target.value, end.time)
                                 )
-                              }))
-                            }
-                            type="datetime-local"
-                            value={interval.endedAt}
-                          />
-                        </label>
+                              }
+                              type="date"
+                              value={end.date}
+                            />
+                            <input
+                              aria-label={`Hora de término ${index + 1}`}
+                              className={fieldClass}
+                              onChange={(event) =>
+                                setIntervalValue(
+                                  "endedAt",
+                                  joinDateTimeValue(end.date, event.target.value)
+                                )
+                              }
+                              type="time"
+                              value={end.time}
+                            />
+                          </div>
+                        </div>
                         <button
                           aria-label={`Remover intervalo ${index + 1}`}
                           className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
