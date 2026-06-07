@@ -6,6 +6,7 @@ import {
 } from "@/components/notifications-center";
 import { getServerEnvStatus } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { syncDuePaymentReminders } from "@/server/reminders";
 import { NotificationCategory } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,8 @@ function toneForType(type: string): NotificationCenterItem["tone"] {
 }
 
 export default async function NotificationsPage() {
+  await syncDuePaymentReminders();
+
   const notifications = await prisma.notification.findMany({
     orderBy: {
       createdAt: "desc"

@@ -8,6 +8,9 @@ export type PaymentInput = {
   projectId: string;
   receipt: File | null;
   removeReceipt: boolean;
+  invoice: File | null;
+  invoiceKey: string | null;
+  removeInvoice: boolean;
 };
 
 function optionalText(value: FormDataEntryValue | unknown) {
@@ -47,6 +50,9 @@ export async function readPaymentInput(request: Request): Promise<PaymentInput> 
   const receipt = values.receipt instanceof File && values.receipt.size > 0
     ? values.receipt
     : null;
+  const invoice = values.invoice instanceof File && values.invoice.size > 0
+    ? values.invoice
+    : null;
 
   if (!projectId) {
     throw new Error("Selecione o projeto do pagamento.");
@@ -71,6 +77,9 @@ export async function readPaymentInput(request: Request): Promise<PaymentInput> 
     paidAt,
     projectId,
     receipt,
-    removeReceipt: values.removeReceipt === "true" || values.removeReceipt === true
+    removeReceipt: values.removeReceipt === "true" || values.removeReceipt === true,
+    invoice,
+    invoiceKey: optionalText(values.invoiceKey),
+    removeInvoice: values.removeInvoice === "true" || values.removeInvoice === true
   };
 }

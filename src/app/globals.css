@@ -347,13 +347,26 @@ button {
 
 /* Native date/time inputs (notably iOS Safari) carry an intrinsic min-width
    that ignores width:100% and pushes them past their container. Force them to
-   respect the parent box so cards never overflow on mobile. */
+   respect the parent box so cards never overflow on mobile. The custom
+   DateField/TimeField components keep these inputs transparent on top of a
+   styled shell, so this is a safety net for any remaining native input. */
 input[type="datetime-local"],
 input[type="date"],
 input[type="time"] {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* iOS Safari zooms the page when a focused field uses a font smaller than 16px.
+   Keep form controls at 16px on small screens to prevent that jump while the
+   rest of the layout keeps its compact look. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 button:not(:disabled),

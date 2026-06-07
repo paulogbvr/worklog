@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Bell,
   ChevronDown,
+  ClipboardList,
   Clock3,
   Copy,
   Download,
@@ -15,6 +17,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  ReceiptText,
   Share2,
   Settings2,
   Trash2,
@@ -23,6 +26,8 @@ import {
   ZoomOut
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa6";
+import { DateField, TimeField } from "@/components/date-fields";
+import { ProjectNotesModal } from "@/components/project-notes-modal";
 import { StatusPulse } from "@/components/status-pulse";
 import { useToast } from "@/components/toast-provider";
 import {
@@ -45,6 +50,7 @@ import {
   PROJECT_STATUSES,
   type ProjectStatusValue
 } from "@/lib/project-status";
+import { buildReminderMessage, REMINDER_AMOUNT_MODES } from "@/lib/reminder";
 import type {
   DashboardClient,
   DashboardPayment,
@@ -59,16 +65,24 @@ type ProjectDraft = {
   billDedicated: boolean;
   billingMode: "FIXED" | "HOURLY";
   clientId: string;
+  clientPhone: string | null;
   dedicatedHourlyRate: string;
   fixedPrice: string;
   hourlyRate: string;
   id: string;
   name: string;
   notes: string;
+  pendingValue: number;
+  pendingValueLabel: string;
   status: ProjectStatusValue;
   repositoryUrl: string;
   shareAccessCount: number;
   sharePath: string | null;
+  reminderEnabled: boolean;
+  reminderAmountMode: "FIXED" | "PENDING";
+  reminderFixedAmount: string;
+  reminderDueDate: string;
+  reminderMessage: string;
 };
 
 type ClientDraft = {
@@ -289,16 +303,25 @@ export function OperationsPanel({
   const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null);
   const [paymentReceiptInputKey, setPaymentReceiptInputKey] = useState(0);
   const [removePaymentReceipt, setRemovePaymentReceipt] = useState(false);
+  const [paymentInvoiceKey, setPaymentInvoiceKey] = useState("");
+  const [paymentInvoice, setPaymentInvoice] = useState<File | null>(null);
+  const [paymentInvoiceInputKey, setPaymentInvoiceInputKey] = useState(0);
+  const [removePaymentInvoice, setRemovePaymentInvoice] = useState(false);
   const [paymentConfirmation, setPaymentConfirmation] =
     useState<PaymentConfirmation | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<DashboardPayment | null>(null);
   const [receiptZoom, setReceiptZoom] = useState(100);
+  const [invoicePreview, setInvoicePreview] = useState<DashboardPayment | null>(null);
+  const [invoiceZoom, setInvoiceZoom] = useState(100);
   const [workOperationDraft, setWorkOperationDraft] = useState<WorkOperationDraft>(
     createWorkOperationDraft
   );
   const [operationConfirmation, setOperationConfirmation] =
     useState<OperationConfirmation | null>(null);
   const [recordComposerOpen, setRecordComposerOpen] = useState(fixedView !== "records");
+  const [notesProject, setNotesProject] = useState<{ id: string; name: string } | null>(
+    null
+  );
   const router = useRouter();
   const { toast } = useToast();
 
@@ -358,16 +381,24 @@ export function OperationsPanel({
       billDedicated: project.billDedicated,
       billingMode: project.billingMode,
       clientId: project.clientId ?? "",
+      clientPhone: project.clientPhone,
       dedicatedHourlyRate: project.dedicatedHourlyRate?.toString() ?? "",
       fixedPrice: project.fixedPrice?.toString() ?? "",
       hourlyRate: project.hourlyRate?.toString() ?? "",
       id: project.id,
       name: project.name,
       notes: project.notes ?? "",
+      pendingValue: project.pendingIsCredit ? 0 : project.pendingValue,
+      pendingValueLabel: project.pendingValueLabel,
       status: project.projectStatus,
       repositoryUrl: project.repositoryUrl ?? "",
       shareAccessCount: project.shareAccessCount,
-      sharePath: project.sharePath
+      sharePath: project.sharePath,
+      reminderEnabled: project.reminderEnabled,
+      reminderAmountMode: project.reminderAmountMode,
+      reminderFixedAmount: project.reminderFixedAmount?.toString() ?? "",
+      reminderDueDate: project.reminderDueDate ?? "",
+      reminderMessage: project.reminderMessage ?? ""
     });
   }
 
@@ -396,6 +427,28 @@ export function OperationsPanel({
       return;
     }
 
+    if (projectDraft.reminderEnabled && !projectDraft.reminderDueDate) {
+      toast({
+        message: "Informe a data do lembrete de pagamento.",
+        title: "Lembrete incompleto",
+        tone: "error"
+      });
+      return;
+    }
+
+    if (
+      projectDraft.reminderEnabled &&
+      projectDraft.reminderAmountMode === "FIXED" &&
+      !(Number(projectDraft.reminderFixedAmount.replace(",", ".")) > 0)
+    ) {
+      toast({
+        message: "Informe um valor fixo maior que zero para o lembrete.",
+        title: "Lembrete incompleto",
+        tone: "error"
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -408,6 +461,28 @@ export function OperationsPanel({
           method: "PATCH"
         })
       );
+
+      if (projectDraft.reminderEnabled) {
+        await readResponse(
+          await fetch(`/api/projects/${projectDraft.id}/reminder`, {
+            body: JSON.stringify({
+              amountMode: projectDraft.reminderAmountMode,
+              dueDate: projectDraft.reminderDueDate,
+              fixedAmount: projectDraft.reminderFixedAmount,
+              message: projectDraft.reminderMessage
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            method: "PUT"
+          })
+        );
+      } else {
+        await fetch(`/api/projects/${projectDraft.id}/reminder`, {
+          method: "DELETE"
+        });
+      }
+
       setProjectDraft(null);
       toast({
         message: "Cliente, cobrança e status foram atualizados.",
@@ -538,9 +613,15 @@ export function OperationsPanel({
       formData.set("paidAt", paymentDate);
       formData.set("projectId", paymentProjectId);
       formData.set("removeReceipt", removePaymentReceipt ? "true" : "false");
+      formData.set("invoiceKey", paymentInvoiceKey);
+      formData.set("removeInvoice", removePaymentInvoice ? "true" : "false");
 
       if (paymentReceipt) {
         formData.set("receipt", paymentReceipt);
+      }
+
+      if (paymentInvoice) {
+        formData.set("invoice", paymentInvoice);
       }
 
       await readResponse(
@@ -576,6 +657,10 @@ export function OperationsPanel({
     setPaymentReceipt(null);
     setPaymentReceiptInputKey((current) => current + 1);
     setRemovePaymentReceipt(false);
+    setPaymentInvoiceKey("");
+    setPaymentInvoice(null);
+    setPaymentInvoiceInputKey((current) => current + 1);
+    setRemovePaymentInvoice(false);
   }
 
   function editPayment(payment: DashboardPayment) {
@@ -588,6 +673,10 @@ export function OperationsPanel({
     setPaymentReceipt(null);
     setPaymentReceiptInputKey((current) => current + 1);
     setRemovePaymentReceipt(false);
+    setPaymentInvoiceKey(payment.invoiceKey ?? "");
+    setPaymentInvoice(null);
+    setPaymentInvoiceInputKey((current) => current + 1);
+    setRemovePaymentInvoice(false);
     document.getElementById("payment-form")?.scrollIntoView({
       behavior: "smooth",
       block: "center"
@@ -702,6 +791,28 @@ export function OperationsPanel({
   function openReceiptPreview(payment: DashboardPayment) {
     setReceiptZoom(100);
     setReceiptPreview(payment);
+  }
+
+  function openInvoicePreview(payment: DashboardPayment) {
+    setInvoiceZoom(100);
+    setInvoicePreview(payment);
+  }
+
+  async function copyInvoiceKey(invoiceKey: string) {
+    try {
+      await copyTextToClipboard(invoiceKey);
+      toast({
+        message: "A chave da nota fiscal está na área de transferência.",
+        title: "Chave copiada",
+        tone: "success"
+      });
+    } catch {
+      toast({
+        message: "Não foi possível copiar a chave da nota fiscal.",
+        title: "Erro ao copiar",
+        tone: "error"
+      });
+    }
   }
 
   function editWorkOperation(operation: DashboardWorkOperation) {
@@ -943,6 +1054,91 @@ export function OperationsPanel({
     });
   }
 
+  function buildReminderText() {
+    if (!projectDraft) {
+      return null;
+    }
+
+    if (!projectDraft.reminderDueDate) {
+      toast({
+        message: "Informe a data do lembrete antes de enviar.",
+        title: "Lembrete incompleto",
+        tone: "error"
+      });
+      return null;
+    }
+
+    const fixedAmount = Number(projectDraft.reminderFixedAmount.replace(",", "."));
+    const amount =
+      projectDraft.reminderAmountMode === "FIXED" ? fixedAmount : projectDraft.pendingValue;
+
+    if (!(amount > 0)) {
+      toast({
+        message: "O valor do lembrete precisa ser maior que zero.",
+        title: "Valor inválido",
+        tone: "error"
+      });
+      return null;
+    }
+
+    const shareUrl = projectDraft.sharePath
+      ? `${window.location.origin}${projectDraft.sharePath}`
+      : null;
+
+    return buildReminderMessage({
+      amount,
+      dueDateLabel: projectDraft.reminderDueDate.split("-").reverse().join("/"),
+      message: projectDraft.reminderMessage,
+      projectName: projectDraft.name,
+      shareUrl
+    });
+  }
+
+  function sendReminderWhatsApp() {
+    const message = buildReminderText();
+
+    if (!message || !projectDraft) {
+      return;
+    }
+
+    const phoneDigits = projectDraft.clientPhone?.replace(/\D/g, "");
+    const phone =
+      phoneDigits && (phoneDigits.length === 10 || phoneDigits.length === 11)
+        ? `55${phoneDigits}`
+        : phoneDigits;
+
+    if (!phone) {
+      void copyTextToClipboard(message);
+      toast({
+        message: "Cliente sem telefone. A mensagem foi copiada para envio manual.",
+        title: "Lembrete copiado",
+        tone: "warning"
+      });
+      return;
+    }
+
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  async function copyReminder() {
+    const message = buildReminderText();
+
+    if (!message) {
+      return;
+    }
+
+    await copyTextToClipboard(message);
+    toast({
+      message: "A mensagem do lembrete está na área de transferência.",
+      title: "Lembrete copiado",
+      tone: "success"
+    });
+  }
+
   return (
     <>
       <section
@@ -1025,6 +1221,12 @@ export function OperationsPanel({
                       <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
                         {project.billingMode === "FIXED" ? "Preço fechado" : "Por horas"}
                       </span>
+                      {project.reminderEnabled && project.reminderStatusLabel ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                          <StatusPulse tone={project.reminderStatusTone} />
+                          Lembrete: {project.reminderStatusLabel}
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
                       {project.clientName ?? "Sem cliente"} · WakaTime:{" "}
@@ -1043,20 +1245,31 @@ export function OperationsPanel({
                         : "sem cobrança"}
                     </p>
                   </div>
-                  <button
-                    className="inline-flex h-10 w-fit shrink-0 items-center gap-2 rounded-md border border-[color:var(--border)] bg-[var(--surface)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
-                    onClick={() => openProject(project)}
-                    type="button"
-                  >
-                    {project.statusLabel === "Pendente" ? (
-                      <Settings2 className="size-4" />
-                    ) : (
-                      <Pencil className="size-4" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {project.statusLabel === "Pendente" ? "Configurar" : "Editar"}
-                    </span>
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      aria-label={`Notas do projeto ${project.name}`}
+                      className="grid h-10 w-10 place-items-center rounded-md border border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                      onClick={() => setNotesProject({ id: project.id, name: project.name })}
+                      title="Notas e tarefas internas"
+                      type="button"
+                    >
+                      <ClipboardList className="size-4" />
+                    </button>
+                    <button
+                      className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[color:var(--border)] bg-[var(--surface)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                      onClick={() => openProject(project)}
+                      type="button"
+                    >
+                      {project.statusLabel === "Pendente" ? (
+                        <Settings2 className="size-4" />
+                      ) : (
+                        <Pencil className="size-4" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {project.statusLabel === "Pendente" ? "Configurar" : "Editar"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -1239,28 +1452,24 @@ export function OperationsPanel({
                             Início {index + 1}
                           </span>
                           <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
-                            <input
-                              aria-label={`Data de início ${index + 1}`}
-                              className={fieldClass}
-                              onChange={(event) =>
+                            <DateField
+                              ariaLabel={`Data de início ${index + 1}`}
+                              onChange={(value) =>
                                 setIntervalValue(
                                   "startedAt",
-                                  joinDateTimeValue(event.target.value, start.time)
+                                  joinDateTimeValue(value, start.time)
                                 )
                               }
-                              type="date"
                               value={start.date}
                             />
-                            <input
-                              aria-label={`Hora de início ${index + 1}`}
-                              className={fieldClass}
-                              onChange={(event) =>
+                            <TimeField
+                              ariaLabel={`Hora de início ${index + 1}`}
+                              onChange={(value) =>
                                 setIntervalValue(
                                   "startedAt",
-                                  joinDateTimeValue(start.date, event.target.value)
+                                  joinDateTimeValue(start.date, value)
                                 )
                               }
-                              type="time"
                               value={start.time}
                             />
                           </div>
@@ -1275,28 +1484,24 @@ export function OperationsPanel({
                             ) : null}
                           </span>
                           <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
-                            <input
-                              aria-label={`Data de término ${index + 1}`}
-                              className={fieldClass}
-                              onChange={(event) =>
+                            <DateField
+                              ariaLabel={`Data de término ${index + 1}`}
+                              onChange={(value) =>
                                 setIntervalValue(
                                   "endedAt",
-                                  joinDateTimeValue(event.target.value, end.time)
+                                  joinDateTimeValue(value, end.time)
                                 )
                               }
-                              type="date"
                               value={end.date}
                             />
-                            <input
-                              aria-label={`Hora de término ${index + 1}`}
-                              className={fieldClass}
-                              onChange={(event) =>
+                            <TimeField
+                              ariaLabel={`Hora de término ${index + 1}`}
+                              onChange={(value) =>
                                 setIntervalValue(
                                   "endedAt",
-                                  joinDateTimeValue(end.date, event.target.value)
+                                  joinDateTimeValue(end.date, value)
                                 )
                               }
-                              type="time"
                               value={end.time}
                             />
                           </div>
@@ -1583,17 +1788,16 @@ export function OperationsPanel({
                   />
                 </label>
 
-                <label className="block">
+                <div className="block">
                   <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                     Data
                   </span>
-                  <input
-                    className={fieldClass}
-                    onChange={(event) => setPaymentDate(event.target.value)}
-                    type="date"
+                  <DateField
+                    ariaLabel="Data do pagamento"
+                    onChange={(value) => setPaymentDate(value)}
                     value={paymentDate}
                   />
-                </label>
+                </div>
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
@@ -1738,6 +1942,126 @@ export function OperationsPanel({
                   Remover o comprovante atual ao salvar
                 </label>
               ) : null}
+
+              <div className="mt-5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ReceiptText className="size-4 text-sky-400" />
+                  <span className="text-sm font-medium text-[color:var(--app-text-strong)]">
+                    Nota fiscal
+                  </span>
+                  <span className="text-xs text-[color:var(--text-faint)]">
+                    Guardada separadamente do comprovante
+                  </span>
+                </div>
+
+                <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.8fr)]">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                      Chave NFS-e / NF-e
+                    </span>
+                    <input
+                      className={fieldClass}
+                      onChange={(event) => setPaymentInvoiceKey(event.target.value)}
+                      placeholder="Opcional. Ex.: 3303302225943316300010000000000000112605..."
+                      value={paymentInvoiceKey}
+                    />
+                  </label>
+
+                  <div className="block">
+                    <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
+                      <span>Arquivo da nota fiscal</span>
+                      <span className="text-[color:var(--text-faint)]">
+                        PDF, XML, PNG, JPG, JPEG, WEBP, ZIP · até 8 MB
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <label
+                        className={[
+                          "group inline-flex h-11 min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md border px-3 text-sm transition-colors duration-200 active:scale-[0.99]",
+                          paymentInvoice
+                            ? "border-sky-500/40 bg-sky-500/10 text-sky-400"
+                            : "border-[color:var(--border)] bg-[var(--input-bg)] text-[color:var(--text-muted)] hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)]"
+                        ].join(" ")}
+                      >
+                        {isSaving && paymentInvoice ? (
+                          <Loader2 className="size-4 shrink-0 animate-spin" />
+                        ) : (
+                          <Paperclip className="size-4 shrink-0 transition-transform duration-200 group-hover:-rotate-12" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate text-left">
+                          {paymentInvoice
+                            ? paymentInvoice.name
+                            : removePaymentInvoice
+                              ? "Nota fiscal será removida"
+                              : "Anexar nota fiscal"}
+                        </span>
+                        {paymentInvoice ? (
+                          <span className="shrink-0 text-xs text-sky-400/70">
+                            {formatFileSize(paymentInvoice.size)}
+                          </span>
+                        ) : null}
+                        <input
+                          accept=".pdf,.xml,.png,.jpg,.jpeg,.webp,.zip,application/pdf,application/xml,text/xml,image/png,image/jpeg,image/webp,application/zip,application/x-zip-compressed"
+                          className="sr-only"
+                          key={paymentInvoiceInputKey}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] ?? null;
+
+                            if (file && file.size > 8 * 1024 * 1024) {
+                              setPaymentInvoice(null);
+                              setPaymentInvoiceInputKey((current) => current + 1);
+                              toast({
+                                message: "Selecione um arquivo de até 8 MB.",
+                                title: "Nota fiscal muito grande",
+                                tone: "error"
+                              });
+                              return;
+                            }
+
+                            if (file) {
+                              toast({
+                                message: `${file.name} pronto para anexar.`,
+                                title: "Nota fiscal selecionada",
+                                tone: "success"
+                              });
+                            }
+
+                            setPaymentInvoice(file);
+                            setRemovePaymentInvoice(false);
+                          }}
+                          type="file"
+                        />
+                      </label>
+                      {paymentInvoice ? (
+                        <button
+                          aria-label="Remover nota fiscal selecionada"
+                          className="grid size-11 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
+                          onClick={() => {
+                            setPaymentInvoice(null);
+                            setPaymentInvoiceInputKey((current) => current + 1);
+                          }}
+                          type="button"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {paymentEditingId &&
+                payments.find((payment) => payment.id === paymentEditingId)?.hasInvoice ? (
+                  <label className="mt-3 inline-flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                    <input
+                      checked={removePaymentInvoice}
+                      className="size-4 accent-sky-500"
+                      onChange={(event) => setRemovePaymentInvoice(event.target.checked)}
+                      type="checkbox"
+                    />
+                    Remover a nota fiscal atual ao salvar
+                  </label>
+                ) : null}
+              </div>
             </form>
 
             <div className="pt-6">
@@ -1800,6 +2124,66 @@ export function OperationsPanel({
                           >
                             <Download className="size-4" />
                           </a>
+                        </div>
+                      ) : null}
+                      {payment.hasInvoice || payment.invoiceKey ? (
+                        <div className="mt-2 rounded-md border border-sky-500/15 bg-sky-500/[0.05] p-2.5">
+                          <div className="flex items-center gap-2">
+                            <ReceiptText className="size-3.5 shrink-0 text-sky-400" />
+                            <span className="text-xs font-medium text-sky-400">Nota fiscal</span>
+                          </div>
+                          {payment.invoiceKey ? (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="min-w-0 flex-1 truncate rounded bg-[var(--surface-subtle)] px-2 py-1 text-xs text-[color:var(--text-soft)]">
+                                <span className="text-[color:var(--text-faint)]">Chave: </span>
+                                {payment.invoiceKey}
+                              </span>
+                              <button
+                                aria-label={`Copiar chave da nota fiscal de ${payment.projectName}`}
+                                className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                                onClick={() => void copyInvoiceKey(payment.invoiceKey ?? "")}
+                                title="Copiar chave da nota fiscal"
+                                type="button"
+                              >
+                                <Copy className="size-4" />
+                              </button>
+                            </div>
+                          ) : null}
+                          {payment.hasInvoice ? (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-md border border-sky-500/15 bg-sky-500/[0.06] px-2.5 py-1.5 text-xs text-sky-400">
+                                <FileText className="size-3.5 shrink-0" />
+                                <span className="truncate">
+                                  {payment.invoiceName ?? "Nota fiscal anexada"}
+                                </span>
+                                {formatFileSize(payment.invoiceSize) ? (
+                                  <span className="shrink-0 text-sky-400/60">
+                                    · {formatFileSize(payment.invoiceSize)}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {payment.invoiceMimeType?.startsWith("image/") ||
+                              payment.invoiceMimeType === "application/pdf" ? (
+                                <button
+                                  aria-label={`Visualizar nota fiscal de ${payment.projectName}`}
+                                  className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                                  onClick={() => openInvoicePreview(payment)}
+                                  title="Visualizar nota fiscal"
+                                  type="button"
+                                >
+                                  <Eye className="size-4" />
+                                </button>
+                              ) : null}
+                              <a
+                                aria-label={`Baixar nota fiscal de ${payment.projectName}`}
+                                className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                                href={`/api/payments/${payment.id}/invoice?download=1`}
+                                title="Baixar nota fiscal"
+                              >
+                                <Download className="size-4" />
+                              </a>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -2192,6 +2576,175 @@ export function OperationsPanel({
                 )}
               </div>
             </div>
+            <div className="rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+              <button
+                aria-checked={projectDraft.reminderEnabled}
+                className="flex w-full items-center justify-between gap-4 text-left"
+                onClick={() =>
+                  setProjectDraft((current) =>
+                    current
+                      ? { ...current, reminderEnabled: !current.reminderEnabled }
+                      : current
+                  )
+                }
+                role="switch"
+                type="button"
+              >
+                <span>
+                  <span className="flex items-center gap-2 text-sm font-medium text-[color:var(--app-text-strong)]">
+                    <Bell className="size-4" />
+                    Lembrete de pagamento
+                  </span>
+                  <span className="mt-1 block text-xs text-[color:var(--text-soft)]">
+                    Gera uma notificação interna na data e prepara a cobrança pelo WhatsApp.
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  className={[
+                    "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
+                    projectDraft.reminderEnabled
+                      ? "border-emerald-500/40 bg-emerald-500/25"
+                      : "border-[color:var(--border-strong)] bg-[var(--input-bg)]"
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute top-1/2 size-4 -translate-y-1/2 rounded-full bg-[var(--app-text-strong)] transition-[left]",
+                      projectDraft.reminderEnabled ? "left-6" : "left-1"
+                    ].join(" ")}
+                  />
+                </span>
+              </button>
+
+              {projectDraft.reminderEnabled ? (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                      Tipo de valor
+                    </span>
+                    <div className="grid grid-cols-2 gap-1 rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] p-1">
+                      {REMINDER_AMOUNT_MODES.map(([value, label]) => (
+                        <button
+                          aria-pressed={projectDraft.reminderAmountMode === value}
+                          className={[
+                            "h-9 rounded px-2 text-xs transition-all duration-200 ease-out active:scale-95 sm:text-sm",
+                            projectDraft.reminderAmountMode === value
+                              ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
+                              : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+                          ].join(" ")}
+                          key={value}
+                          onClick={() =>
+                            setProjectDraft((current) =>
+                              current
+                                ? { ...current, reminderAmountMode: value }
+                                : current
+                            )
+                          }
+                          type="button"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {projectDraft.reminderAmountMode === "FIXED" ? (
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                          Valor fixo
+                        </span>
+                        <input
+                          className={fieldClass}
+                          inputMode="decimal"
+                          onChange={(event) =>
+                            setProjectDraft((current) =>
+                              current
+                                ? { ...current, reminderFixedAmount: event.target.value }
+                                : current
+                            )
+                          }
+                          placeholder="Ex.: 500,00"
+                          type="text"
+                          value={projectDraft.reminderFixedAmount}
+                        />
+                      </label>
+                    ) : (
+                      <div className="block">
+                        <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                          Valor pendente atual
+                        </span>
+                        <p className="flex h-11 items-center rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 text-sm text-[color:var(--app-text-strong)]">
+                          {projectDraft.pendingValueLabel}
+                        </p>
+                      </div>
+                    )}
+                    <div className="block">
+                      <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                        Data do lembrete
+                      </span>
+                      <DateField
+                        ariaLabel="Data do lembrete"
+                        onChange={(value) =>
+                          setProjectDraft((current) =>
+                            current ? { ...current, reminderDueDate: value } : current
+                          )
+                        }
+                        value={projectDraft.reminderDueDate}
+                      />
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                      Observação / mensagem (opcional)
+                    </span>
+                    <textarea
+                      className={textareaClass}
+                      onChange={(event) =>
+                        setProjectDraft((current) =>
+                          current ? { ...current, reminderMessage: event.target.value } : current
+                        )
+                      }
+                      placeholder="Ex.: Lembrete referente à segunda etapa do projeto."
+                      value={projectDraft.reminderMessage}
+                    />
+                  </label>
+
+                  {!projectDraft.clientPhone ? (
+                    <p className="text-xs text-[color:var(--warning-text)]">
+                      O cliente não tem telefone cadastrado. A mensagem será copiada para envio
+                      manual.
+                    </p>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="inline-flex h-10 items-center gap-2 rounded-md border border-emerald-500/30 px-3 text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10 active:scale-[0.98]"
+                      onClick={sendReminderWhatsApp}
+                      type="button"
+                    >
+                      <FaWhatsapp className="size-4" />
+                      Enviar no WhatsApp
+                    </button>
+                    <button
+                      className="inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                      onClick={() => void copyReminder()}
+                      type="button"
+                    >
+                      <Copy className="size-4" />
+                      Copiar mensagem
+                    </button>
+                  </div>
+                  <p className="text-xs text-[color:var(--text-faint)]">
+                    O lembrete é salvo junto com o projeto e nunca envia nada automaticamente para o
+                    cliente.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)]"
@@ -2362,6 +2915,83 @@ export function OperationsPanel({
         </Modal>
       ) : null}
 
+      {notesProject ? (
+        <ProjectNotesModal
+          onClose={() => setNotesProject(null)}
+          projectId={notesProject.id}
+          projectName={notesProject.name}
+        />
+      ) : null}
+
+      {invoicePreview ? (
+        <Modal
+          onClose={() => setInvoicePreview(null)}
+          title={invoicePreview.invoiceName ?? "Nota fiscal"}
+        >
+          <div className="p-5">
+            {invoicePreview.invoiceMimeType?.startsWith("image/") ? (
+              <>
+                <div className="mb-3 flex items-center justify-end gap-2">
+                  <button
+                    aria-label="Reduzir imagem"
+                    className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                    disabled={invoiceZoom <= 75}
+                    onClick={() => setInvoiceZoom((current) => Math.max(75, current - 25))}
+                    title="Reduzir"
+                    type="button"
+                  >
+                    <ZoomOut className="size-4" />
+                  </button>
+                  <span className="min-w-12 text-center text-xs text-[color:var(--text-soft)]">
+                    {invoiceZoom}%
+                  </span>
+                  <button
+                    aria-label="Ampliar imagem"
+                    className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
+                    disabled={invoiceZoom >= 200}
+                    onClick={() => setInvoiceZoom((current) => Math.min(200, current + 25))}
+                    title="Ampliar"
+                    type="button"
+                  >
+                    <ZoomIn className="size-4" />
+                  </button>
+                </div>
+                <div className="max-h-[62vh] min-h-80 overflow-auto rounded-md border border-[color:var(--border)] bg-white p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={`Nota fiscal de ${invoicePreview.projectName}`}
+                    className="mx-auto block h-auto max-w-none"
+                    src={`/api/payments/${invoicePreview.id}/invoice`}
+                    style={{ width: `${invoiceZoom}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <iframe
+                className="h-[62vh] min-h-80 w-full rounded-md border border-[color:var(--border)] bg-white"
+                src={`/api/payments/${invoicePreview.id}/invoice`}
+                title={`Nota fiscal de ${invoicePreview.projectName}`}
+              />
+            )}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-[color:var(--text-soft)]">
+                {invoicePreview.invoiceMimeType ?? "Arquivo privado"}
+                {formatFileSize(invoicePreview.invoiceSize)
+                  ? ` · ${formatFileSize(invoicePreview.invoiceSize)}`
+                  : ""}
+              </p>
+              <a
+                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+                href={`/api/payments/${invoicePreview.id}/invoice?download=1`}
+              >
+                <Download className="size-4" />
+                Baixar nota fiscal
+              </a>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
       {clientDraft ? (
         <Modal
           onClose={() => setClientDraft(null)}
@@ -2496,11 +3126,11 @@ export function OperationsPanel({
                   </span>
                 ) : (
                   <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
-                    A máscara muda automaticamente entre CPF e CNPJ.
+                    Opcional. Preencha CPF ou CNPJ.
                   </span>
                 )}
               </label>
-              <label className="block">
+              <div className="block">
                 <span className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[color:var(--text-muted)]">
                   <span>Data de nascimento</span>
                   {clientAge !== null ? (
@@ -2509,18 +3139,18 @@ export function OperationsPanel({
                     </span>
                   ) : null}
                 </span>
-                <input
-                  className={fieldClass}
+                <DateField
+                  ariaLabel="Data de nascimento"
                   max={todayInputValue()}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     setClientDraft((current) =>
-                      current ? { ...current, birthDate: event.target.value } : current
+                      current ? { ...current, birthDate: value } : current
                     )
                   }
-                  type="date"
+                  placeholder="Data de nascimento"
                   value={clientDraft.birthDate}
                 />
-              </label>
+              </div>
             </div>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">

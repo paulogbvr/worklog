@@ -7,6 +7,10 @@ import {
   deletePaymentReceiptSafely,
   preparePaymentReceipt
 } from "@/server/storage/payment-receipts";
+import {
+  deletePaymentInvoiceSafely,
+  preparePaymentInvoice
+} from "@/server/storage/payment-invoices";
 
 export const runtime = "nodejs";
 
@@ -15,6 +19,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   let uploadedPath: string | null = null;
+  let uploadedInvoicePath: string | null = null;
 
   try {
     const { id } = await context.params;
@@ -22,7 +27,8 @@ export async function PATCH(
       readPaymentInput(request),
       prisma.payment.findUnique({
         select: {
-          receiptPath: true
+          receiptPath: true,
+          invoicePath: true
         },
         where: {
           id
@@ -44,6 +50,10 @@ export async function PATCH(
       ? await preparePaymentReceipt(input.receipt, input.projectId)
       : null;
     uploadedPath = receipt?.path ?? null;
+    const invoice = input.invoice
+      ? await preparePaymentInvoice(input.invoice, input.projectId)
+      : null;
+    uploadedInvoicePath = invoice?.path ?? null;
 
     await prisma.payment.update({
       data: {
@@ -52,6 +62,7 @@ export async function PATCH(
         note: input.note,
         paidAt: input.paidAt,
         projectId: input.projectId,
+        invoiceKey: input.invoiceKey,
         ...(receipt
           ? {
               receiptData: receipt.data,
@@ -68,6 +79,23 @@ export async function PATCH(
                 receiptPath: null,
                 receiptSize: null
               }
+            : {}),
+        ...(invoice
+          ? {
+              invoiceData: invoice.data,
+              invoiceMimeType: invoice.mimeType,
+              invoiceName: invoice.name,
+              invoicePath: invoice.path,
+              invoiceSize: invoice.size
+            }
+          : input.removeInvoice
+            ? {
+                invoiceData: null,
+                invoiceMimeType: null,
+                invoiceName: null,
+                invoicePath: null,
+                invoiceSize: null
+              }
             : {})
       },
       where: {
@@ -79,12 +107,17 @@ export async function PATCH(
       await deletePaymentReceiptSafely(current.receiptPath);
     }
 
+    if (invoice || input.removeInvoice) {
+      await deletePaymentInvoiceSafely(current.invoicePath);
+    }
+
     revalidatePath("/", "page");
     revalidatePath("/payments", "page");
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     await deletePaymentReceiptSafely(uploadedPath);
+    await deletePaymentInvoiceSafely(uploadedInvoicePath);
     const isValidationError =
       error instanceof Error &&
       (error.message.startsWith("Selecione") ||
@@ -92,7 +125,9 @@ export async function PATCH(
         error.message.startsWith("Envie") ||
         error.message.startsWith("Não foi possível enviar") ||
         error.message.startsWith("O comprovante") ||
-        error.message.startsWith("Comprovantes"));
+        error.message.startsWith("A nota fiscal") ||
+        error.message.startsWith("Comprovantes") ||
+        error.message.startsWith("Notas fiscais"));
     const isMissingRecord =
       error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025";
 
@@ -119,13 +154,15 @@ export async function DELETE(
 
     const payment = await prisma.payment.delete({
       select: {
-        receiptPath: true
+        receiptPath: true,
+        invoicePath: true
       },
       where: {
         id
       }
     });
     await deletePaymentReceiptSafely(payment.receiptPath);
+    await deletePaymentInvoiceSafely(payment.invoicePath);
     revalidatePath("/", "page");
     revalidatePath("/payments", "page");
 

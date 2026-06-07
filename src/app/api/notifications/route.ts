@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { NotificationCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { syncDuePaymentReminders } from "@/server/reminders";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
+    await syncDuePaymentReminders();
+
     const [notifications, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         orderBy: {

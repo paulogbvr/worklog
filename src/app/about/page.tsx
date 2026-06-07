@@ -22,11 +22,15 @@ export const metadata: Metadata = {
 const capabilities = [
   "Horas reais importadas do WakaTime",
   "Horas dedicadas registradas manualmente",
-  "Projetos e clientes",
-  "Pagamentos recebidos",
-  "Valores pendentes",
+  "Preço fechado ou cobrança por horas",
+  "Comparação interna preço fechado x horas",
+  "Projetos, clientes e status",
+  "Pagamentos, comprovantes e notas fiscais",
+  "Lembretes de pagamento",
+  "Notas e tarefas internas por projeto",
+  "Valores pendentes e recebidos",
   "Histórico completo de operações",
-  "Compartilhamento de projetos",
+  "Links compartilháveis somente leitura",
   "Dashboard financeira"
 ];
 

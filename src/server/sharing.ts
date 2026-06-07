@@ -59,6 +59,10 @@ export async function getPublicProject(slug: string) {
             select: {
               amount: true,
               id: true,
+              invoiceKey: true,
+              invoiceMimeType: true,
+              invoicePath: true,
+              invoiceSize: true,
               method: true,
               note: true,
               paidAt: true,
@@ -158,7 +162,14 @@ export async function getPublicProject(slug: string) {
       amountLabel: formatCurrency(Number(payment.amount)),
       dateLabel: formatDate(payment.paidAt),
       hasReceipt: Boolean(payment.receiptPath || payment.receiptSize),
+      hasInvoice: Boolean(payment.invoicePath || payment.invoiceSize),
       id: payment.id,
+      invoiceIsImage: Boolean(payment.invoiceMimeType?.startsWith("image/")),
+      invoiceIsViewable: Boolean(
+        payment.invoiceMimeType?.startsWith("image/") ||
+          payment.invoiceMimeType === "application/pdf"
+      ),
+      invoiceKey: payment.invoiceKey,
       methodLabel: getPaymentMethodLabel(payment.method),
       note: payment.note,
       receiptIsImage: Boolean(payment.receiptMimeType?.startsWith("image/")),
@@ -217,7 +228,8 @@ export async function getPublicProject(slug: string) {
         detail: [
           `${formatCurrency(Number(payment.amount))} via ${getPaymentMethodLabel(payment.method)}.`,
           payment.note,
-          payment.receiptPath || payment.receiptSize ? "Comprovante anexado." : null
+          payment.receiptPath || payment.receiptSize ? "Comprovante anexado." : null,
+          payment.invoicePath || payment.invoiceSize ? "Nota fiscal anexada." : null
         ]
           .filter((item): item is string => Boolean(item))
           .join(" "),

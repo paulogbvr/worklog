@@ -5,6 +5,7 @@ import { Clock3, Code2, ExternalLink, ReceiptText } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { StatusPulse } from "@/components/status-pulse";
 import { SharedPaymentReceipt } from "@/app/share/[slug]/shared-payment-receipt";
+import { SharedPaymentInvoice } from "@/app/share/[slug]/shared-payment-invoice";
 import { SharedProjectActions } from "@/app/share/[slug]/shared-project-actions";
 import {
   SharedProjectTimeline,
@@ -224,6 +225,16 @@ export default async function SharedProjectPage({
                       {payment.hasReceipt ? (
                         <SharedPaymentReceipt
                           isImage={payment.receiptIsImage}
+                          paymentId={payment.id}
+                          projectName={project.name}
+                        />
+                      ) : null}
+                      {payment.hasInvoice || payment.invoiceKey ? (
+                        <SharedPaymentInvoice
+                          hasFile={payment.hasInvoice}
+                          invoiceKey={payment.invoiceKey}
+                          isImage={payment.invoiceIsImage}
+                          isViewable={payment.invoiceIsViewable}
                           paymentId={payment.id}
                           projectName={project.name}
                         />

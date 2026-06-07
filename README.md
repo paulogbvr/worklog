@@ -21,7 +21,10 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Projetos              | ✅ Cobrança independente por tipo de hora |
 | Clientes              | ✅ CRUD e validações |
 | Registros de Trabalho | ✅ CRUD concluído |
-| Pagamentos            | ✅ Métodos, comprovantes privados e WhatsApp |
+| Pagamentos            | ✅ Métodos, comprovantes, notas fiscais e WhatsApp |
+| Notas Fiscais         | ✅ Chave, arquivos e visualização separada do comprovante |
+| Notas/Tarefas Internas| ✅ Notas livres e checklists por projeto |
+| Lembretes de Pagamento| ✅ Configuração por projeto, notificação interna e WhatsApp |
 | Portal Compartilhável | ✅ Status, filtros, metadata dinâmica, eventos e PDF |
 | Notificações          | ✅ Importantes e atualizações |
 | Deploy                | ⚙️ Publicado, proteção pendente |
@@ -87,7 +90,12 @@ https://worklog-projects.vercel.app/
 │       ├── 20260605170000_client_profile_fields/
 │       ├── 20260605203000_dual_billing_rates/
 │       ├── 20260606013000_project_sharing_notifications/
-│       └── 20260606183000_payments_notifications_public_sharing/
+│       ├── 20260606183000_payments_notifications_public_sharing/
+│       ├── 20260606210000_project_status_and_receipts/
+│       ├── 20260606230000_payment_whatsapp_notified/
+│       ├── 20260607010000_client_status/
+│       ├── 20260607020000_project_billing_mode/
+│       └── 20260607030000_invoices_notes_reminders/
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -117,10 +125,12 @@ https://worklog-projects.vercel.app/
 │   │   ├── brand-logo.tsx
 │   │   ├── dashboard-charts.tsx
 │   │   ├── dashboard-filters.tsx
+│   │   ├── date-fields.tsx
 │   │   ├── installation-code-block.tsx
 │   │   ├── notification-menu.tsx
 │   │   ├── notifications-center.tsx
 │   │   ├── operations-panel.tsx
+│   │   ├── project-notes-modal.tsx
 │   │   ├── status-pulse.tsx
 │   │   ├── toast-provider.tsx
 │   │   └── wakatime/
@@ -129,6 +139,7 @@ https://worklog-projects.vercel.app/
 │   │   ├── clipboard.ts
 │   │   ├── env.ts
 │   │   ├── payment.ts
+│   │   ├── reminder.ts
 │   │   └── prisma.ts
 │   ├── content/
 │   │   └── site.ts
@@ -136,7 +147,11 @@ https://worklog-projects.vercel.app/
 │       ├── dashboard/
 │       │   └── summary.ts
 │       ├── payments/
+│       ├── project-notes.ts
+│       ├── reminders.ts
 │       ├── storage/
+│       │   ├── payment-receipts.ts
+│       │   └── payment-invoices.ts
 │       └── wakatime/
 │           ├── client.ts
 │           └── sync.ts
@@ -454,6 +469,7 @@ Registrar:
 - forma de pagamento
 - observações
 - comprovante opcional
+- nota fiscal opcional (separada do comprovante)
 
 Formas atuais:
 
@@ -469,6 +485,10 @@ visualizados e baixados sem sair do WorkLog. PDF, PNG, JPG, JPEG e WEBP de até 
 Supabase Storage quando configurado e o PostgreSQL privado como fallback. O botão do WhatsApp abre
 uma mensagem profissional do recebimento e o link público do projeto, quando disponível.
 
+Projetos com preço fechado tratam o contrato como um todo, enquanto projetos por horas seguem o
+período selecionado. A comparação interna entre preço fechado e valor por horas fica disponível
+apenas no painel administrativo.
+
 O sistema recalcula automaticamente:
 
 valor acumulado
@@ -480,6 +500,47 @@ valor recebido
 =
 
 valor pendente
+
+---
+
+## Notas Fiscais
+
+Cada pagamento pode armazenar uma nota fiscal totalmente separada do comprovante:
+
+- chave NFS-e / NF-e opcional, com botão para copiar
+- arquivo opcional em PDF, XML, PNG, JPG, JPEG, WEBP ou ZIP de até 8 MB
+- visualização de PDF e imagens sem sair do WorkLog
+- download do arquivo original
+
+Os arquivos usam o mesmo Supabase Storage dos comprovantes (sob o prefixo `invoices/`) quando
+configurado, com fallback no PostgreSQL privado. No link público o cliente vê que existe nota
+fiscal, pode copiar a chave, visualizar e baixar — sem misturar com o comprovante de pagamento.
+
+---
+
+## Notas e Tarefas Internas
+
+Cada projeto possui uma área interna de notas, parecida com o app de Notas, acessível por um botão
+de ícone ao lado de Configurar/Editar:
+
+- notas livres com título e conteúdo
+- checklists/to-dos com itens marcáveis
+- criação, edição, exclusão e marcação de itens
+- uso estritamente interno: nunca aparecem no link público nem afetam cálculos ou WakaTime
+
+---
+
+## Lembretes de Pagamento
+
+Cada projeto pode ter um lembrete de cobrança configurável:
+
+- ativar/desativar por projeto
+- valor pendente integral ou valor fixo
+- data do lembrete e observação opcional
+- envio manual pelo WhatsApp do cliente vinculado (ou cópia da mensagem quando não há telefone)
+- notificação interna automática quando a data chega — nunca uma cobrança automática para o cliente
+
+A configuração do lembrete é interna e não aparece para o cliente no link compartilhado.
 
 ---
 
@@ -543,6 +604,7 @@ Estado atual:
 - migration `20260605203000_dual_billing_rates` aplicada no Supabase
 - migration `20260606013000_project_sharing_notifications` aplicada no Supabase
 - migration `20260606183000_payments_notifications_public_sharing` aplicada no Supabase
+- migration `20260607030000_invoices_notes_reminders` aplicada no Supabase (notas fiscais, notas internas e lembretes)
 - Prisma Client regenerado automaticamente antes de cada build
 - sincronização real validada usando Prisma e Supabase
 - projetos removidos do WakaTime são arquivados sem perda de histórico

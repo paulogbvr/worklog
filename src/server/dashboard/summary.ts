@@ -64,7 +64,12 @@ export type DashboardPayment = {
   clientName: string | null;
   clientPhone: string | null;
   hasReceipt: boolean;
+  hasInvoice: boolean;
   id: string;
+  invoiceKey: string | null;
+  invoiceMimeType: string | null;
+  invoiceName: string | null;
+  invoiceSize: number | null;
   method: PaymentMethodValue;
   methodLabel: string;
   messageDateLabel: string;
@@ -88,6 +93,15 @@ export type DashboardProject = {
   chargeWakaTime: boolean;
   clientId: string | null;
   clientName: string | null;
+  clientPhone: string | null;
+  reminderEnabled: boolean;
+  reminderAmountMode: "FIXED" | "PENDING";
+  reminderFixedAmount: number | null;
+  reminderDueDate: string | null;
+  reminderMessage: string | null;
+  reminderStatus: "ACTIVE" | "DISABLED" | "SENT" | null;
+  reminderStatusLabel: string | null;
+  reminderStatusTone: StatusTone;
   comparisonDelta: number;
   comparisonDeltaLabel: string;
   comparisonPositive: boolean;
@@ -434,6 +448,15 @@ export async function getDashboardSummary(
         lastSyncAt: true,
         name: true,
         notes: true,
+        paymentReminder: {
+          select: {
+            amountMode: true,
+            dueDate: true,
+            fixedAmount: true,
+            message: true,
+            status: true
+          }
+        },
         payments: {
           orderBy: {
             paidAt: "asc"
@@ -442,6 +465,11 @@ export async function getDashboardSummary(
             amount: true,
             createdAt: true,
             id: true,
+            invoiceKey: true,
+            invoiceMimeType: true,
+            invoiceName: true,
+            invoicePath: true,
+            invoiceSize: true,
             method: true,
             note: true,
             paidAt: true,
@@ -710,6 +738,28 @@ export async function getDashboardSummary(
 
     const shareLink = project.shareLinks[0];
     const projectStatus = getProjectStatusMeta(project.status);
+    const reminder = project.paymentReminder;
+    const reminderDueDateKey = reminder
+      ? getDatabaseDateKey(reminder.dueDate)
+      : null;
+    let reminderStatusLabel: string | null = null;
+    let reminderStatusTone: StatusTone = "neutral";
+
+    if (reminder) {
+      if (reminder.status === "SENT") {
+        reminderStatusLabel = "Enviado";
+        reminderStatusTone = "success";
+      } else if (reminderDueDateKey && reminderDueDateKey < todayKey) {
+        reminderStatusLabel = "Vencido";
+        reminderStatusTone = "error";
+      } else if (reminderDueDateKey === todayKey) {
+        reminderStatusLabel = "Hoje";
+        reminderStatusTone = "warning";
+      } else {
+        reminderStatusLabel = "Ativo";
+        reminderStatusTone = "neutral";
+      }
+    }
 
     return {
       active: project.active,
@@ -719,6 +769,15 @@ export async function getDashboardSummary(
       chargeWakaTime,
       clientId: project.clientId,
       clientName: project.client?.name ?? null,
+      clientPhone: project.client?.phone ?? null,
+      reminderEnabled: Boolean(reminder && reminder.status !== "DISABLED"),
+      reminderAmountMode: reminder?.amountMode ?? "PENDING",
+      reminderFixedAmount: reminder?.fixedAmount ? Number(reminder.fixedAmount) : null,
+      reminderDueDate: reminderDueDateKey,
+      reminderMessage: reminder?.message ?? null,
+      reminderStatus: reminder?.status ?? null,
+      reminderStatusLabel,
+      reminderStatusTone,
       comparisonDelta,
       comparisonDeltaLabel: `${comparisonDelta >= 0 ? "+" : "-"}${formatCurrency(
         Math.abs(comparisonDelta)
@@ -930,7 +989,12 @@ export async function getDashboardSummary(
       clientName: payment.clientName,
       clientPhone: payment.clientPhone,
       hasReceipt: Boolean(payment.receiptPath || payment.receiptSize),
+      hasInvoice: Boolean(payment.invoicePath || payment.invoiceSize),
       id: payment.id,
+      invoiceKey: payment.invoiceKey,
+      invoiceMimeType: payment.invoiceMimeType,
+      invoiceName: payment.invoiceName,
+      invoiceSize: payment.invoiceSize,
       method: payment.method,
       methodLabel: getPaymentMethodLabel(payment.method),
       messageDateLabel: formatPaymentMessageDate(payment.createdAt),

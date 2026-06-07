@@ -46,9 +46,26 @@ enum NotificationType {
   SHARE_CREATED
   SHARE_PDF_DOWNLOADED
   PROJECT_STATUS_CHANGED
+  PAYMENT_REMINDER_DUE
   ENV_WARNING
   SYNC_SUCCESS
   SYNC_ERROR
+}
+
+enum ProjectNoteType {
+  FREE
+  CHECKLIST
+}
+
+enum ReminderAmountMode {
+  PENDING
+  FIXED
+}
+
+enum ReminderStatus {
+  ACTIVE
+  SENT
+  DISABLED
 }
 
 enum NotificationCategory {
@@ -110,6 +127,8 @@ model Project {
   shareLinks          ShareLink[]
   notifications       Notification[]
   statusEvents         ProjectStatusEvent[]
+  projectNotes        ProjectNote[]
+  paymentReminder     PaymentReminder?
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
 
@@ -172,6 +191,12 @@ model Payment {
   receiptName     String?
   receiptMimeType String?
   receiptSize     Int?
+  invoiceKey      String?
+  invoicePath     String?
+  invoiceData     Bytes?
+  invoiceName     String?
+  invoiceMimeType String?
+  invoiceSize     Int?
   whatsappNotifiedAt DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -239,4 +264,50 @@ model SyncLog {
 
   @@index([provider])
   @@index([startedAt])
+}
+
+model ProjectNote {
+  id        String            @id @default(cuid())
+  projectId String
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String?
+  content   String?
+  type      ProjectNoteType   @default(FREE)
+  position  Int               @default(0)
+  items     ProjectNoteItem[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([projectId])
+}
+
+model ProjectNoteItem {
+  id        String      @id @default(cuid())
+  noteId    String
+  note      ProjectNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  text      String
+  completed Boolean     @default(false)
+  position  Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  @@index([noteId])
+}
+
+model PaymentReminder {
+  id            String             @id @default(cuid())
+  projectId     String             @unique
+  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId      String?
+  amountMode    ReminderAmountMode @default(PENDING)
+  fixedAmount   Decimal?           @db.Decimal(12, 2)
+  dueDate       DateTime           @db.Date
+  message       String?
+  status        ReminderStatus     @default(ACTIVE)
+  sentAt        DateTime?
+  notifiedDueAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
 }

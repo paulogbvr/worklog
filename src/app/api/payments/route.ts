@@ -7,11 +7,16 @@ import {
   deletePaymentReceiptSafely,
   preparePaymentReceipt
 } from "@/server/storage/payment-receipts";
+import {
+  deletePaymentInvoiceSafely,
+  preparePaymentInvoice
+} from "@/server/storage/payment-invoices";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   let uploadedPath: string | null = null;
+  let uploadedInvoicePath: string | null = null;
 
   try {
     const input = await readPaymentInput(request);
@@ -19,6 +24,10 @@ export async function POST(request: Request) {
       ? await preparePaymentReceipt(input.receipt, input.projectId)
       : null;
     uploadedPath = receipt?.path ?? null;
+    const invoice = input.invoice
+      ? await preparePaymentInvoice(input.invoice, input.projectId)
+      : null;
+    uploadedInvoicePath = invoice?.path ?? null;
 
     await prisma.payment.create({
       data: {
@@ -31,7 +40,13 @@ export async function POST(request: Request) {
         receiptMimeType: receipt?.mimeType,
         receiptName: receipt?.name,
         receiptPath: receipt?.path,
-        receiptSize: receipt?.size
+        receiptSize: receipt?.size,
+        invoiceKey: input.invoiceKey,
+        invoiceData: invoice?.data,
+        invoiceMimeType: invoice?.mimeType,
+        invoiceName: invoice?.name,
+        invoicePath: invoice?.path,
+        invoiceSize: invoice?.size
       }
     });
     revalidatePath("/", "page");
@@ -40,6 +55,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     await deletePaymentReceiptSafely(uploadedPath);
+    await deletePaymentInvoiceSafely(uploadedInvoicePath);
     const isValidationError =
       error instanceof Error &&
       (error.message.startsWith("Selecione") ||
@@ -47,7 +63,9 @@ export async function POST(request: Request) {
         error.message.startsWith("Envie") ||
         error.message.startsWith("Não foi possível enviar") ||
         error.message.startsWith("O comprovante") ||
-        error.message.startsWith("Comprovantes"));
+        error.message.startsWith("A nota fiscal") ||
+        error.message.startsWith("Comprovantes") ||
+        error.message.startsWith("Notas fiscais"));
     const isMissingProject =
       error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003";
 
