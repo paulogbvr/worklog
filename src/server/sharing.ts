@@ -38,6 +38,7 @@ export async function getPublicProject(slug: string) {
         select: {
           active: true,
           billDedicated: true,
+          billingMode: true,
           client: {
             select: {
               name: true
@@ -45,6 +46,7 @@ export async function getPublicProject(slug: string) {
           },
           configurationStatus: true,
           dedicatedHourlyRate: true,
+          fixedPrice: true,
           hourlyRate: true,
           id: true,
           lastSyncAt: true,
@@ -122,18 +124,26 @@ export async function getPublicProject(slug: string) {
     ? Number(project.dedicatedHourlyRate)
     : 0;
   const isConfigured = project.configurationStatus === "CONFIGURED";
-  const generatedValue =
-    (isConfigured && hourlyRate > 0 ? (wakaSeconds / 3600) * hourlyRate : 0) +
-    (isConfigured && project.billDedicated && dedicatedHourlyRate > 0
+  const isFixed = project.billingMode === "FIXED";
+  const fixedPrice = project.fixedPrice ? Number(project.fixedPrice) : 0;
+  const hoursValue =
+    (hourlyRate > 0 ? (wakaSeconds / 3600) * hourlyRate : 0) +
+    (project.billDedicated && dedicatedHourlyRate > 0
       ? (dedicatedSeconds / 3600) * dedicatedHourlyRate
       : 0);
+  // Fixed-price contracts expose the agreed total; hourly projects expose the
+  // value accrued from tracked hours. The internal "hours vs fixed" comparison
+  // is intentionally not surfaced publicly.
+  const generatedValue = isFixed ? fixedPrice : isConfigured ? hoursValue : 0;
   const receivedValue = project.payments.reduce(
     (total, payment) => total + Number(payment.amount),
     0
   );
+  const pendingValue = generatedValue - receivedValue;
   const projectStatus = getProjectStatusMeta(project.status);
 
   return {
+    billingMode: project.billingMode,
     clientName: project.client?.name ?? "Projeto independente",
     createdAtLabel: formatDate(shareLink.createdAt),
     dedicatedLabel: formatDuration(dedicatedSeconds),
@@ -154,7 +164,8 @@ export async function getPublicProject(slug: string) {
       receiptIsImage: Boolean(payment.receiptMimeType?.startsWith("image/")),
       receiptMimeType: payment.receiptMimeType
     })),
-    pendingValueLabel: formatCurrency(generatedValue - receivedValue),
+    pendingIsCredit: pendingValue < 0,
+    pendingValueLabel: formatCurrency(Math.abs(pendingValue)),
     projectId: project.id,
     receivedValueLabel: formatCurrency(receivedValue),
     repositoryUrl: project.repositoryUrl,

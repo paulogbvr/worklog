@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
+  BillingMode,
   NotificationCategory,
   NotificationType,
   Prisma,
@@ -72,6 +73,9 @@ export async function PATCH(
     const clientId = optionalText(body.clientId);
     const hourlyRate = parseHourlyRate(body.hourlyRate);
     const dedicatedHourlyRate = parseHourlyRate(body.dedicatedHourlyRate);
+    const fixedPrice = parseHourlyRate(body.fixedPrice);
+    const billingMode =
+      body.billingMode === "FIXED" ? BillingMode.FIXED : BillingMode.HOURLY;
     const billDedicated = body.billDedicated === true;
     const active = body.active !== false;
     const repositoryUrl = parseRepositoryUrl(body.repositoryUrl);
@@ -134,6 +138,16 @@ export async function PATCH(
       );
     }
 
+    if (fixedPrice !== null && (!Number.isFinite(fixedPrice) || fixedPrice < 0)) {
+      return NextResponse.json(
+        {
+          error: "Informe um preço fechado válido ou deixe o campo vazio.",
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
     const project = await prisma.project.findUnique({
       select: {
         id: true,
@@ -187,8 +201,11 @@ export async function PATCH(
     const hasBillableRate =
       Boolean(hourlyRate && hourlyRate > 0) ||
       Boolean(billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0);
+    const hasFixedPrice = Boolean(fixedPrice && fixedPrice > 0);
+    const isBillable =
+      billingMode === BillingMode.FIXED ? hasFixedPrice : hasBillableRate;
     const configurationStatus =
-      clientId && hasBillableRate
+      clientId && isBillable
         ? ProjectConfigurationStatus.CONFIGURED
         : ProjectConfigurationStatus.PENDING;
     const nextStatus = status ?? project.status;
@@ -196,9 +213,11 @@ export async function PATCH(
       data: {
         active,
         billDedicated,
+        billingMode,
         clientId,
         configurationStatus,
         dedicatedHourlyRate,
+        fixedPrice,
         hourlyRate,
         name,
         notes: optionalText(body.notes),

@@ -83,21 +83,29 @@ export type DashboardPayment = {
 export type DashboardProject = {
   active: boolean;
   billDedicated: boolean;
+  billingMode: "FIXED" | "HOURLY";
   chargeDedicated: boolean;
   chargeWakaTime: boolean;
   clientId: string | null;
   clientName: string | null;
+  comparisonDelta: number;
+  comparisonDeltaLabel: string;
+  comparisonPositive: boolean;
   dedicatedHourlyRate: number | null;
   dedicatedLabel: string;
   dedicatedValueLabel: string;
+  fixedPrice: number | null;
+  fixedPriceLabel: string;
   globalDedicatedLabel: string;
   globalWakaTimeLabel: string;
   hourlyRate: number | null;
+  hoursComparisonLabel: string;
   id: string;
   lastPaymentLabel: string;
   lastSyncLabel: string;
   name: string;
   notes: string | null;
+  pendingIsCredit: boolean;
   pendingValue: number;
   pendingValueLabel: string;
   projectStatus: ProjectStatusValue;
@@ -408,6 +416,7 @@ export async function getDashboardSummary(
       select: {
         active: true,
         billDedicated: true,
+        billingMode: true,
         client: {
           select: {
             id: true,
@@ -419,6 +428,7 @@ export async function getDashboardSummary(
         configurationStatus: true,
         createdAt: true,
         dedicatedHourlyRate: true,
+        fixedPrice: true,
         hourlyRate: true,
         id: true,
         lastSyncAt: true,
@@ -565,10 +575,13 @@ export async function getDashboardSummary(
     const chargeDedicated = Boolean(
       project.billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0
     );
+    const isFixed = project.billingMode === "FIXED";
+    const fixedPrice = project.fixedPrice ? Number(project.fixedPrice) : null;
+    const contractedValue = isFixed && fixedPrice && fixedPrice > 0 ? fixedPrice : 0;
     const isConfigured =
       project.configurationStatus === "CONFIGURED" &&
       Boolean(project.clientId) &&
-      (chargeWakaTime || chargeDedicated);
+      (isFixed ? contractedValue > 0 : chargeWakaTime || chargeDedicated);
     const periodWakaDays = project.wakatimeDays.filter((day) =>
       isInPeriod(getDatabaseDateKey(day.date), startKey)
     );
@@ -607,19 +620,36 @@ export async function getDashboardSummary(
       0
     );
     const wakatimeValue =
-      isConfigured && chargeWakaTime && hourlyRate
+      isConfigured && !isFixed && chargeWakaTime && hourlyRate
         ? (wakatimeSeconds / 3600) * hourlyRate
         : 0;
     const dedicatedValue =
-      isConfigured && chargeDedicated && dedicatedHourlyRate
+      isConfigured && !isFixed && chargeDedicated && dedicatedHourlyRate
         ? (dedicatedSeconds / 3600) * dedicatedHourlyRate
         : 0;
-    const totalValue = wakatimeValue + dedicatedValue;
-    const receivedValue = periodPayments.reduce(
+    const hourlyTotalValue = wakatimeValue + dedicatedValue;
+    // Hours-based value over the whole project, computed from whatever rates are
+    // set even in fixed mode, so the admin comparison "preço fechado vs horas"
+    // is always available.
+    const comparisonWakaRate = hourlyRate && hourlyRate > 0 ? hourlyRate : 0;
+    const comparisonDedicatedRate =
+      project.billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0
+        ? dedicatedHourlyRate
+        : 0;
+    const hoursValueAllTime =
+      (allWakaTimeSeconds / 3600) * comparisonWakaRate +
+      (allDedicatedSeconds / 3600) * comparisonDedicatedRate;
+    const allReceivedValueTotal = allReceivedValue;
+    const periodReceivedValue = periodPayments.reduce(
       (total, payment) => total + Number(payment.amount),
       0
     );
+    // Fixed-price projects track the contract as a whole, so generated/received
+    // are all-time; hourly projects stay scoped to the selected period.
+    const totalValue = isFixed ? contractedValue : hourlyTotalValue;
+    const receivedValue = isFixed ? allReceivedValueTotal : periodReceivedValue;
     const pendingValue = totalValue - receivedValue;
+    const comparisonDelta = hoursValueAllTime - contractedValue;
     const lastPayment = project.payments.at(-1) ?? null;
     const sinceLastPaymentWakaTimeSeconds = project.wakatimeDays
       .filter(
@@ -645,7 +675,7 @@ export async function getDashboardSummary(
       point[series.wakatimeKey] = (point[series.wakatimeKey] ?? 0) + hours;
       point[series.hoursKey] = (point[series.hoursKey] ?? 0) + hours;
 
-      if (isConfigured && chargeWakaTime && hourlyRate) {
+      if (isConfigured && !isFixed && chargeWakaTime && hourlyRate) {
         point[series.generatedKey] =
           (point[series.generatedKey] ?? 0) + hours * hourlyRate;
       }
@@ -657,7 +687,7 @@ export async function getDashboardSummary(
       point[series.dedicatedKey] = (point[series.dedicatedKey] ?? 0) + hours;
       point[series.hoursKey] = (point[series.hoursKey] ?? 0) + hours;
 
-      if (isConfigured && chargeDedicated && dedicatedHourlyRate) {
+      if (isConfigured && !isFixed && chargeDedicated && dedicatedHourlyRate) {
         point[series.generatedKey] =
           (point[series.generatedKey] ?? 0) + hours * dedicatedHourlyRate;
       }
@@ -675,7 +705,7 @@ export async function getDashboardSummary(
     globalDedicatedSeconds += allDedicatedSeconds;
     totalGeneratedValue += totalValue;
     totalReceivedValue += receivedValue;
-    globalGeneratedValue += allWakaTimeValue + allDedicatedValue;
+    globalGeneratedValue += isFixed ? contractedValue : allWakaTimeValue + allDedicatedValue;
     globalReceivedValue += allReceivedValue;
 
     const shareLink = project.shareLinks[0];
@@ -684,23 +714,33 @@ export async function getDashboardSummary(
     return {
       active: project.active,
       billDedicated: project.billDedicated,
+      billingMode: project.billingMode,
       chargeDedicated,
       chargeWakaTime,
       clientId: project.clientId,
       clientName: project.client?.name ?? null,
+      comparisonDelta,
+      comparisonDeltaLabel: `${comparisonDelta >= 0 ? "+" : "-"}${formatCurrency(
+        Math.abs(comparisonDelta)
+      )}`,
+      comparisonPositive: comparisonDelta >= 0,
       dedicatedHourlyRate,
       dedicatedLabel: formatDuration(dedicatedSeconds),
       dedicatedValueLabel: formatCurrency(dedicatedValue),
+      fixedPrice,
+      fixedPriceLabel: formatCurrency(contractedValue),
       globalDedicatedLabel: formatDuration(allDedicatedSeconds),
       globalWakaTimeLabel: formatDuration(allWakaTimeSeconds),
       hourlyRate,
+      hoursComparisonLabel: formatCurrency(hoursValueAllTime),
       id: project.id,
       lastPaymentLabel: formatDate(lastPayment?.paidAt),
       lastSyncLabel: formatDateTime(project.lastSyncAt),
       name: project.name,
       notes: project.notes,
+      pendingIsCredit: pendingValue < 0,
       pendingValue,
-      pendingValueLabel: formatCurrency(pendingValue),
+      pendingValueLabel: formatCurrency(Math.abs(pendingValue)),
       projectStatus: projectStatus.value,
       projectStatusBadgeClass: projectStatus.badgeClass,
       projectStatusLabel: projectStatus.label,

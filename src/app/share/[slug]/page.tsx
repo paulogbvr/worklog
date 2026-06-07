@@ -97,9 +97,12 @@ export default async function SharedProjectPage({
   const metrics = [
     ["Horas WakaTime", project.wakaTimeLabel],
     ["Horas dedicadas", project.dedicatedLabel],
-    ["Valor gerado", project.generatedValueLabel],
+    [
+      project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado",
+      project.generatedValueLabel
+    ],
     ["Valor recebido", project.receivedValueLabel],
-    ["Valor pendente", project.pendingValueLabel]
+    [project.pendingIsCredit ? "Excedente" : "Valor pendente", project.pendingValueLabel]
   ];
 
   return (

@@ -57,8 +57,10 @@ export type OperationView = "clients" | "payments" | "projects" | "records";
 type ProjectDraft = {
   active: boolean;
   billDedicated: boolean;
+  billingMode: "FIXED" | "HOURLY";
   clientId: string;
   dedicatedHourlyRate: string;
+  fixedPrice: string;
   hourlyRate: string;
   id: string;
   name: string;
@@ -354,8 +356,10 @@ export function OperationsPanel({
     setProjectDraft({
       active: project.active,
       billDedicated: project.billDedicated,
+      billingMode: project.billingMode,
       clientId: project.clientId ?? "",
       dedicatedHourlyRate: project.dedicatedHourlyRate?.toString() ?? "",
+      fixedPrice: project.fixedPrice?.toString() ?? "",
       hourlyRate: project.hourlyRate?.toString() ?? "",
       id: project.id,
       name: project.name,
@@ -1018,6 +1022,9 @@ export function OperationsPanel({
                       >
                         {project.statusLabel}
                       </span>
+                      <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                        {project.billingMode === "FIXED" ? "Preço fechado" : "Por horas"}
+                      </span>
                     </div>
                     <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">
                       {project.clientName ?? "Sem cliente"} · WakaTime:{" "}
@@ -1073,9 +1080,21 @@ export function OperationsPanel({
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
-                      Valor Gerado
+                      {project.billingMode === "FIXED" ? "Preço fechado" : "Valor Gerado"}
                     </p>
                     <p className="mt-1 text-sm">{project.totalValueLabel}</p>
+                    {project.billingMode === "FIXED" ? (
+                      <p
+                        className={[
+                          "mt-1 text-xs",
+                          project.comparisonPositive
+                            ? "text-emerald-400"
+                            : "text-[color:var(--text-soft)]"
+                        ].join(" ")}
+                      >
+                        Por horas {project.hoursComparisonLabel} ({project.comparisonDeltaLabel})
+                      </p>
+                    ) : null}
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
@@ -1085,9 +1104,16 @@ export function OperationsPanel({
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
-                      Valor Pendente
+                      {project.pendingIsCredit ? "Excedente" : "Valor Pendente"}
                     </p>
-                    <p className="mt-1 text-sm">{project.pendingValueLabel}</p>
+                    <p
+                      className={[
+                        "mt-1 text-sm",
+                        project.pendingIsCredit ? "text-emerald-400" : ""
+                      ].join(" ")}
+                    >
+                      {project.pendingValueLabel}
+                    </p>
                     <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[color:var(--text-soft)]">
                       <StatusPulse tone={project.projectStatusTone} />
                       {project.projectStatusLabel}
@@ -1941,6 +1967,64 @@ export function OperationsPanel({
                   Vazio ou 0 mantém as horas visíveis sem gerar cobrança.
                 </span>
               </label>
+            </div>
+            <div className="rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+              <span className="block text-sm font-medium text-[color:var(--app-text-strong)]">
+                Tipo de cobrança
+              </span>
+              <span className="mt-1 block text-xs text-[color:var(--text-soft)]">
+                Cobre por horas trabalhadas ou por um preço fechado combinado.
+              </span>
+              <div className="mt-3 grid grid-cols-2 gap-1 rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] p-1">
+                {(
+                  [
+                    ["HOURLY", "Por horas"],
+                    ["FIXED", "Preço fechado"]
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    aria-pressed={projectDraft.billingMode === value}
+                    className={[
+                      "h-9 rounded text-sm transition-all duration-200 ease-out active:scale-95",
+                      projectDraft.billingMode === value
+                        ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
+                        : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+                    ].join(" ")}
+                    key={value}
+                    onClick={() =>
+                      setProjectDraft((current) =>
+                        current ? { ...current, billingMode: value } : current
+                      )
+                    }
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {projectDraft.billingMode === "FIXED" ? (
+                <label className="mt-4 block">
+                  <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                    Preço fechado do projeto
+                  </span>
+                  <input
+                    className={fieldClass}
+                    inputMode="decimal"
+                    onChange={(event) =>
+                      setProjectDraft((current) =>
+                        current ? { ...current, fixedPrice: event.target.value } : current
+                      )
+                    }
+                    placeholder="Ex.: 3.000,00"
+                    type="text"
+                    value={projectDraft.fixedPrice}
+                  />
+                  <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
+                    Esse valor vira o total do projeto. Os valores por hora acima continuam
+                    salvos e servem só como comparação interna.
+                  </span>
+                </label>
+              ) : null}
             </div>
             <div className="rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
               <button

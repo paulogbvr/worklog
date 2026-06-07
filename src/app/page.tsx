@@ -216,11 +216,24 @@ export default async function Home({
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
-                      Gerado
+                      {project.billingMode === "FIXED" ? "Preço fechado" : "Gerado"}
                     </p>
                     <p className="mt-1 text-sm">{project.totalValueLabel}</p>
-                    <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                      Pendente {project.pendingValueLabel}
+                    {project.billingMode === "FIXED" ? (
+                      <p className="mt-1 text-xs text-[color:var(--text-soft)]">
+                        Por horas {project.hoursComparisonLabel}
+                      </p>
+                    ) : null}
+                    <p
+                      className={[
+                        "mt-1 text-xs",
+                        project.pendingIsCredit
+                          ? "text-emerald-400"
+                          : "text-[color:var(--text-soft)]"
+                      ].join(" ")}
+                    >
+                      {project.pendingIsCredit ? "Excedente" : "Pendente"}{" "}
+                      {project.pendingValueLabel}
                     </p>
                   </div>
                   <div>

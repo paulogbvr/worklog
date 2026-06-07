@@ -31,6 +31,11 @@ enum ClientStatus {
   INACTIVE
 }
 
+enum BillingMode {
+  HOURLY
+  FIXED
+}
+
 enum SyncProvider {
   WAKATIME
 }
@@ -91,6 +96,8 @@ model Project {
   hourlyRate          Decimal?                   @db.Decimal(10, 2)
   dedicatedHourlyRate Decimal?                   @db.Decimal(10, 2)
   billDedicated       Boolean                    @default(false)
+  billingMode         BillingMode                @default(HOURLY)
+  fixedPrice          Decimal?                   @db.Decimal(12, 2)
   wakatimeProjectId   String?                    @unique
   wakatimeProjectName String?                    @unique
   active              Boolean                    @default(true)
