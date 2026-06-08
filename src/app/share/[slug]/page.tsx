@@ -7,6 +7,7 @@ import { StatusPulse } from "@/components/status-pulse";
 import { SharedPaymentReceipt } from "@/app/share/[slug]/shared-payment-receipt";
 import { SharedPaymentInvoice } from "@/app/share/[slug]/shared-payment-invoice";
 import { SharedProjectActions } from "@/app/share/[slug]/shared-project-actions";
+import { ToastProvider } from "@/components/toast-provider";
 import {
   SharedProjectTimeline,
   type SharedTimelineFilter
@@ -107,6 +108,7 @@ export default async function SharedProjectPage({
   ];
 
   return (
+    <ToastProvider>
     <main className="min-h-screen bg-[var(--app-bg)] text-[color:var(--app-text)]">
       <div className="pointer-events-none fixed inset-0 bg-[var(--ambient-gradient)]" />
       <div className="relative mx-auto w-full max-w-5xl px-5 py-7 sm:px-8 lg:py-10">
@@ -258,5 +260,6 @@ export default async function SharedProjectPage({
         </section>
       </div>
     </main>
+    </ToastProvider>
   );
 }

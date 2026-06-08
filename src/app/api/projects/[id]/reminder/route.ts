@@ -20,12 +20,18 @@ function parseAmount(value: unknown) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-function parseDueDate(value: unknown) {
-  if (typeof value !== "string" || !value.trim()) {
+// Brazil no longer observes DST, so America/Sao_Paulo is a stable UTC-3. We build
+// the exact instant from the user's local date + time without pulling a TZ lib.
+function parseDueDate(dateValue: unknown, timeValue: unknown) {
+  if (typeof dateValue !== "string" || !dateValue.trim()) {
     return null;
   }
 
-  const date = new Date(`${value}T12:00:00.000Z`);
+  const time =
+    typeof timeValue === "string" && /^\d{2}:\d{2}$/.test(timeValue.trim())
+      ? timeValue.trim()
+      : "09:00";
+  const date = new Date(`${dateValue}T${time}:00-03:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
@@ -38,7 +44,7 @@ export async function PUT(
     const body = (await request.json()) as Record<string, unknown>;
     const amountMode =
       body.amountMode === "FIXED" ? ReminderAmountMode.FIXED : ReminderAmountMode.PENDING;
-    const dueDate = parseDueDate(body.dueDate);
+    const dueDate = parseDueDate(body.dueDate, body.dueTime);
     const message = optionalText(body.message);
     const fixedAmount =
       amountMode === ReminderAmountMode.FIXED ? parseAmount(body.fixedAmount) : null;

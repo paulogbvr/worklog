@@ -42,6 +42,7 @@ export default async function NotificationsPage() {
       timeZone: TIME_ZONE
     }).format(notification.createdAt),
     id: notification.id,
+    isReminder: notification.type === "PAYMENT_REMINDER_DUE",
     message: notification.message,
     read: Boolean(notification.readAt),
     title: notification.title,

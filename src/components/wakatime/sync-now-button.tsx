@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+
+export const DASHBOARD_REFRESHING_EVENT = "worklog-dashboard-refreshing";
 
 type SyncResponse = {
   ok: boolean;
@@ -35,6 +37,14 @@ export function SyncNowButton() {
   const [isRefreshing, startRefresh] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
+
+  // Broadcast the busy state so the dashboard data blocks can show a skeleton
+  // while the sync + server refresh are in flight.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(DASHBOARD_REFRESHING_EVENT, { detail: isSyncing || isRefreshing })
+    );
+  }, [isSyncing, isRefreshing]);
 
   async function handleSync() {
     setIsSyncing(true);

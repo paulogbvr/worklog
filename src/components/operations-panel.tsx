@@ -28,6 +28,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa6";
 import { DateField, TimeField } from "@/components/date-fields";
 import { ProjectNotesModal } from "@/components/project-notes-modal";
+import { SearchField } from "@/components/search-field";
 import { StatusPulse } from "@/components/status-pulse";
 import { useToast } from "@/components/toast-provider";
 import {
@@ -82,6 +83,7 @@ type ProjectDraft = {
   reminderAmountMode: "FIXED" | "PENDING";
   reminderFixedAmount: string;
   reminderDueDate: string;
+  reminderDueTime: string;
   reminderMessage: string;
 };
 
@@ -129,6 +131,21 @@ const emptyClient: ClientDraft = {
   status: "",
   taxId: ""
 };
+
+type ClientSortValue =
+  | "recent"
+  | "name"
+  | "withProject"
+  | "noProject"
+  | "pending";
+
+const CLIENT_SORTS = [
+  ["recent", "Recentes"],
+  ["name", "Nome"],
+  ["withProject", "Com projeto"],
+  ["noProject", "Sem projeto"],
+  ["pending", "Maior pendência"]
+] as const;
 
 function todayInputValue() {
   const now = new Date();
@@ -268,6 +285,27 @@ function Modal({
   );
 }
 
+function DetailRow({
+  full = false,
+  label,
+  value
+}: {
+  full?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={full ? "sm:col-span-2" : ""}>
+      <dt className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+        {label}
+      </dt>
+      <dd className="mt-0.5 break-words text-sm text-[color:var(--app-text-strong)]">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 const fieldClass =
   "h-11 w-full min-w-0 rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] px-3 text-sm text-[color:var(--app-text-strong)] outline-none transition-colors placeholder:text-[color:var(--text-faint)] focus:border-[color:var(--border-focus)]";
 const selectClass = `${fieldClass} appearance-none pr-10`;
@@ -307,6 +345,8 @@ export function OperationsPanel({
   const [paymentInvoice, setPaymentInvoice] = useState<File | null>(null);
   const [paymentInvoiceInputKey, setPaymentInvoiceInputKey] = useState(0);
   const [removePaymentInvoice, setRemovePaymentInvoice] = useState(false);
+  const [paymentComposerOpen, setPaymentComposerOpen] = useState(false);
+  const [paymentInvoiceOpen, setPaymentInvoiceOpen] = useState(false);
   const [paymentConfirmation, setPaymentConfirmation] =
     useState<PaymentConfirmation | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<DashboardPayment | null>(null);
@@ -322,6 +362,11 @@ export function OperationsPanel({
   const [notesProject, setNotesProject] = useState<{ id: string; name: string } | null>(
     null
   );
+  const [clientSearch, setClientSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
+  const [clientSort, setClientSort] = useState<ClientSortValue>("recent");
+  const [previewClient, setPreviewClient] = useState<DashboardClient | null>(null);
+  const [previewProject, setPreviewProject] = useState<DashboardProject | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -353,6 +398,52 @@ export function OperationsPanel({
     () => projects.filter((project) => project.statusLabel === "Configurado"),
     [projects]
   );
+  const filteredClients = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase();
+    let result = clients.filter((client) =>
+      term
+        ? [client.name, client.email, client.phone, client.taxId, client.statusLabel]
+            .filter(Boolean)
+            .some((field) => (field as string).toLowerCase().includes(term))
+        : true
+    );
+
+    if (clientSort === "withProject") {
+      result = result.filter((client) => client.projectCount > 0);
+    } else if (clientSort === "noProject") {
+      result = result.filter((client) => client.projectCount === 0);
+    }
+
+    const sorted = [...result];
+
+    if (clientSort === "name") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    } else if (clientSort === "pending") {
+      sorted.sort((a, b) => b.pendingValue - a.pendingValue);
+    } else {
+      sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+
+    return sorted;
+  }, [clientSearch, clientSort, clients]);
+  const filteredProjects = useMemo(() => {
+    const term = projectSearch.trim().toLowerCase();
+
+    if (!term) {
+      return projects;
+    }
+
+    return projects.filter((project) =>
+      [
+        project.name,
+        project.clientName,
+        project.projectStatusLabel,
+        project.billingMode === "FIXED" ? "preço fechado" : "por horas"
+      ]
+        .filter(Boolean)
+        .some((field) => (field as string).toLowerCase().includes(term))
+    );
+  }, [projectSearch, projects]);
   const clientTaxIdFeedback = useMemo(
     () => (clientDraft ? getTaxIdFeedback(clientDraft.taxId) : null),
     [clientDraft]
@@ -398,6 +489,7 @@ export function OperationsPanel({
       reminderAmountMode: project.reminderAmountMode,
       reminderFixedAmount: project.reminderFixedAmount?.toString() ?? "",
       reminderDueDate: project.reminderDueDate ?? "",
+      reminderDueTime: project.reminderDueTime ?? "09:00",
       reminderMessage: project.reminderMessage ?? ""
     });
   }
@@ -468,6 +560,7 @@ export function OperationsPanel({
             body: JSON.stringify({
               amountMode: projectDraft.reminderAmountMode,
               dueDate: projectDraft.reminderDueDate,
+              dueTime: projectDraft.reminderDueTime,
               fixedAmount: projectDraft.reminderFixedAmount,
               message: projectDraft.reminderMessage
             }),
@@ -631,6 +724,7 @@ export function OperationsPanel({
         })
       );
       resetPaymentForm();
+      setPaymentComposerOpen(false);
       toast({
         message: "O saldo pendente foi recalculado.",
         title: paymentEditingId ? "Pagamento atualizado" : "Pagamento registrado",
@@ -661,9 +755,12 @@ export function OperationsPanel({
     setPaymentInvoice(null);
     setPaymentInvoiceInputKey((current) => current + 1);
     setRemovePaymentInvoice(false);
+    setPaymentInvoiceOpen(false);
   }
 
   function editPayment(payment: DashboardPayment) {
+    setPaymentComposerOpen(true);
+    setPaymentInvoiceOpen(Boolean(payment.hasInvoice || payment.invoiceKey));
     setPaymentAmount(payment.amount.toString());
     setPaymentDate(payment.paidAt);
     setPaymentEditingId(payment.id);
@@ -791,11 +888,29 @@ export function OperationsPanel({
   function openReceiptPreview(payment: DashboardPayment) {
     setReceiptZoom(100);
     setReceiptPreview(payment);
+    toast({
+      message: "Abrindo o comprovante de pagamento.",
+      title: "Comprovante",
+      tone: "info"
+    });
   }
 
   function openInvoicePreview(payment: DashboardPayment) {
     setInvoiceZoom(100);
     setInvoicePreview(payment);
+    toast({
+      message: "Abrindo a nota fiscal.",
+      title: "Nota fiscal",
+      tone: "info"
+    });
+  }
+
+  function notifyDownload(kind: "comprovante" | "nota fiscal") {
+    toast({
+      message: `A ${kind} será baixada em instantes.`,
+      title: kind === "comprovante" ? "Baixando comprovante" : "Baixando nota fiscal",
+      tone: "success"
+    });
   }
 
   async function copyInvoiceKey(invoiceKey: string) {
@@ -1085,9 +1200,13 @@ export function OperationsPanel({
       ? `${window.location.origin}${projectDraft.sharePath}`
       : null;
 
+    const dateLabel = projectDraft.reminderDueDate.split("-").reverse().join("/");
+
     return buildReminderMessage({
       amount,
-      dueDateLabel: projectDraft.reminderDueDate.split("-").reverse().join("/"),
+      dueDateLabel: projectDraft.reminderDueTime
+        ? `${dateLabel} às ${projectDraft.reminderDueTime}`
+        : dateLabel,
       message: projectDraft.reminderMessage,
       projectName: projectDraft.name,
       shareUrl
@@ -1197,7 +1316,23 @@ export function OperationsPanel({
 
         {view === "projects" ? (
           <div className="space-y-4 p-5">
-            {projects.map((project) => (
+            <SearchField
+              ariaLabel="Buscar projetos"
+              onChange={setProjectSearch}
+              placeholder="Buscar projetos..."
+              value={projectSearch}
+            />
+            {projects.length > 0 && filteredProjects.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
+                  Nenhum projeto encontrado
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                  Ajuste a busca por “{projectSearch}”.
+                </p>
+              </div>
+            ) : null}
+            {filteredProjects.map((project) => (
               <div
                 className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4 transition-colors duration-200 hover:border-[color:var(--border-strong)]"
                 key={project.id}
@@ -1246,6 +1381,15 @@ export function OperationsPanel({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      aria-label={`Visualizar ${project.name}`}
+                      className="grid h-10 w-10 place-items-center rounded-md border border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                      onClick={() => setPreviewProject(project)}
+                      title="Visualização rápida"
+                      type="button"
+                    >
+                      <Eye className="size-4" />
+                    </button>
                     <button
                       aria-label={`Notas do projeto ${project.name}`}
                       className="grid h-10 w-10 place-items-center rounded-md border border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:border-[color:var(--border-strong)] hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
@@ -1360,7 +1504,7 @@ export function OperationsPanel({
                   </p>
                 </div>
                 <button
-                  className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium transition-transform duration-200 active:scale-95"
+                  className="button-primary inline-flex h-10 w-fit items-center gap-2 self-end px-3 text-sm font-medium transition-transform duration-200 active:scale-95 sm:self-auto"
                   onClick={() => {
                     resetWorkOperation();
                     setRecordComposerOpen((current) => !current);
@@ -1655,9 +1799,35 @@ export function OperationsPanel({
 
         {view === "clients" ? (
           <div id="clientes">
-            <div className="flex justify-end px-5 pt-5">
+            <div className="flex flex-col gap-3 px-5 pt-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:flex-1">
+                <SearchField
+                  ariaLabel="Buscar clientes"
+                  onChange={setClientSearch}
+                  placeholder="Buscar clientes..."
+                  value={clientSearch}
+                />
+                <label className="relative block w-full sm:w-52">
+                  <span className="sr-only">Ordenar clientes</span>
+                  <select
+                    className={selectClass}
+                    onChange={(event) => setClientSort(event.target.value as ClientSortValue)}
+                    value={clientSort}
+                  >
+                    {CLIENT_SORTS.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-faint)]"
+                  />
+                </label>
+              </div>
               <button
-                className="button-primary inline-flex h-10 items-center gap-2 px-3 text-sm font-medium"
+                className="button-primary inline-flex h-10 w-fit items-center gap-2 self-end px-3 text-sm font-medium transition-transform duration-200 active:scale-95 lg:self-auto"
                 onClick={() => openClient()}
                 type="button"
               >
@@ -1666,8 +1836,21 @@ export function OperationsPanel({
               </button>
             </div>
             <div className="divide-y divide-[color:var(--border)] px-5">
-              {clients.length > 0 ? (
-                clients.map((client) => (
+              {clients.length === 0 ? (
+                <p className="py-8 text-sm text-[color:var(--text-soft)]">
+                  Nenhum cliente cadastrado.
+                </p>
+              ) : filteredClients.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
+                    Nenhum cliente encontrado
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                    Ajuste a busca por “{clientSearch}” ou cadastre um novo cliente.
+                  </p>
+                </div>
+              ) : (
+                filteredClients.map((client) => (
                   <div
                     className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
                     key={client.id}
@@ -1687,20 +1870,36 @@ export function OperationsPanel({
                         {client.email ? ` · ${client.email}` : ""}
                         {client.taxId ? ` · ${formatTaxId(client.taxId)}` : ""}
                       </p>
+                      {client.pendingValue > 0 ? (
+                        <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-amber-400">
+                          Pendente: {client.pendingValueLabel}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 gap-2">
+                      <button
+                        aria-label={`Visualizar ${client.name}`}
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                        onClick={() => setPreviewClient(client)}
+                        title="Visualização rápida"
+                        type="button"
+                      >
+                        <Eye className="size-4" />
+                      </button>
                       <button
                         aria-label={`Editar ${client.name}`}
                         className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                         onClick={() => openClient(client)}
+                        title="Editar cliente"
                         type="button"
                       >
                         <Pencil className="size-4" />
                       </button>
                       <button
                         aria-label={`Remover ${client.name}`}
-                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] hover:bg-red-500/10 hover:text-red-400"
+                        className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
                         onClick={() => deleteClient(client)}
+                        title="Excluir cliente"
                         type="button"
                       >
                         <Trash2 className="size-4" />
@@ -1708,10 +1907,6 @@ export function OperationsPanel({
                     </div>
                   </div>
                 ))
-              ) : (
-                <p className="py-8 text-sm text-[color:var(--text-soft)]">
-                  Nenhum cliente cadastrado.
-                </p>
               )}
             </div>
           </div>
@@ -1719,32 +1914,46 @@ export function OperationsPanel({
 
         {view === "payments" ? (
           <div className="p-5" id="pagamentos">
-            <form
-              className="border-b border-[color:var(--border)] pb-6"
+            <div
+              className={[
+                "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+                paymentComposerOpen
+                  ? "mb-5 border-b border-[color:var(--border)] pb-5"
+                  : "border-b border-[color:var(--border)] pb-6"
+              ].join(" ")}
               id="payment-form"
-              noValidate
-              onSubmit={savePayment}
             >
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {paymentEditingId ? "Editar pagamento" : "Registrar pagamento"}
-                  </h2>
-                  <p className="mt-1 text-sm text-[color:var(--text-soft)]">
-                    O histórico atualiza imediatamente os valores recebidos e pendentes.
-                  </p>
-                </div>
-                {paymentEditingId ? (
-                  <button
-                    className="h-9 w-fit rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
-                    onClick={resetPaymentForm}
-                    type="button"
-                  >
-                    Cancelar edição
-                  </button>
-                ) : null}
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {paymentEditingId ? "Editar pagamento" : "Registrar pagamento"}
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--text-soft)]">
+                  O histórico atualiza imediatamente os valores recebidos e pendentes.
+                </p>
               </div>
+              <button
+                className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium transition-transform duration-200 active:scale-95"
+                onClick={() => {
+                  if (paymentComposerOpen) {
+                    resetPaymentForm();
+                    setPaymentComposerOpen(false);
+                  } else {
+                    setPaymentComposerOpen(true);
+                  }
+                }}
+                type="button"
+              >
+                {paymentComposerOpen ? <X className="size-4" /> : <Plus className="size-4" />}
+                {paymentComposerOpen ? "Fechar pagamento" : "Registrar pagamento"}
+              </button>
+            </div>
 
+            {paymentComposerOpen ? (
+              <form
+                className="border-b border-[color:var(--border)] pb-6 pt-5"
+                noValidate
+                onSubmit={savePayment}
+              >
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <label className="block">
                   <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
@@ -1825,7 +2034,7 @@ export function OperationsPanel({
                 </label>
               </div>
 
-              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.7fr)_auto] lg:items-end">
+              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.7fr)] lg:items-end">
                 <label className="block">
                   <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                     Observação
@@ -1916,18 +2125,6 @@ export function OperationsPanel({
                     ) : null}
                   </div>
                 </div>
-
-                <button
-                  className="button-primary h-11 px-4 text-sm font-medium disabled:opacity-60"
-                  disabled={isSaving}
-                  type="submit"
-                >
-                  {isSaving
-                    ? "Salvando"
-                    : paymentEditingId
-                      ? "Salvar alterações"
-                      : "Registrar"}
-                </button>
               </div>
 
               {paymentEditingId &&
@@ -1944,17 +2141,43 @@ export function OperationsPanel({
               ) : null}
 
               <div className="mt-5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ReceiptText className="size-4 text-sky-400" />
-                  <span className="text-sm font-medium text-[color:var(--app-text-strong)]">
-                    Nota fiscal
+                <button
+                  aria-checked={paymentInvoiceOpen}
+                  className="flex w-full items-center justify-between gap-4 text-left"
+                  onClick={() => setPaymentInvoiceOpen((current) => !current)}
+                  role="switch"
+                  type="button"
+                >
+                  <span>
+                    <span className="flex items-center gap-2 text-sm font-medium text-[color:var(--app-text-strong)]">
+                      <ReceiptText className="size-4 text-sky-400" />
+                      Nota fiscal
+                    </span>
+                    <span className="mt-1 block text-xs text-[color:var(--text-soft)]">
+                      Guardada separadamente do comprovante.
+                    </span>
                   </span>
-                  <span className="text-xs text-[color:var(--text-faint)]">
-                    Guardada separadamente do comprovante
+                  <span
+                    aria-hidden
+                    className={[
+                      "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
+                      paymentInvoiceOpen
+                        ? "border-sky-500/40 bg-sky-500/25"
+                        : "border-[color:var(--border-strong)] bg-[var(--input-bg)]"
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "absolute top-1/2 size-4 -translate-y-1/2 rounded-full bg-[var(--app-text-strong)] transition-[left]",
+                        paymentInvoiceOpen ? "left-6" : "left-1"
+                      ].join(" ")}
+                    />
                   </span>
-                </div>
+                </button>
 
-                <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.8fr)]">
+                {paymentInvoiceOpen ? (
+                  <>
+                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.8fr)]">
                   <label className="block">
                     <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                       Chave NFS-e / NF-e
@@ -2061,8 +2284,26 @@ export function OperationsPanel({
                     Remover a nota fiscal atual ao salvar
                   </label>
                 ) : null}
+                  </>
+                ) : null}
               </div>
-            </form>
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  className="button-primary inline-flex h-11 items-center gap-2 px-5 text-sm font-medium disabled:opacity-60"
+                  disabled={isSaving}
+                  type="submit"
+                >
+                  {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {isSaving
+                    ? "Salvando"
+                    : paymentEditingId
+                      ? "Salvar alterações"
+                      : "Registrar pagamento"}
+                </button>
+              </div>
+              </form>
+            ) : null}
 
             <div className="pt-6">
               <h2 className="text-lg font-semibold text-amber-400">Histórico de pagamentos</h2>
@@ -2120,6 +2361,7 @@ export function OperationsPanel({
                             aria-label={`Baixar comprovante de ${payment.projectName}`}
                             className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                             href={`/api/payments/${payment.id}/receipt?download=1`}
+                            onClick={() => notifyDownload("comprovante")}
                             title="Baixar comprovante"
                           >
                             <Download className="size-4" />
@@ -2178,6 +2420,7 @@ export function OperationsPanel({
                                 aria-label={`Baixar nota fiscal de ${payment.projectName}`}
                                 className="grid size-9 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
                                 href={`/api/payments/${payment.id}/invoice?download=1`}
+                                onClick={() => notifyDownload("nota fiscal")}
                                 title="Baixar nota fiscal"
                               >
                                 <Download className="size-4" />
@@ -2628,7 +2871,7 @@ export function OperationsPanel({
                         <button
                           aria-pressed={projectDraft.reminderAmountMode === value}
                           className={[
-                            "h-9 rounded px-2 text-xs transition-all duration-200 ease-out active:scale-95 sm:text-sm",
+                            "inline-flex h-9 items-center justify-center truncate rounded px-2 text-xs transition-all duration-200 ease-out active:scale-95",
                             projectDraft.reminderAmountMode === value
                               ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
                               : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
@@ -2647,6 +2890,11 @@ export function OperationsPanel({
                         </button>
                       ))}
                     </div>
+                    <span className="mt-1.5 block text-xs text-[color:var(--text-faint)]">
+                      {projectDraft.reminderAmountMode === "FIXED"
+                        ? "Cobra um valor fixo definido por você."
+                        : "Usa o valor pendente atual do projeto."}
+                    </span>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -2682,17 +2930,28 @@ export function OperationsPanel({
                     )}
                     <div className="block">
                       <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
-                        Data do lembrete
+                        Data e hora do lembrete
                       </span>
-                      <DateField
-                        ariaLabel="Data do lembrete"
-                        onChange={(value) =>
-                          setProjectDraft((current) =>
-                            current ? { ...current, reminderDueDate: value } : current
-                          )
-                        }
-                        value={projectDraft.reminderDueDate}
-                      />
+                      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
+                        <DateField
+                          ariaLabel="Data do lembrete"
+                          onChange={(value) =>
+                            setProjectDraft((current) =>
+                              current ? { ...current, reminderDueDate: value } : current
+                            )
+                          }
+                          value={projectDraft.reminderDueDate}
+                        />
+                        <TimeField
+                          ariaLabel="Hora do lembrete"
+                          onChange={(value) =>
+                            setProjectDraft((current) =>
+                              current ? { ...current, reminderDueTime: value } : current
+                            )
+                          }
+                          value={projectDraft.reminderDueTime}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -2904,8 +3163,9 @@ export function OperationsPanel({
                   : ""}
               </p>
               <a
-                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium transition-transform duration-200 active:scale-[0.97]"
                 href={`/api/payments/${receiptPreview.id}/receipt?download=1`}
+                onClick={() => notifyDownload("comprovante")}
               >
                 <Download className="size-4" />
                 Baixar comprovante
@@ -2921,6 +3181,150 @@ export function OperationsPanel({
           projectId={notesProject.id}
           projectName={notesProject.name}
         />
+      ) : null}
+
+      {previewClient ? (
+        <Modal onClose={() => setPreviewClient(null)} title="Detalhes do cliente">
+          <div className="space-y-4 p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-lg font-semibold text-[color:var(--app-text-strong)]">
+                {previewClient.name}
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                <StatusPulse tone={previewClient.statusTone} />
+                {previewClient.statusLabel}
+              </span>
+            </div>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <DetailRow label="Email" value={previewClient.email ?? "—"} />
+              <DetailRow
+                label="Telefone"
+                value={previewClient.phone ? formatPhone(previewClient.phone) : "—"}
+              />
+              <DetailRow
+                label="CPF/CNPJ"
+                value={previewClient.taxId ? formatTaxId(previewClient.taxId) : "—"}
+              />
+              <DetailRow
+                label="Projetos vinculados"
+                value={`${previewClient.projectCount} ${
+                  previewClient.projectCount === 1 ? "projeto" : "projetos"
+                }`}
+              />
+              <DetailRow label="Cadastrado em" value={previewClient.createdAtLabel} />
+              <DetailRow
+                label="Endereço"
+                value={previewClient.address ?? "—"}
+                full
+              />
+              {previewClient.notes ? (
+                <DetailRow label="Observações" value={previewClient.notes} full />
+              ) : null}
+            </dl>
+            <div className="flex justify-end gap-2 border-t border-[color:var(--border)] pt-4">
+              <button
+                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] active:scale-[0.98]"
+                onClick={() => setPreviewClient(null)}
+                type="button"
+              >
+                Fechar
+              </button>
+              <button
+                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium transition-transform duration-200 active:scale-[0.98]"
+                onClick={() => {
+                  const client = clients.find((item) => item.id === previewClient.id);
+                  setPreviewClient(null);
+                  if (client) {
+                    openClient(client);
+                  }
+                }}
+                type="button"
+              >
+                <Pencil className="size-4" />
+                Editar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {previewProject ? (
+        <Modal onClose={() => setPreviewProject(null)} title="Detalhes do projeto">
+          <div className="space-y-4 p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-lg font-semibold text-[color:var(--app-text-strong)]">
+                {previewProject.name}
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                <StatusPulse tone={previewProject.projectStatusTone} />
+                {previewProject.projectStatusLabel}
+              </span>
+              {previewProject.reminderEnabled && previewProject.reminderStatusLabel ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                  <StatusPulse tone={previewProject.reminderStatusTone} />
+                  Lembrete: {previewProject.reminderStatusLabel}
+                </span>
+              ) : null}
+            </div>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <DetailRow label="Cliente" value={previewProject.clientName ?? "Sem cliente"} />
+              <DetailRow
+                label="Tipo de cobrança"
+                value={previewProject.billingMode === "FIXED" ? "Preço fechado" : "Por horas"}
+              />
+              <DetailRow label="Horas WakaTime" value={previewProject.wakatimeLabel} />
+              <DetailRow label="Horas dedicadas" value={previewProject.dedicatedLabel} />
+              <DetailRow
+                label={previewProject.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado"}
+                value={previewProject.totalValueLabel}
+              />
+              <DetailRow label="Valor recebido" value={previewProject.receivedValueLabel} />
+              <DetailRow
+                label={previewProject.pendingIsCredit ? "Excedente" : "Valor pendente"}
+                value={previewProject.pendingValueLabel}
+              />
+              <DetailRow label="Criado em" value={previewProject.createdAtLabel} />
+              {previewProject.repositoryUrl ? (
+                <DetailRow
+                  full
+                  label="Repositório"
+                  value={previewProject.repositoryUrl}
+                />
+              ) : null}
+              <DetailRow
+                full
+                label="Link compartilhável"
+                value={previewProject.sharePath ? "Ativo" : "Não criado"}
+              />
+              {previewProject.notes ? (
+                <DetailRow full label="Observações" value={previewProject.notes} />
+              ) : null}
+            </dl>
+            <div className="flex justify-end gap-2 border-t border-[color:var(--border)] pt-4">
+              <button
+                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] active:scale-[0.98]"
+                onClick={() => setPreviewProject(null)}
+                type="button"
+              >
+                Fechar
+              </button>
+              <button
+                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium transition-transform duration-200 active:scale-[0.98]"
+                onClick={() => {
+                  const project = projects.find((item) => item.id === previewProject.id);
+                  setPreviewProject(null);
+                  if (project) {
+                    openProject(project);
+                  }
+                }}
+                type="button"
+              >
+                <Pencil className="size-4" />
+                Editar
+              </button>
+            </div>
+          </div>
+        </Modal>
       ) : null}
 
       {invoicePreview ? (
@@ -2981,8 +3385,9 @@ export function OperationsPanel({
                   : ""}
               </p>
               <a
-                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+                className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium transition-transform duration-200 active:scale-[0.97]"
                 href={`/api/payments/${invoicePreview.id}/invoice?download=1`}
+                onClick={() => notifyDownload("nota fiscal")}
               >
                 <Download className="size-4" />
                 Baixar nota fiscal

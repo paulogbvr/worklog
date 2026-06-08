@@ -8,11 +8,14 @@ import { StatusPulse, type StatusTone } from "@/components/status-pulse";
 export type NotificationCenterItem = {
   createdAtLabel: string;
   id: string;
+  isReminder?: boolean;
   message: string;
   read: boolean;
   title: string;
   tone: StatusTone;
 };
+
+type NotificationFilter = "all" | "unread" | "reminders";
 
 export function NotificationsCenter({
   defaultMode = "unread",
@@ -21,20 +24,26 @@ export function NotificationsCenter({
   showReadControls = true,
   title = "Importantes"
 }: {
-  defaultMode?: "all" | "unread";
+  defaultMode?: NotificationFilter;
   description?: string;
   initialItems: NotificationCenterItem[];
   showReadControls?: boolean;
   title?: string;
 }) {
   const [items, setItems] = useState(initialItems);
-  const [mode, setMode] = useState<"all" | "unread">(defaultMode);
+  const [mode, setMode] = useState<NotificationFilter>(defaultMode);
   const router = useRouter();
   const visibleItems = useMemo(
-    () => (mode === "unread" ? items.filter((item) => !item.read) : items),
+    () =>
+      mode === "unread"
+        ? items.filter((item) => !item.read)
+        : mode === "reminders"
+          ? items.filter((item) => item.isReminder)
+          : items,
     [items, mode]
   );
   const unreadCount = items.filter((item) => !item.read).length;
+  const reminderCount = items.filter((item) => item.isReminder).length;
 
   async function markRead(id: string) {
     const response = await fetch(`/api/notifications/${id}`, {
@@ -75,27 +84,32 @@ export function NotificationsCenter({
         </div>
         {showReadControls ? (
           <div className="flex flex-wrap items-center gap-3">
-            <div className="grid w-fit grid-cols-2 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
-              {(
-                [
-                  ["unread", `Não lidas (${unreadCount})`],
-                  ["all", "Todas"]
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  className={[
-                    "h-9 rounded px-3 text-sm transition-all duration-200 ease-out active:scale-95",
-                    mode === value
-                      ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
-                      : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
-                  ].join(" ")}
-                  key={value}
-                  onClick={() => setMode(value)}
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="-mx-1 max-w-full overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="inline-flex w-max gap-0.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-1">
+                {(
+                  [
+                    ["all", "Todas", items.length],
+                    ["unread", "Não lidas", unreadCount],
+                    ["reminders", "Lembretes", reminderCount]
+                  ] as const
+                ).map(([value, label, count]) => (
+                  <button
+                    aria-pressed={mode === value}
+                    className={[
+                      "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-3 text-xs transition-all duration-200 ease-out active:scale-95",
+                      mode === value
+                        ? "bg-[var(--active-bg)] text-[color:var(--app-text-strong)] shadow-sm"
+                        : "text-[color:var(--text-muted)] hover:text-[color:var(--app-text-strong)]"
+                    ].join(" ")}
+                    key={value}
+                    onClick={() => setMode(value)}
+                    type="button"
+                  >
+                    {label}
+                    <span className="text-[10px] tabular-nums opacity-60">{count}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             {unreadCount > 0 ? (
               <button

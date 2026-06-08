@@ -26,8 +26,13 @@ Utiliza o WakaTime como fonte oficial de horas registradas em código e o Supaba
 | Notas/Tarefas Internas| ✅ Notas livres e checklists por projeto |
 | Lembretes de Pagamento| ✅ Configuração por projeto, notificação interna e WhatsApp |
 | Portal Compartilhável | ✅ Status, filtros, metadata dinâmica, eventos e PDF |
-| Notificações          | ✅ Importantes e atualizações |
-| Deploy                | ⚙️ Publicado, proteção pendente |
+| Notificações          | ✅ Importantes, atualizações e lembretes |
+| Busca e preview       | ✅ Busca em clientes/projetos e visualização rápida |
+| Deploy                | ⚙️ Publicado, proteção/admin pendente |
+| Autenticação          | ❌ Pendente (login, perfil, sessão) |
+| Modo público/admin    | ❌ Pendente (separação de acesso) |
+| Plano/assinatura      | ❌ Pendente (gateway de pagamento) |
+| Revisão de segurança  | ❌ Pendente (hardening de APIs e dados) |
 
 Site publicado:
 
@@ -35,10 +40,28 @@ Site publicado:
 https://worklog-projects.vercel.app/
 ```
 
+### Direção do Projeto
+
+O WorkLog começou como um projeto pessoal/open source de controle de horas e pagamentos, mas
+cresceu e agora caminha para um produto **SaaS multiusuário**. O núcleo funcional (horas, projetos,
+clientes, pagamentos, notas fiscais, lembretes, portal compartilhável) está sólido e em produção,
+porém ainda **não** está pronto para uso público multiusuário.
+
+Antes de abrir para outros usuários, ainda falta:
+
+- login de usuários e área de perfil/conta;
+- separação clara entre modo público e modo admin;
+- plano/assinatura com gateway de pagamento (ex.: AbacatePay ou similar);
+- revisão forte de segurança e hardening das APIs;
+- proteção de dados sensíveis e revisão contra vazamento;
+- painel admin para acompanhar usuários/clientes;
+- landing page de apresentação.
+
 ### Progresso Geral
 
 ```txt
-███████████████████▓ 99%
+Núcleo funcional ████████████████████ pronto
+Plataforma SaaS  ██████░░░░░░░░░░░░░░░░ em evolução
 ```
 
 ---
@@ -812,8 +835,10 @@ Assets de identidade:
 
 Implementar:
 
-- proteção administrativa antes de ampliar o uso público
-- validar o novo fluxo no deploy da Vercel
+- autenticação de usuários e área de perfil/conta
+- separação entre modo público e modo admin
+- revisão de segurança antes de ampliar o uso público
+- validar os novos fluxos no deploy da Vercel
 
 Após conclusão de cada etapa importante, atualizar:
 
@@ -822,3 +847,68 @@ Após conclusão de cada etapa importante, atualizar:
 - próxima etapa
 - docs/project-memory/PROGRESS.md
 - docs/project-memory/TASK_PLAN.md
+
+---
+
+# Roadmap
+
+Itens planejados/parcialmente implementados. Quando um item for grande, a versão
+essencial entra primeiro e o restante fica documentado aqui.
+
+## Dashboard e filtros
+
+- **Comparação com período anterior** nos blocos e gráficos (7D vs 7D anteriores,
+  30D vs 30D anteriores, personalizado vs intervalo de mesma duração). Mostrar
+  seta de alta/baixa e percentual discreto; gráfico do período anterior em linha
+  cinza/discreta com tooltip indicando que é comparação.
+- **Conversão de horas em dias** nos blocos de tempo quando ≥ 24h (ex.: `28h30min
+  → 1D 4:30H`). ✅ Implementado.
+- **Saudação dinâmica** no título da dashboard conforme o horário local. ✅
+  Implementado.
+- **Filtro local da seção “Operação atual”** independente do filtro global da
+  dashboard (não deve afetar gráficos nem resumo do período).
+- **Filtro por calendário personalizado** (data inicial/final) em `/dashboard`,
+  `/operations`, `/records` e `/payments`, usando os campos de data já corrigidos,
+  além de 7D/30D/ALL.
+
+## Busca e gestão
+
+- **Busca** em clientes e projetos (nome, e-mail, telefone, CPF/CNPJ, status,
+  cliente vinculado). ✅ Implementado (clientes e projetos).
+- **Ordenações/filtros úteis** na página de clientes (recentes, nome, com/sem
+  projeto, maior pendência). ✅ Implementado.
+- **Visualização prévia** (preview) de cliente e projeto, somente leitura, com
+  data de criação. ✅ Implementado.
+- **Reordenar notas internas** do projeto (botões subir/descer; drag-and-drop
+  futuramente). ✅ Implementado via botões.
+
+## Plataforma / SaaS
+
+- **Login, perfil e configurações do usuário** na sidebar (conta, dados,
+  preferências, upload de foto, configuração de ambiente quando fizer sentido).
+- **Plano/assinatura** com gateway de pagamento (ex.: AbacatePay), separando o
+  modo público do modo admin.
+- **Internacionalização (i18n)** PT-BR e EN, com seletor compacto (PT/EN ou ícone
+  de globo) próximo aos botões inferiores da sidebar. Estrutura preparada para
+  mais idiomas no futuro.
+
+## Integrações futuras
+
+- **WakaTime — sincronização automática** por horário (ex.: Vercel Cron de hora
+  em hora), além do botão manual. Manter API key apenas no backend, registrar a
+  última sincronização, evitar sobrecarga do banco e, no modo público futuro,
+  restringir o sync a admin. Notificar o front quando houver dados novos.
+- **WhatsApp API oficial** para enviar lembretes de pagamento, confirmações de
+  pagamento e atualizações/resumos do projeto ao cliente, com templates
+  aprovados, mensagens agendadas, tokens seguros e webhooks — substituindo o
+  envio manual atual (que apenas abre o WhatsApp).
+- **MCP para Claude/Codex** ler as notas/tarefas internas (com autorização) e
+  ajudar a executar tarefas técnicas, transformando notas em briefings de IA e
+  registrando resultado, status e histórico. Depende de autenticação e da revisão
+  de segurança; deve respeitar permissões e nunca expor dados sensíveis.
+
+## Segurança (pré-requisito para uso público)
+
+- hardening das APIs e proteção de dados sensíveis;
+- separação de acesso público/admin;
+- revisão contra vazamento de dados antes de habilitar multiusuário.

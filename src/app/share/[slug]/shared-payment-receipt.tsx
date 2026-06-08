@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, FileText, X, ZoomIn, ZoomOut } from "lucide-react";
+import { useToast } from "@/components/toast-provider";
 
 export function SharedPaymentReceipt({
   isImage,
@@ -14,6 +15,7 @@ export function SharedPaymentReceipt({
 }) {
   const [open, setOpen] = useState(false);
   const [zoom, setZoom] = useState(100);
+  const { toast } = useToast();
   const src = `/api/payments/${paymentId}/receipt`;
 
   useEffect(() => {
@@ -33,17 +35,38 @@ export function SharedPaymentReceipt({
 
   return (
     <>
-      <button
-        className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 active:scale-[0.98]"
-        onClick={() => {
-          setZoom(100);
-          setOpen(true);
-        }}
-        type="button"
-      >
-        <FileText className="size-3.5" />
-        Ver comprovante
-      </button>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-400 transition-all duration-200 ease-out hover:bg-emerald-500/20 active:scale-[0.96]"
+          onClick={() => {
+            setZoom(100);
+            setOpen(true);
+            toast({
+              message: "Abrindo o comprovante de pagamento.",
+              title: "Comprovante",
+              tone: "info"
+            });
+          }}
+          type="button"
+        >
+          <FileText className="size-3.5" />
+          Ver comprovante
+        </button>
+        <a
+          className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--border)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.96]"
+          href={`${src}?download=1`}
+          onClick={() =>
+            toast({
+              message: "O comprovante será baixado em instantes.",
+              title: "Baixando comprovante",
+              tone: "success"
+            })
+          }
+        >
+          <Download className="size-3.5" />
+          Baixar
+        </a>
+      </div>
 
       {open ? (
         <div className="fixed inset-0 z-[180] grid place-items-center bg-black/70 p-4 backdrop-blur-sm">

@@ -152,3 +152,50 @@ export async function POST(
     );
   }
 }
+
+// Reorders the project's notes from an ordered list of note ids.
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const body = (await request.json()) as { order?: unknown };
+    const order = Array.isArray(body.order)
+      ? body.order.filter((value): value is string => typeof value === "string")
+      : [];
+
+    if (order.length === 0) {
+      return NextResponse.json(
+        {
+          error: "Nenhuma ordem informada.",
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
+    await prisma.$transaction(
+      order.map((noteId, index) =>
+        prisma.projectNote.updateMany({
+          data: { position: index },
+          where: { id: noteId, projectId: id }
+        })
+      )
+    );
+
+    revalidatePath("/projects", "page");
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    logPrismaError("project notes reorder", error);
+
+    return NextResponse.json(
+      {
+        error: "Não foi possível reordenar as notas.",
+        ok: false
+      },
+      { status: 500 }
+    );
+  }
+}

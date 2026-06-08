@@ -50,6 +50,8 @@ export type DashboardClient = {
   id: string;
   name: string;
   notes: string | null;
+  pendingValue: number;
+  pendingValueLabel: string;
   phone: string | null;
   projectCount: number;
   status: ClientStatusValue | null;
@@ -93,11 +95,13 @@ export type DashboardProject = {
   chargeWakaTime: boolean;
   clientId: string | null;
   clientName: string | null;
+  createdAtLabel: string;
   clientPhone: string | null;
   reminderEnabled: boolean;
   reminderAmountMode: "FIXED" | "PENDING";
   reminderFixedAmount: number | null;
   reminderDueDate: string | null;
+  reminderDueTime: string | null;
   reminderMessage: string | null;
   reminderStatus: "ACTIVE" | "DISABLED" | "SENT" | null;
   reminderStatusLabel: string | null;
@@ -189,11 +193,28 @@ export type DashboardSummary = {
   periodReceivedValue: number;
   periodReceivedValueLabel: string;
   periodWakaTimeLabel: string;
+  periodWakaTimeDaysLabel: string | null;
+  periodDedicatedDaysLabel: string | null;
   projectOptions: Array<{ id: string; name: string }>;
   projects: DashboardProject[];
   selectedProjectId: string | null;
   workOperations: DashboardWorkOperation[];
 };
+
+// Compact "days" hint for durations of 24h or more, e.g. 28h30min -> "1D 4:30H".
+export function formatDaysHint(totalSeconds: number) {
+  if (totalSeconds < 24 * 3600) {
+    return null;
+  }
+
+  const totalMinutes = Math.round(totalSeconds / 60);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const remainingMinutes = totalMinutes - days * 24 * 60;
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+
+  return `${days}D ${hours}:${minutes.toString().padStart(2, "0")}H`;
+}
 
 export function formatDuration(totalSeconds: number) {
   if (totalSeconds <= 0) {
@@ -285,6 +306,15 @@ function getDatabaseDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function formatLocalTime(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    timeZone: TIME_ZONE
+  }).format(date);
+}
+
 function formatChartDate(dateKey: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -347,6 +377,8 @@ function getEmptySummary(
     periodReceivedValue: 0,
     periodReceivedValueLabel: "R$ 0,00",
     periodWakaTimeLabel: "0h",
+    periodWakaTimeDaysLabel: null,
+    periodDedicatedDaysLabel: null,
     projectOptions: [],
     projects: [],
     selectedProjectId: null,
@@ -739,9 +771,8 @@ export async function getDashboardSummary(
     const shareLink = project.shareLinks[0];
     const projectStatus = getProjectStatusMeta(project.status);
     const reminder = project.paymentReminder;
-    const reminderDueDateKey = reminder
-      ? getDatabaseDateKey(reminder.dueDate)
-      : null;
+    const reminderDueDateKey = reminder ? getLocalDateKey(reminder.dueDate) : null;
+    const reminderDueTime = reminder ? formatLocalTime(reminder.dueDate) : null;
     let reminderStatusLabel: string | null = null;
     let reminderStatusTone: StatusTone = "neutral";
 
@@ -749,7 +780,7 @@ export async function getDashboardSummary(
       if (reminder.status === "SENT") {
         reminderStatusLabel = "Enviado";
         reminderStatusTone = "success";
-      } else if (reminderDueDateKey && reminderDueDateKey < todayKey) {
+      } else if (reminder.dueDate.getTime() < Date.now()) {
         reminderStatusLabel = "Vencido";
         reminderStatusTone = "error";
       } else if (reminderDueDateKey === todayKey) {
@@ -774,6 +805,7 @@ export async function getDashboardSummary(
       reminderAmountMode: reminder?.amountMode ?? "PENDING",
       reminderFixedAmount: reminder?.fixedAmount ? Number(reminder.fixedAmount) : null,
       reminderDueDate: reminderDueDateKey,
+      reminderDueTime,
       reminderMessage: reminder?.message ?? null,
       reminderStatus: reminder?.status ?? null,
       reminderStatusLabel,
@@ -783,6 +815,7 @@ export async function getDashboardSummary(
         Math.abs(comparisonDelta)
       )}`,
       comparisonPositive: comparisonDelta >= 0,
+      createdAtLabel: formatClientCreatedAt(project.createdAt),
       dedicatedHourlyRate,
       dedicatedLabel: formatDuration(dedicatedSeconds),
       dedicatedValueLabel: formatCurrency(dedicatedValue),
@@ -906,6 +939,16 @@ export async function getDashboardSummary(
     (project) => project.statusLabel === "Pendente"
   ).length;
   const configuredProjects = projectSummaries.length - pendingProjects;
+  const pendingByClient = new Map<string, number>();
+
+  for (const project of projectSummaries) {
+    if (project.clientId && !project.pendingIsCredit && project.pendingValue > 0) {
+      pendingByClient.set(
+        project.clientId,
+        (pendingByClient.get(project.clientId) ?? 0) + project.pendingValue
+      );
+    }
+  }
 
   return {
     activeProjects: projectSummaries.length,
@@ -924,6 +967,7 @@ export async function getDashboardSummary(
     clients: clients.map((client) => {
       const projectCount = activeProjectCountByClient.get(client.id) ?? 0;
       const clientStatus = resolveClientStatus(client.status, projectCount);
+      const clientPending = pendingByClient.get(client.id) ?? 0;
 
       return {
         address: client.address,
@@ -934,6 +978,8 @@ export async function getDashboardSummary(
         id: client.id,
         name: client.name,
         notes: client.notes,
+        pendingValue: clientPending,
+        pendingValueLabel: formatCurrency(clientPending),
         phone: client.phone,
         projectCount,
         status: client.status,
@@ -1018,6 +1064,8 @@ export async function getDashboardSummary(
     periodReceivedValue: totalReceivedValue,
     periodReceivedValueLabel: formatCurrency(totalReceivedValue),
     periodWakaTimeLabel: formatDuration(totalWakaTimeSeconds),
+    periodWakaTimeDaysLabel: formatDaysHint(totalWakaTimeSeconds),
+    periodDedicatedDaysLabel: formatDaysHint(totalDedicatedSeconds),
     projectOptions: projects.map((project) => ({
       id: project.id,
       name: project.name

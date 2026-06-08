@@ -300,7 +300,7 @@ model PaymentReminder {
   clientId      String?
   amountMode    ReminderAmountMode @default(PENDING)
   fixedAmount   Decimal?           @db.Decimal(12, 2)
-  dueDate       DateTime           @db.Date
+  dueDate       DateTime
   message       String?
   status        ReminderStatus     @default(ACTIVE)
   sentAt        DateTime?

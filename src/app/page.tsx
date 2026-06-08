@@ -1,7 +1,10 @@
 import { Clock3, Code2, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { DashboardCharts } from "@/components/dashboard-charts";
+import { DashboardData } from "@/components/dashboard-data";
 import { DashboardFilters } from "@/components/dashboard-filters";
+import { DashboardGreeting } from "@/components/dashboard-greeting";
+import { Skeleton } from "@/components/skeleton";
 import { StatusPulse } from "@/components/status-pulse";
 import { SyncNowButton } from "@/components/wakatime/sync-now-button";
 import { getServerEnvStatus } from "@/lib/env";
@@ -56,16 +59,16 @@ export default async function Home({
   return (
     <AppShell envStatus={envStatus}>
       <header className="border-b border-[color:var(--border)] pb-6" id="dashboard">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm text-[color:var(--text-muted)]">Dashboard</p>
             <h1 className="mt-1 text-2xl font-semibold leading-tight text-[color:var(--app-text-strong)] sm:text-3xl">
-              Visão financeira
+              <DashboardGreeting />
             </h1>
           </div>
           <DashboardFilters
             actions={
-              <span className="xl:hidden">
+              <span className="lg:hidden">
                 <SyncNowButton />
               </span>
             }
@@ -76,7 +79,7 @@ export default async function Home({
         </div>
 
         <div className="mt-3 flex flex-col items-end gap-2">
-          <div className="hidden xl:block">
+          <div className="hidden lg:block">
             <SyncNowButton />
           </div>
           <div className="inline-flex w-fit max-w-full items-center gap-2.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[color:var(--text-muted)]">
@@ -96,6 +99,29 @@ export default async function Home({
         </section>
       ) : null}
 
+      <DashboardData
+        skeleton={
+          <>
+            <section className="py-7">
+              <div className="mb-4">
+                <Skeleton className="h-3.5 w-40" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                {["m1", "m2", "m3"].map((key) => (
+                  <Skeleton className="h-[92px]" key={key} />
+                ))}
+              </div>
+            </section>
+            <Skeleton className="h-72 w-full" />
+            <section className="mt-8 space-y-3">
+              <Skeleton className="h-20 w-full" />
+              {["r1", "r2", "r3"].map((key) => (
+                <Skeleton className="h-16 w-full" key={key} />
+              ))}
+            </section>
+          </>
+        }
+      >
       <section className="py-7">
         <div className="mb-4">
           <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
@@ -105,18 +131,21 @@ export default async function Home({
         <div className="grid gap-4 md:grid-cols-3">
           {[
             {
+              hint: dashboard.periodWakaTimeDaysLabel,
               icon: Code2,
               label: `WakaTime ${periodContext}`,
               tone: "bg-blue-500/10 text-blue-400",
               value: dashboard.periodWakaTimeLabel
             },
             {
+              hint: dashboard.periodDedicatedDaysLabel,
               icon: Clock3,
               label: `Horas dedicadas ${periodContext}`,
               tone: "bg-amber-500/10 text-amber-500",
               value: dashboard.periodDedicatedLabel
             },
             {
+              hint: null,
               icon: WalletCards,
               label: `Valor pendente ${periodContext}`,
               tone: "bg-emerald-500/10 text-emerald-400",
@@ -135,7 +164,14 @@ export default async function Home({
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs leading-5 text-[color:var(--text-soft)]">{item.label}</p>
-                  <p className="mt-1 truncate text-xl font-semibold">{item.value}</p>
+                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 truncate text-xl font-semibold">
+                    {item.value}
+                    {item.hint ? (
+                      <span className="text-[11px] font-medium text-[color:var(--text-faint)]">
+                        {item.hint}
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
               </article>
             );
@@ -255,6 +291,7 @@ export default async function Home({
           )}
         </div>
       </section>
+      </DashboardData>
     </AppShell>
   );
 }

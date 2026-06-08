@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Download, FileText, ReceiptText, X, ZoomIn, ZoomOut } from "lucide-react";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { useToast } from "@/components/toast-provider";
 
 export function SharedPaymentInvoice({
   hasFile,
@@ -22,6 +23,7 @@ export function SharedPaymentInvoice({
   const [open, setOpen] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
   const src = `/api/payments/${paymentId}/invoice`;
 
   useEffect(() => {
@@ -48,8 +50,17 @@ export function SharedPaymentInvoice({
       await copyTextToClipboard(invoiceKey);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
+      toast({
+        message: "A chave da nota fiscal está na área de transferência.",
+        title: "Chave copiada",
+        tone: "success"
+      });
     } catch {
-      // Sem permissão para a Clipboard API; o cliente ainda pode copiar manualmente.
+      toast({
+        message: "Não foi possível copiar a chave. Copie manualmente.",
+        title: "Erro ao copiar",
+        tone: "error"
+      });
     }
   }
 
@@ -86,10 +97,15 @@ export function SharedPaymentInvoice({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {isViewable ? (
             <button
-              className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/20 active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-1.5 text-xs font-medium text-sky-400 transition-all duration-200 ease-out hover:bg-sky-500/20 active:scale-[0.96]"
               onClick={() => {
                 setZoom(100);
                 setOpen(true);
+                toast({
+                  message: "Abrindo a nota fiscal.",
+                  title: "Nota fiscal",
+                  tone: "info"
+                });
               }}
               type="button"
             >
@@ -98,8 +114,15 @@ export function SharedPaymentInvoice({
             </button>
           ) : null}
           <a
-            className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--border)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--border)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.96]"
             href={`${src}?download=1`}
+            onClick={() =>
+              toast({
+                message: "A nota fiscal será baixada em instantes.",
+                title: "Baixando nota fiscal",
+                tone: "success"
+              })
+            }
           >
             <Download className="size-3.5" />
             Baixar nota

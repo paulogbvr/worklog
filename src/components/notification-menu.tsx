@@ -15,6 +15,7 @@ type NotificationItem = {
   title: string;
   type:
     | "ENV_WARNING"
+    | "PAYMENT_REMINDER_DUE"
     | "PROJECT_STATUS_CHANGED"
     | "SHARE_ACCESSED"
     | "SHARE_COPIED"
@@ -61,6 +62,10 @@ function notificationTone(type: NotificationItem["type"]) {
 
   if (type === "SYNC_SUCCESS" || type === "SHARE_CREATED") {
     return "success" as const;
+  }
+
+  if (type === "PAYMENT_REMINDER_DUE") {
+    return "warning" as const;
   }
 
   return "neutral" as const;

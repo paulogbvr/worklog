@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
   ListChecks,
   Loader2,
+  Pencil,
   Plus,
   Square,
   StickyNote,
@@ -46,6 +49,16 @@ export function ProjectNotesModal({
   const [draftItems, setDraftItems] = useState<DraftItem[]>([
     { completed: false, key: "draft-0", text: "" }
   ]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editItems, setEditItems] = useState<DraftItem[]>([]);
+  // Monotonic counter for stable draft item keys without impure render-time calls.
+  const keyCounter = useRef(0);
+  const nextKey = (prefix: string) => {
+    keyCounter.current += 1;
+    return `${prefix}-${keyCounter.current}`;
+  };
 
   const loadNotes = useCallback(async () => {
     try {
@@ -90,7 +103,7 @@ export function ProjectNotesModal({
   function resetComposer() {
     setTitle("");
     setContent("");
-    setDraftItems([{ completed: false, key: `draft-${Date.now()}`, text: "" }]);
+    setDraftItems([{ completed: false, key: nextKey("draft"), text: "" }]);
   }
 
   async function createNote() {
@@ -209,6 +222,106 @@ export function ProjectNotesModal({
         title: "Erro ao remover",
         tone: "error"
       });
+    }
+  }
+
+  async function moveNote(index: number, direction: -1 | 1) {
+    const target = index + direction;
+
+    if (target < 0 || target >= notes.length) {
+      return;
+    }
+
+    const reordered = [...notes];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(target, 0, moved);
+    setNotes(reordered);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/notes`, {
+        body: JSON.stringify({ order: reordered.map((note) => note.id) }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH"
+      });
+
+      if (!response.ok) {
+        throw new Error();
+      }
+    } catch {
+      setNotes(notes);
+      toast({
+        message: "Não foi possível salvar a nova ordem.",
+        title: "Erro ao reordenar",
+        tone: "error"
+      });
+    }
+  }
+
+  function startEdit(note: SerializedProjectNote) {
+    setEditingId(note.id);
+    setEditTitle(note.title ?? "");
+    setEditContent(note.content ?? "");
+    setEditItems(
+      note.items.length > 0
+        ? note.items.map((item, index) => ({
+            completed: item.completed,
+            key: `${item.id}-${index}`,
+            text: item.text
+          }))
+        : [{ completed: false, key: nextKey("edit"), text: "" }]
+    );
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(note: SerializedProjectNote) {
+    const items = editItems
+      .map((item) => ({ completed: item.completed, text: item.text.trim() }))
+      .filter((item) => item.text);
+
+    if (note.type === "FREE" && !editTitle.trim() && !editContent.trim()) {
+      toast({
+        message: "Escreva um título ou conteúdo para a nota.",
+        title: "Nota vazia",
+        tone: "error"
+      });
+      return;
+    }
+
+    if (note.type === "CHECKLIST" && !editTitle.trim() && items.length === 0) {
+      toast({
+        message: "Adicione um título ou pelo menos um item.",
+        title: "Checklist vazia",
+        tone: "error"
+      });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await patchNote(note.id, {
+        content: note.type === "FREE" ? editContent : null,
+        items: note.type === "CHECKLIST" ? items : [],
+        title: editTitle,
+        type: note.type
+      });
+      setEditingId(null);
+      toast({
+        message: "As alterações da nota foram salvas.",
+        title: "Nota atualizada",
+        tone: "success"
+      });
+    } catch {
+      toast({
+        message: "Não foi possível atualizar a nota.",
+        title: "Erro ao salvar",
+        tone: "error"
+      });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -332,7 +445,7 @@ export function ProjectNotesModal({
                   onClick={() =>
                     setDraftItems((current) => [
                       ...current,
-                      { completed: false, key: `draft-${Date.now()}`, text: "" }
+                      { completed: false, key: nextKey("draft"), text: "" }
                     ])
                   }
                   type="button"
@@ -366,8 +479,123 @@ export function ProjectNotesModal({
                 Nenhuma nota interna ainda. Use o espaço acima para registrar ideias e tarefas.
               </p>
             ) : (
-              notes.map((note) => {
+              notes.map((note, index) => {
                 const progressLabel = progress(note);
+
+                if (editingId === note.id) {
+                  return (
+                    <article
+                      className="rounded-md border border-[color:var(--border-strong)] bg-[var(--surface-subtle)] p-4"
+                      key={note.id}
+                    >
+                      <input
+                        className={fieldClass}
+                        onChange={(event) => setEditTitle(event.target.value)}
+                        placeholder="Título da nota (opcional)"
+                        value={editTitle}
+                      />
+
+                      {note.type === "FREE" ? (
+                        <textarea
+                          className={`${textareaClass} mt-3`}
+                          onChange={(event) => setEditContent(event.target.value)}
+                          placeholder="Ideias, decisões, pendências, observações internas..."
+                          value={editContent}
+                        />
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          {editItems.map((item, index) => (
+                            <div className="flex items-center gap-2" key={item.key}>
+                              <button
+                                aria-label={
+                                  item.completed
+                                    ? `Desmarcar item ${index + 1}`
+                                    : `Marcar item ${index + 1}`
+                                }
+                                className="grid size-11 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] active:scale-[0.97]"
+                                onClick={() =>
+                                  setEditItems((current) =>
+                                    current.map((draft) =>
+                                      draft.key === item.key
+                                        ? { ...draft, completed: !draft.completed }
+                                        : draft
+                                    )
+                                  )
+                                }
+                                type="button"
+                              >
+                                {item.completed ? (
+                                  <CheckSquare className="size-4 text-emerald-400" />
+                                ) : (
+                                  <Square className="size-4 text-[color:var(--text-faint)]" />
+                                )}
+                              </button>
+                              <input
+                                className={fieldClass}
+                                onChange={(event) =>
+                                  setEditItems((current) =>
+                                    current.map((draft) =>
+                                      draft.key === item.key
+                                        ? { ...draft, text: event.target.value }
+                                        : draft
+                                    )
+                                  )
+                                }
+                                placeholder={`Item ${index + 1}`}
+                                value={item.text}
+                              />
+                              <button
+                                aria-label={`Remover item ${index + 1}`}
+                                className="grid size-11 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                disabled={editItems.length === 1}
+                                onClick={() =>
+                                  setEditItems((current) =>
+                                    current.filter((draft) => draft.key !== item.key)
+                                  )
+                                }
+                                type="button"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                            onClick={() =>
+                              setEditItems((current) => [
+                                ...current,
+                                { completed: false, key: nextKey("edit"), text: "" }
+                              ])
+                            }
+                            type="button"
+                          >
+                            <Plus className="size-4" />
+                            Adicionar item
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex justify-end gap-2">
+                        <button
+                          className="inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-3 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                          onClick={cancelEdit}
+                          type="button"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium disabled:opacity-60"
+                          disabled={saving}
+                          onClick={() => void saveEdit(note)}
+                          type="button"
+                        >
+                          {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+                          Salvar nota
+                        </button>
+                      </div>
+                    </article>
+                  );
+                }
 
                 return (
                   <article
@@ -394,14 +622,44 @@ export function ProjectNotesModal({
                           ) : null}
                         </div>
                       </div>
-                      <button
-                        aria-label="Excluir nota"
-                        className="grid size-8 shrink-0 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
-                        onClick={() => void deleteNote(note.id)}
-                        type="button"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className="flex flex-col">
+                          <button
+                            aria-label="Mover nota para cima"
+                            className="grid h-4 w-7 place-items-center rounded-t-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] disabled:cursor-not-allowed disabled:opacity-30"
+                            disabled={index === 0}
+                            onClick={() => void moveNote(index, -1)}
+                            type="button"
+                          >
+                            <ChevronUp className="size-3.5" />
+                          </button>
+                          <button
+                            aria-label="Mover nota para baixo"
+                            className="grid h-4 w-7 place-items-center rounded-b-md border border-t-0 border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] disabled:cursor-not-allowed disabled:opacity-30"
+                            disabled={index === notes.length - 1}
+                            onClick={() => void moveNote(index, 1)}
+                            type="button"
+                          >
+                            <ChevronDown className="size-3.5" />
+                          </button>
+                        </div>
+                        <button
+                          aria-label="Editar nota"
+                          className="grid size-8 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.97]"
+                          onClick={() => startEdit(note)}
+                          type="button"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                        <button
+                          aria-label="Excluir nota"
+                          className="grid size-8 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
+                          onClick={() => void deleteNote(note.id)}
+                          type="button"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </div>
 
                     {note.type === "FREE" && note.content ? (

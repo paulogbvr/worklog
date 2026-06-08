@@ -1,5 +1,5 @@
 export const REMINDER_AMOUNT_MODES = [
-  ["PENDING", "Valor pendente integral"],
+  ["PENDING", "Pendente"],
   ["FIXED", "Valor fixo"]
 ] as const;
 
