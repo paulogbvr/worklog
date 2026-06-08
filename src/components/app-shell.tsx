@@ -19,7 +19,6 @@ import {
   Sun,
   UserRound,
   Users,
-  Workflow,
   X,
   type LucideIcon
 } from "lucide-react";
@@ -61,7 +60,6 @@ const navItems: NavItem[] = [
     path: "/notifications"
   },
   { label: "Perfil", href: "/profile", icon: UserRound, path: "/profile" },
-  { label: "Fluxo", href: "/flow", icon: Workflow, path: "/flow" },
   { label: "Instalação", href: "/installation", icon: Download, path: "/installation" },
   { label: "Sobre", href: "/about", icon: Info, path: "/about" }
 ];
