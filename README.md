@@ -884,20 +884,34 @@ essencial entra primeiro e o restante fica documentado aqui.
 
 ## Plataforma / SaaS
 
-- **Login, perfil e configurações do usuário** na sidebar (conta, dados,
+- **Perfil do usuário** — página `/profile` com nome de exibição editável,
+  persistido no banco (modelo `Profile`, singleton por enquanto). A saudação da
+  dashboard usa esse nome (ex.: "Bom dia, Paulo Oliveira"), com fallback simples
+  quando vazio. ✅ Primeiro passo implementado.
+- **Login e configurações completas do usuário** na sidebar (conta, autenticação,
   preferências, upload de foto, configuração de ambiente quando fizer sentido).
 - **Plano/assinatura** com gateway de pagamento (ex.: AbacatePay), separando o
   modo público do modo admin.
 - **Internacionalização (i18n)** PT-BR e EN, com seletor compacto (PT/EN ou ícone
-  de globo) próximo aos botões inferiores da sidebar. Estrutura preparada para
-  mais idiomas no futuro.
+  de globo) próximo aos botões inferiores da sidebar, e botões inferiores apenas
+  com ícone (sem o texto "Notificações"). Requer infraestrutura de tradução de
+  toda a interface, por isso fica como próxima etapa estruturada.
+- **Configuração de variáveis pela interface (admin)** — área segura para
+  configurar WakaTime API Key, Supabase, WhatsApp API, gateway de pagamento e
+  dados/imagens da instância. Regras obrigatórias: campos mascarados, salvar
+  segredos somente no backend, nunca expor secrets no client, nunca usar
+  localStorage para segredo, e botões de visualizar/copiar/testar conexão. Por
+  ora apenas documentado; qualquer protótipo deve ser só visual, sem persistir
+  secrets reais.
 
 ## Integrações futuras
 
-- **WakaTime — sincronização automática** por horário (ex.: Vercel Cron de hora
-  em hora), além do botão manual. Manter API key apenas no backend, registrar a
-  última sincronização, evitar sobrecarga do banco e, no modo público futuro,
-  restringir o sync a admin. Notificar o front quando houver dados novos.
+- **WakaTime — sincronização automática** por horário. ✅ Implementado via Vercel
+  Cron (`vercel.json` → `/api/cron/wakatime-sync`, de hora em hora). A rota é
+  protegida por `CRON_SECRET` (header `Authorization: Bearer`), mantém a API key
+  apenas no backend, registra a última sincronização e cria notificação interna.
+  O botão manual continua funcionando. Configure `CRON_SECRET` nas variáveis de
+  ambiente do projeto (ver `.env.example`).
 - **WhatsApp API oficial** para enviar lembretes de pagamento, confirmações de
   pagamento e atualizações/resumos do projeto ao cliente, com templates
   aprovados, mensagens agendadas, tokens seguros e webhooks — substituindo o

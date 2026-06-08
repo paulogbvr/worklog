@@ -1,17 +1,17 @@
-import { Clock3, Code2, WalletCards } from "lucide-react";
+import { Suspense } from "react";
 import { AppShell } from "@/components/app-shell";
-import { DashboardCharts } from "@/components/dashboard-charts";
-import { DashboardData } from "@/components/dashboard-data";
 import { DashboardFilters } from "@/components/dashboard-filters";
 import { DashboardGreeting } from "@/components/dashboard-greeting";
-import { Skeleton } from "@/components/skeleton";
+import { DashboardSections } from "@/components/dashboard-sections";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 import { StatusPulse } from "@/components/status-pulse";
 import { SyncNowButton } from "@/components/wakatime/sync-now-button";
 import { getServerEnvStatus } from "@/lib/env";
 import {
-  getDashboardSummary,
+  getDashboardHeader,
   type DashboardPeriod
 } from "@/server/dashboard/summary";
+import { getProfile } from "@/server/profile";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -41,257 +41,61 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const period = parsePeriod(params.period);
-  const dashboard = await getDashboardSummary(period, parseProjectId(params.project));
+  const projectId = parseProjectId(params.project);
+  // Lightweight query so the chrome (greeting, filters, sync, last sync) renders
+  // instantly; the heavy data streams in via the Suspense boundary below.
+  const [header, profile] = await Promise.all([
+    getDashboardHeader(projectId),
+    getProfile()
+  ]);
   const envStatus = getServerEnvStatus();
-  const periodContext =
-    dashboard.period === "all"
-      ? "em todo o histórico"
-      : dashboard.period === "30d"
-        ? "nos últimos 30 dias"
-        : "nos últimos 7 dias";
   const syncTone =
-    dashboard.lastSyncLabel === "Não realizada"
+    header.lastSyncLabel === "Não realizada"
       ? "neutral"
-      : dashboard.latestSyncSuccessful
+      : header.latestSyncSuccessful
         ? "success"
         : "error";
 
   return (
     <AppShell envStatus={envStatus}>
       <header className="border-b border-[color:var(--border)] pb-6" id="dashboard">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-[color:var(--text-muted)]">Dashboard</p>
-            <h1 className="mt-1 text-2xl font-semibold leading-tight text-[color:var(--app-text-strong)] sm:text-3xl">
-              <DashboardGreeting />
-            </h1>
-          </div>
-          <DashboardFilters
-            actions={
-              <span className="lg:hidden">
-                <SyncNowButton />
-              </span>
-            }
-            period={dashboard.period}
-            projectId={dashboard.selectedProjectId}
-            projects={dashboard.projectOptions}
-          />
+        <div>
+          <p className="text-sm text-[color:var(--text-muted)]">Dashboard</p>
+          <h1 className="mt-1 text-2xl font-semibold leading-tight text-[color:var(--app-text-strong)] sm:text-3xl">
+            <DashboardGreeting name={profile.name} />
+          </h1>
         </div>
 
-        <div className="mt-3 flex flex-col items-end gap-2">
-          <div className="hidden lg:block">
+        <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <DashboardFilters
+            period={period}
+            projectId={header.selectedProjectId}
+            projects={header.projectOptions}
+          />
+
+          <div className="flex flex-col items-end gap-2">
             <SyncNowButton />
-          </div>
-          <div className="inline-flex w-fit max-w-full items-center gap-2.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[color:var(--text-muted)]">
-            <StatusPulse tone={syncTone} />
-            <span className="truncate">Última sincronização</span>
-            <strong className="shrink-0 font-medium text-[color:var(--app-text-strong)]">
-              {dashboard.lastSyncLabel}
-            </strong>
+            <div className="inline-flex w-fit max-w-full items-center gap-2.5 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[color:var(--text-muted)]">
+              <StatusPulse tone={syncTone} />
+              <span className="truncate">Última sincronização</span>
+              <strong className="shrink-0 font-medium text-[color:var(--app-text-strong)]">
+                {header.lastSyncLabel}
+              </strong>
+            </div>
           </div>
         </div>
       </header>
 
-      {!dashboard.databaseAvailable ? (
+      {!header.databaseAvailable ? (
         <section className="mt-5 rounded-lg border border-[color:var(--warning-border)] bg-[var(--warning-bg)] p-4 text-sm text-[color:var(--warning-text)]">
           Banco indisponível no momento. A interface tentará carregar os dados reais na próxima
           requisição.
         </section>
       ) : null}
 
-      <DashboardData
-        skeleton={
-          <>
-            <section className="py-7">
-              <div className="mb-4">
-                <Skeleton className="h-3.5 w-40" />
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                {["m1", "m2", "m3"].map((key) => (
-                  <Skeleton className="h-[92px]" key={key} />
-                ))}
-              </div>
-            </section>
-            <Skeleton className="h-72 w-full" />
-            <section className="mt-8 space-y-3">
-              <Skeleton className="h-20 w-full" />
-              {["r1", "r2", "r3"].map((key) => (
-                <Skeleton className="h-16 w-full" key={key} />
-              ))}
-            </section>
-          </>
-        }
-      >
-      <section className="py-7">
-        <div className="mb-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-faint)]">
-            {dashboard.period === "all" ? "Resumo histórico" : "Resumo do período"}
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            {
-              hint: dashboard.periodWakaTimeDaysLabel,
-              icon: Code2,
-              label: `WakaTime ${periodContext}`,
-              tone: "bg-blue-500/10 text-blue-400",
-              value: dashboard.periodWakaTimeLabel
-            },
-            {
-              hint: dashboard.periodDedicatedDaysLabel,
-              icon: Clock3,
-              label: `Horas dedicadas ${periodContext}`,
-              tone: "bg-amber-500/10 text-amber-500",
-              value: dashboard.periodDedicatedLabel
-            },
-            {
-              hint: null,
-              icon: WalletCards,
-              label: `Valor pendente ${periodContext}`,
-              tone: "bg-emerald-500/10 text-emerald-400",
-              value: dashboard.periodPendingValueLabel
-            }
-          ].map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <article
-                className="flex items-center gap-4 rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow)]"
-                key={item.label}
-              >
-                <span className={`grid size-11 shrink-0 place-items-center rounded-md ${item.tone}`}>
-                  <Icon className="size-5" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs leading-5 text-[color:var(--text-soft)]">{item.label}</p>
-                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 truncate text-xl font-semibold">
-                    {item.value}
-                    {item.hint ? (
-                      <span className="text-[11px] font-medium text-[color:var(--text-faint)]">
-                        {item.hint}
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <DashboardCharts data={dashboard.chartData} series={dashboard.chartSeries} />
-
-      <section
-        className="mt-8 rounded-lg border border-[color:var(--border)] bg-[var(--surface)]"
-        id="operacao-atual"
-      >
-        <div className="flex flex-col gap-4 border-b border-[color:var(--border)] p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Operação atual</h2>
-            <p className="mt-1 text-sm text-[color:var(--text-soft)]">
-              Posição do período por projeto ativo.
-            </p>
-          </div>
-          <div className="grid grid-cols-4 gap-4 text-center sm:gap-7">
-            {[
-              ["Ativos", dashboard.activeProjects],
-              ["Pendentes", dashboard.pendingProjects],
-              ["WakaTime", dashboard.periodWakaTimeLabel],
-              ["Dedicadas", dashboard.periodDedicatedLabel]
-            ].map(([label, value]) => (
-              <div key={label}>
-                <p className="text-base font-semibold sm:text-lg">{value}</p>
-                <p className="text-[10px] uppercase text-[color:var(--text-faint)]">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="divide-y divide-[color:var(--border)] px-5">
-          {dashboard.projects.length > 0 ? (
-            dashboard.projects.map((project) => (
-              <article
-                className="grid gap-4 py-5 md:grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(110px,.55fr))] md:items-center"
-                key={project.id}
-              >
-                <div className="min-w-0">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <p className="truncate font-medium text-[color:var(--app-text-strong)]">
-                      {project.name}
-                    </p>
-                    <span
-                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] ${project.projectStatusBadgeClass}`}
-                    >
-                      <StatusPulse tone={project.projectStatusTone} />
-                      {project.projectStatusLabel}
-                    </span>
-                  </div>
-                  <p className="mt-1 truncate text-xs text-[color:var(--text-soft)]">
-                    {project.clientName ?? "Sem cliente"} · último pagamento:{" "}
-                    {project.lastPaymentLabel}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4 rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4 md:contents md:gap-0 md:rounded-none md:border-0 md:bg-transparent md:p-0">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
-                      WakaTime
-                    </p>
-                    <p className="mt-1 text-sm">{project.wakatimeLabel}</p>
-                    <p className="mt-1 hidden text-xs text-[color:var(--text-soft)] md:block">
-                      {periodContext}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
-                      Dedicadas
-                    </p>
-                    <p className="mt-1 text-sm">{project.dedicatedLabel}</p>
-                    <p className="mt-1 hidden text-xs text-[color:var(--text-soft)] md:block">
-                      {periodContext}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
-                      {project.billingMode === "FIXED" ? "Preço fechado" : "Gerado"}
-                    </p>
-                    <p className="mt-1 text-sm">{project.totalValueLabel}</p>
-                    {project.billingMode === "FIXED" ? (
-                      <p className="mt-1 text-xs text-[color:var(--text-soft)]">
-                        Por horas {project.hoursComparisonLabel}
-                      </p>
-                    ) : null}
-                    <p
-                      className={[
-                        "mt-1 text-xs",
-                        project.pendingIsCredit
-                          ? "text-emerald-400"
-                          : "text-[color:var(--text-soft)]"
-                      ].join(" ")}
-                    >
-                      {project.pendingIsCredit ? "Excedente" : "Pendente"}{" "}
-                      {project.pendingValueLabel}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
-                      Recebido
-                    </p>
-                    <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
-                    <p className="mt-1 hidden text-xs text-[color:var(--text-soft)] md:block">
-                      {periodContext}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            ))
-          ) : (
-            <p className="py-8 text-sm text-[color:var(--text-soft)]">
-              Nenhum projeto encontrado para o filtro atual.
-            </p>
-          )}
-        </div>
-      </section>
-      </DashboardData>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardSections period={period} projectId={projectId} />
+      </Suspense>
     </AppShell>
   );
 }

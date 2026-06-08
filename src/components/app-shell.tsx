@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Sun,
+  UserRound,
   Users,
   Workflow,
   X,
@@ -59,6 +60,7 @@ const navItems: NavItem[] = [
     icon: Bell,
     path: "/notifications"
   },
+  { label: "Perfil", href: "/profile", icon: UserRound, path: "/profile" },
   { label: "Fluxo", href: "/flow", icon: Workflow, path: "/flow" },
   { label: "Instalação", href: "/installation", icon: Download, path: "/installation" },
   { label: "Sobre", href: "/about", icon: Info, path: "/about" }

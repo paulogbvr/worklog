@@ -449,6 +449,55 @@ function getSeriesKeys(index: number) {
   };
 }
 
+export type DashboardHeader = {
+  databaseAvailable: boolean;
+  lastSyncLabel: string;
+  latestSyncSuccessful: boolean;
+  projectOptions: Array<{ id: string; name: string }>;
+  selectedProjectId: string | null;
+};
+
+// Lightweight query used to render the dashboard chrome (greeting, filters, sync
+// button, last sync) instantly, while the heavy summary streams in via Suspense.
+export async function getDashboardHeader(
+  requestedProjectId?: string | null
+): Promise<DashboardHeader> {
+  try {
+    const [projects, latestSync] = await Promise.all([
+      prisma.project.findMany({
+        orderBy: [{ configurationStatus: "asc" }, { updatedAt: "desc" }],
+        select: { id: true, name: true },
+        where: { active: true }
+      }),
+      prisma.syncLog.findFirst({
+        orderBy: { startedAt: "desc" },
+        where: { provider: SyncProvider.WAKATIME }
+      })
+    ]);
+    const selectedProjectId = projects.some((project) => project.id === requestedProjectId)
+      ? requestedProjectId ?? null
+      : null;
+
+    return {
+      databaseAvailable: true,
+      lastSyncLabel: formatDateTime(latestSync?.finishedAt ?? latestSync?.startedAt),
+      latestSyncSuccessful: latestSync?.success ?? false,
+      projectOptions: projects,
+      selectedProjectId
+    };
+  } catch (error) {
+    logDashboardError("dashboard header", error);
+
+    return {
+      databaseAvailable: false,
+      lastSyncLabel: "Não realizada",
+      latestSyncSuccessful: false,
+      projectOptions: [],
+      selectedProjectId: null
+    };
+  }
+}
+
 export async function getDashboardSummary(
   period: DashboardPeriod = "7d",
   requestedProjectId?: string | null

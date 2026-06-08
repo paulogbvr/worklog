@@ -47,6 +47,7 @@ import {
   type PaymentMethodValue
 } from "@/lib/payment";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
 import {
   PROJECT_STATUSES,
   type ProjectStatusValue
@@ -261,6 +262,8 @@ function Modal({
   onClose: () => void;
   title: string;
 }) {
+  useLockBodyScroll();
+
   return (
     <div className="fixed inset-0 z-[180] grid place-items-center bg-black/65 p-4 backdrop-blur-sm">
       <div
@@ -367,6 +370,7 @@ export function OperationsPanel({
   const [clientSort, setClientSort] = useState<ClientSortValue>("recent");
   const [previewClient, setPreviewClient] = useState<DashboardClient | null>(null);
   const [previewProject, setPreviewProject] = useState<DashboardProject | null>(null);
+  const [clientConfirmation, setClientConfirmation] = useState<DashboardClient | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -531,10 +535,11 @@ export function OperationsPanel({
     if (
       projectDraft.reminderEnabled &&
       projectDraft.reminderAmountMode === "FIXED" &&
+      projectDraft.reminderFixedAmount.trim() !== "" &&
       !(Number(projectDraft.reminderFixedAmount.replace(",", ".")) > 0)
     ) {
       toast({
-        message: "Informe um valor fixo maior que zero para o lembrete.",
+        message: "Informe um valor fixo válido ou deixe o campo vazio.",
         title: "Lembrete incompleto",
         tone: "error"
       });
@@ -641,10 +646,6 @@ export function OperationsPanel({
   }
 
   async function deleteClient(client: DashboardClient) {
-    if (!window.confirm(`Remover o cliente ${client.name}? Os projetos ficarão sem cliente.`)) {
-      return;
-    }
-
     try {
       await readResponse(
         await fetch(`/api/clients/${client.id}`, {
@@ -661,6 +662,34 @@ export function OperationsPanel({
       toast({
         message: error instanceof Error ? error.message : "Não foi possível remover o cliente.",
         title: "Erro ao remover",
+        tone: "error"
+      });
+    }
+  }
+
+  async function copyClient(client: DashboardClient) {
+    const lines = [
+      `Nome → ${client.name}`,
+      `Email → ${client.email ?? "—"}`,
+      `Telefone → ${client.phone ? formatPhone(client.phone) : "—"}`,
+      `CPF/CNPJ → ${client.taxId ? formatTaxId(client.taxId) : "—"}`,
+      `Status → ${client.statusLabel}`,
+      `Projetos vinculados → ${client.projectCount}`,
+      `Pendente → ${client.pendingValueLabel}`,
+      `Criado em → ${client.createdAtLabel}`
+    ];
+
+    try {
+      await copyTextToClipboard(lines.join("\n\n"));
+      toast({
+        message: "Os dados do cliente estão na área de transferência.",
+        title: "Dados copiados",
+        tone: "success"
+      });
+    } catch {
+      toast({
+        message: "Não foi possível copiar os dados.",
+        title: "Erro ao copiar",
         tone: "error"
       });
     }
@@ -1184,17 +1213,13 @@ export function OperationsPanel({
     }
 
     const fixedAmount = Number(projectDraft.reminderFixedAmount.replace(",", "."));
+    // An empty/zero value is allowed — the message simply omits the value line.
     const amount =
-      projectDraft.reminderAmountMode === "FIXED" ? fixedAmount : projectDraft.pendingValue;
-
-    if (!(amount > 0)) {
-      toast({
-        message: "O valor do lembrete precisa ser maior que zero.",
-        title: "Valor inválido",
-        tone: "error"
-      });
-      return null;
-    }
+      projectDraft.reminderAmountMode === "FIXED"
+        ? fixedAmount > 0
+          ? fixedAmount
+          : 0
+        : projectDraft.pendingValue;
 
     const shareUrl = projectDraft.sharePath
       ? `${window.location.origin}${projectDraft.sharePath}`
@@ -1262,7 +1287,9 @@ export function OperationsPanel({
     <>
       <section
         className={[
-          fixedView === "records"
+          fixedView === "records" ||
+          fixedView === "clients" ||
+          fixedView === "payments"
             ? "space-y-6"
             : "rounded-lg border border-[color:var(--border)] bg-[var(--surface)]",
           fixedView ? "" : "mt-4"
@@ -1798,8 +1825,8 @@ export function OperationsPanel({
         ) : null}
 
         {view === "clients" ? (
-          <div id="clientes">
-            <div className="flex flex-col gap-3 px-5 pt-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-4" id="clientes">
+            <div className="flex flex-col gap-3 rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:flex-1">
                 <SearchField
                   ariaLabel="Buscar clientes"
@@ -1835,7 +1862,7 @@ export function OperationsPanel({
                 Novo cliente
               </button>
             </div>
-            <div className="divide-y divide-[color:var(--border)] px-5">
+            <div className="divide-y divide-[color:var(--border)] rounded-lg border border-[color:var(--border)] bg-[var(--surface)] px-5">
               {clients.length === 0 ? (
                 <p className="py-8 text-sm text-[color:var(--text-soft)]">
                   Nenhum cliente cadastrado.
@@ -1898,7 +1925,7 @@ export function OperationsPanel({
                       <button
                         aria-label={`Remover ${client.name}`}
                         className="grid size-9 place-items-center rounded-md border border-[color:var(--border)] text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-red-500/10 hover:text-red-400 active:scale-[0.97]"
-                        onClick={() => deleteClient(client)}
+                        onClick={() => setClientConfirmation(client)}
                         title="Excluir cliente"
                         type="button"
                       >
@@ -1913,13 +1940,14 @@ export function OperationsPanel({
         ) : null}
 
         {view === "payments" ? (
-          <div className="p-5" id="pagamentos">
+          <div className="space-y-4" id="pagamentos">
+            <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
             <div
               className={[
                 "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
                 paymentComposerOpen
                   ? "mb-5 border-b border-[color:var(--border)] pb-5"
-                  : "border-b border-[color:var(--border)] pb-6"
+                  : ""
               ].join(" ")}
               id="payment-form"
             >
@@ -1932,7 +1960,7 @@ export function OperationsPanel({
                 </p>
               </div>
               <button
-                className="button-primary inline-flex h-10 w-fit items-center gap-2 px-3 text-sm font-medium transition-transform duration-200 active:scale-95"
+                className="button-primary inline-flex h-10 w-fit items-center gap-2 self-end px-3 text-sm font-medium transition-transform duration-200 active:scale-95 sm:self-auto"
                 onClick={() => {
                   if (paymentComposerOpen) {
                     resetPaymentForm();
@@ -2304,15 +2332,17 @@ export function OperationsPanel({
               </div>
               </form>
             ) : null}
+            </div>
 
-            <div className="pt-6">
+            <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+            <div>
               <h2 className="text-lg font-semibold text-amber-400">Histórico de pagamentos</h2>
               <p className="mt-1 text-sm text-[color:var(--text-soft)]">
                 Edite dados, consulte comprovantes ou avise o cliente pelo WhatsApp.
               </p>
             </div>
 
-            <div className="mt-3 divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
+            <div className="mt-3 divide-y divide-[color:var(--border)] border-t border-[color:var(--border)]">
               {payments.length > 0 ? (
                 payments.map((payment) => (
                   <div
@@ -2475,6 +2505,7 @@ export function OperationsPanel({
                   Nenhum pagamento registrado.
                 </p>
               )}
+            </div>
             </div>
           </div>
         ) : null}
@@ -3221,13 +3252,14 @@ export function OperationsPanel({
                 <DetailRow label="Observações" value={previewClient.notes} full />
               ) : null}
             </dl>
-            <div className="flex justify-end gap-2 border-t border-[color:var(--border)] pt-4">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--border)] pt-4">
               <button
-                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] active:scale-[0.98]"
-                onClick={() => setPreviewClient(null)}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                onClick={() => void copyClient(previewClient)}
                 type="button"
               >
-                Fechar
+                <Copy className="size-4" />
+                Copiar dados
               </button>
               <button
                 className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium transition-transform duration-200 active:scale-[0.98]"
@@ -3242,6 +3274,41 @@ export function OperationsPanel({
               >
                 <Pencil className="size-4" />
                 Editar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {clientConfirmation ? (
+        <Modal onClose={() => setClientConfirmation(null)} title="Apagar cliente?">
+          <div className="p-5">
+            <p className="text-sm leading-6 text-[color:var(--text-muted)]">
+              Essa ação não pode ser desfeita. Os projetos de{" "}
+              <strong className="text-[color:var(--app-text-strong)]">
+                {clientConfirmation.name}
+              </strong>{" "}
+              voltarão ao estado pendente.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] active:scale-[0.98]"
+                onClick={() => setClientConfirmation(null)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="inline-flex h-10 items-center gap-2 rounded-md bg-red-500 px-4 text-sm font-medium text-white transition-colors hover:bg-red-600 active:scale-[0.98]"
+                onClick={() => {
+                  const client = clientConfirmation;
+                  setClientConfirmation(null);
+                  void deleteClient(client);
+                }}
+                type="button"
+              >
+                <Trash2 className="size-4" />
+                Apagar cliente
               </button>
             </div>
           </div>

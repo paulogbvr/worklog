@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
 import type { SerializedProjectNote } from "@/server/project-notes";
 
 type NoteType = "FREE" | "CHECKLIST";
@@ -39,6 +40,7 @@ export function ProjectNotesModal({
   projectId: string;
   projectName: string;
 }) {
+  useLockBodyScroll();
   const { toast } = useToast();
   const [notes, setNotes] = useState<SerializedProjectNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,14 +192,52 @@ export function ProjectNotesModal({
   }
 
   async function toggleItem(note: SerializedProjectNote, itemId: string) {
-    const items = note.items.map((item) => ({
-      completed: item.id === itemId ? !item.completed : item.completed,
-      text: item.text
-    }));
+    const current = note.items.find((item) => item.id === itemId);
+
+    if (!current) {
+      return;
+    }
+
+    const nextCompleted = !current.completed;
+
+    // Optimistically flip just this item; ids stay stable and the update is
+    // idempotent, so rapid clicks can't duplicate or drop checklist items.
+    setNotes((notesList) =>
+      notesList.map((entry) =>
+        entry.id === note.id
+          ? {
+              ...entry,
+              items: entry.items.map((item) =>
+                item.id === itemId ? { ...item, completed: nextCompleted } : item
+              )
+            }
+          : entry
+      )
+    );
 
     try {
-      await patchNote(note.id, { items });
+      const response = await fetch(`/api/project-note-items/${itemId}`, {
+        body: JSON.stringify({ completed: nextCompleted }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH"
+      });
+
+      if (!response.ok) {
+        throw new Error();
+      }
     } catch {
+      setNotes((notesList) =>
+        notesList.map((entry) =>
+          entry.id === note.id
+            ? {
+                ...entry,
+                items: entry.items.map((item) =>
+                  item.id === itemId ? { ...item, completed: current.completed } : item
+                )
+              }
+            : entry
+        )
+      );
       toast({
         message: "Não foi possível atualizar o item.",
         title: "Erro",

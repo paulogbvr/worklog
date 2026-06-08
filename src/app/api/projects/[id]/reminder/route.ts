@@ -59,18 +59,26 @@ export async function PUT(
       );
     }
 
+    // A fixed amount is optional: an empty value clears it (no value shown in the
+    // message). Only reject when a value was typed but is not a positive number.
     if (
       amountMode === ReminderAmountMode.FIXED &&
-      (fixedAmount === null || Number.isNaN(fixedAmount) || fixedAmount <= 0)
+      fixedAmount !== null &&
+      (Number.isNaN(fixedAmount) || fixedAmount <= 0)
     ) {
       return NextResponse.json(
         {
-          error: "Informe um valor fixo maior que zero para o lembrete.",
+          error: "Informe um valor fixo válido ou deixe o campo vazio.",
           ok: false
         },
         { status: 400 }
       );
     }
+
+    const normalizedFixedAmount =
+      fixedAmount !== null && !Number.isNaN(fixedAmount) && fixedAmount > 0
+        ? fixedAmount
+        : null;
 
     const project = await prisma.project.findUnique({
       select: { clientId: true, id: true },
@@ -93,7 +101,7 @@ export async function PUT(
       amountMode,
       clientId: project.clientId,
       dueDate,
-      fixedAmount,
+      fixedAmount: normalizedFixedAmount,
       message,
       notifiedDueAt: null,
       status: ReminderStatus.ACTIVE
