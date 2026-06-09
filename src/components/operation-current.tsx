@@ -58,6 +58,19 @@ export function OperationCurrent({
   const [data, setData] = useState<OperationData>(initial);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<DashboardProject | null>(null);
+  // Tracks the dashboard's global period. When it changes (top filter), the
+  // local filter follows (top -> bottom sync). Changing only the local filter
+  // never touches the global one. This is React's "adjust state on prop change"
+  // pattern, so it stays in sync without an effect.
+  const [globalPeriod, setGlobalPeriod] = useState<DashboardPeriod>(initial.period);
+
+  if (initial.period !== globalPeriod) {
+    setGlobalPeriod(initial.period);
+    setPeriod(initial.period);
+    setData(initial);
+    setLoading(false);
+  }
+
   const periodContext = periodContextFor(period);
 
   async function selectPeriod(next: DashboardPeriod) {

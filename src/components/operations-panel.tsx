@@ -695,6 +695,47 @@ export function OperationsPanel({
     }
   }
 
+  async function copyProject(project: DashboardProject) {
+    const hourlyRate =
+      project.hourlyRate && project.hourlyRate > 0
+        ? `${new Intl.NumberFormat("pt-BR", {
+            currency: "BRL",
+            style: "currency"
+          }).format(project.hourlyRate)}/h`
+        : project.billingMode === "FIXED"
+          ? "Preço fechado"
+          : "—";
+    const shareLink = project.sharePath
+      ? `${window.location.origin}${project.sharePath}`
+      : "Sem link";
+    const lines = [
+      `Nome → ${project.name}`,
+      `Cliente → ${project.clientName ?? "Sem cliente"}`,
+      `Status → ${project.projectStatusLabel}`,
+      `Valor/hora → ${hourlyRate}`,
+      `Horas WakaTime → ${project.wakatimeLabel}`,
+      `Horas dedicadas → ${project.dedicatedLabel}`,
+      `${project.billingMode === "FIXED" ? "Preço fechado" : "Total"} → ${project.totalValueLabel}`,
+      `${project.pendingIsCredit ? "Excedente" : "Pendente"} → ${project.pendingValueLabel}`,
+      `Link compartilhado → ${shareLink}`
+    ];
+
+    try {
+      await copyTextToClipboard(lines.join("\n\n"));
+      toast({
+        message: "Os dados do projeto estão na área de transferência.",
+        title: "Dados copiados",
+        tone: "success"
+      });
+    } catch {
+      toast({
+        message: "Não foi possível copiar os dados.",
+        title: "Erro ao copiar",
+        tone: "error"
+      });
+    }
+  }
+
   async function savePayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -3367,13 +3408,14 @@ export function OperationsPanel({
                 <DetailRow full label="Observações" value={previewProject.notes} />
               ) : null}
             </dl>
-            <div className="flex justify-end gap-2 border-t border-[color:var(--border)] pt-4">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--border)] pt-4">
               <button
-                className="h-10 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] active:scale-[0.98]"
-                onClick={() => setPreviewProject(null)}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[color:var(--border)] px-4 text-sm text-[color:var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--hover-bg)] hover:text-[color:var(--app-text-strong)] active:scale-[0.98]"
+                onClick={() => void copyProject(previewProject)}
                 type="button"
               >
-                Fechar
+                <Copy className="size-4" />
+                Copiar dados
               </button>
               <button
                 className="button-primary inline-flex h-10 items-center gap-2 px-4 text-sm font-medium transition-transform duration-200 active:scale-[0.98]"
