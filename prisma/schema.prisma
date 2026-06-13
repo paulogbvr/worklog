@@ -34,6 +34,7 @@ enum ClientStatus {
 enum BillingMode {
   HOURLY
   FIXED
+  NON_PROFIT
 }
 
 enum SyncProvider {

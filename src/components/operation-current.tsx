@@ -32,16 +32,26 @@ function periodContextFor(period: DashboardPeriod) {
 }
 
 function buildProjectText(project: DashboardProject) {
-  const lines = [
-    `Projeto → ${project.name}`,
-    `Cliente → ${project.clientName ?? "Sem cliente"}`,
-    `Status → ${project.projectStatusLabel}`,
-    `WakaTime → ${project.wakatimeLabel}`,
-    `Horas dedicadas → ${project.dedicatedLabel}`,
-    `${project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado"} → ${project.totalValueLabel}`,
-    `Valor recebido → ${project.receivedValueLabel}`,
-    `${project.pendingIsCredit ? "Excedente" : "Valor pendente"} → ${project.pendingValueLabel}`
-  ];
+  const lines = project.isNonProfit
+    ? [
+        `Projeto → ${project.name}`,
+        `Cliente → ${project.clientName ?? "Sem cliente"}`,
+        `Status → ${project.projectStatusLabel}`,
+        `Tipo → Projeto próprio sem fins lucrativos`,
+        `Cobrança → Gratuito`,
+        `WakaTime → ${project.wakatimeLabel}`,
+        `Horas dedicadas → ${project.dedicatedLabel}`
+      ]
+    : [
+        `Projeto → ${project.name}`,
+        `Cliente → ${project.clientName ?? "Sem cliente"}`,
+        `Status → ${project.projectStatusLabel}`,
+        `WakaTime → ${project.wakatimeLabel}`,
+        `Horas dedicadas → ${project.dedicatedLabel}`,
+        `${project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado"} → ${project.totalValueLabel}`,
+        `Valor recebido → ${project.receivedValueLabel}`,
+        `${project.pendingIsCredit ? "Excedente" : "Valor pendente"} → ${project.pendingValueLabel}`
+      ];
 
   return lines.join("\n\n");
 }
@@ -225,17 +235,30 @@ export function OperationCurrent({
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
-                    {project.billingMode === "FIXED" ? "Preço fechado" : "Gerado"}
+                    {project.isNonProfit
+                      ? "Cobrança"
+                      : project.billingMode === "FIXED"
+                        ? "Preço fechado"
+                        : "Gerado"}
                   </p>
-                  <p className="mt-1 text-sm">{project.totalValueLabel}</p>
-                  <p
-                    className={[
-                      "mt-1 text-xs",
-                      project.pendingIsCredit ? "text-emerald-400" : "text-[color:var(--text-soft)]"
-                    ].join(" ")}
-                  >
-                    {project.pendingIsCredit ? "Excedente" : "Pendente"} {project.pendingValueLabel}
-                  </p>
+                  {project.isNonProfit ? (
+                    <p className="mt-1 text-sm text-emerald-500">Gratuito</p>
+                  ) : (
+                    <>
+                      <p className="mt-1 text-sm">{project.totalValueLabel}</p>
+                      <p
+                        className={[
+                          "mt-1 text-xs",
+                          project.pendingIsCredit
+                            ? "text-emerald-400"
+                            : "text-[color:var(--text-soft)]"
+                        ].join(" ")}
+                      >
+                        {project.pendingIsCredit ? "Excedente" : "Pendente"}{" "}
+                        {project.pendingValueLabel}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)] md:text-xs md:normal-case md:tracking-normal">
@@ -284,16 +307,28 @@ function OperationPreview({
 }) {
   useLockBodyScroll();
 
-  const rows: Array<[string, string]> = [
-    ["Cliente", project.clientName ?? "Sem cliente"],
-    ["Status", project.projectStatusLabel],
-    ["Tipo de cobrança", project.billingMode === "FIXED" ? "Preço fechado" : "Por horas"],
-    ["WakaTime", project.wakatimeLabel],
-    ["Horas dedicadas", project.dedicatedLabel],
-    [project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado", project.totalValueLabel],
-    ["Valor recebido", project.receivedValueLabel],
-    [project.pendingIsCredit ? "Excedente" : "Valor pendente", project.pendingValueLabel]
-  ];
+  const rows: Array<[string, string]> = project.isNonProfit
+    ? [
+        ["Cliente", project.clientName ?? "Sem cliente"],
+        ["Status", project.projectStatusLabel],
+        ["Tipo de cobrança", "Projeto próprio / sem fins lucrativos"],
+        ["WakaTime", project.wakatimeLabel],
+        ["Horas dedicadas", project.dedicatedLabel],
+        ["Cobrança", "Gratuito"]
+      ]
+    : [
+        ["Cliente", project.clientName ?? "Sem cliente"],
+        ["Status", project.projectStatusLabel],
+        ["Tipo de cobrança", project.billingMode === "FIXED" ? "Preço fechado" : "Por horas"],
+        ["WakaTime", project.wakatimeLabel],
+        ["Horas dedicadas", project.dedicatedLabel],
+        [
+          project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado",
+          project.totalValueLabel
+        ],
+        ["Valor recebido", project.receivedValueLabel],
+        [project.pendingIsCredit ? "Excedente" : "Valor pendente", project.pendingValueLabel]
+      ];
 
   return (
     <div className="fixed inset-0 z-[180] grid place-items-center bg-black/65 p-4 backdrop-blur-sm">

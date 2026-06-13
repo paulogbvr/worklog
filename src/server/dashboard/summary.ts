@@ -90,7 +90,8 @@ export type DashboardPayment = {
 export type DashboardProject = {
   active: boolean;
   billDedicated: boolean;
-  billingMode: "FIXED" | "HOURLY";
+  billingMode: "FIXED" | "HOURLY" | "NON_PROFIT";
+  isNonProfit: boolean;
   chargeDedicated: boolean;
   chargeWakaTime: boolean;
   clientId: string | null;
@@ -680,17 +681,20 @@ export async function getDashboardSummary(
     const dedicatedHourlyRate = project.dedicatedHourlyRate
       ? Number(project.dedicatedHourlyRate)
       : null;
-    const chargeWakaTime = Boolean(hourlyRate && hourlyRate > 0);
-    const chargeDedicated = Boolean(
-      project.billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0
-    );
+    // Free / non-profit projects track hours but never generate billable value.
+    const isNonProfit = project.billingMode === "NON_PROFIT";
+    const chargeWakaTime = !isNonProfit && Boolean(hourlyRate && hourlyRate > 0);
+    const chargeDedicated =
+      !isNonProfit &&
+      Boolean(project.billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0);
     const isFixed = project.billingMode === "FIXED";
     const fixedPrice = project.fixedPrice ? Number(project.fixedPrice) : null;
     const contractedValue = isFixed && fixedPrice && fixedPrice > 0 ? fixedPrice : 0;
-    const isConfigured =
-      project.configurationStatus === "CONFIGURED" &&
-      Boolean(project.clientId) &&
-      (isFixed ? contractedValue > 0 : chargeWakaTime || chargeDedicated);
+    const isConfigured = isNonProfit
+      ? project.configurationStatus === "CONFIGURED"
+      : project.configurationStatus === "CONFIGURED" &&
+        Boolean(project.clientId) &&
+        (isFixed ? contractedValue > 0 : chargeWakaTime || chargeDedicated);
     const periodWakaDays = project.wakatimeDays.filter((day) =>
       isInPeriod(getDatabaseDateKey(day.date), startKey)
     );
@@ -755,9 +759,15 @@ export async function getDashboardSummary(
     );
     // Fixed-price projects track the contract as a whole, so generated/received
     // are all-time; hourly projects stay scoped to the selected period.
-    const totalValue = isFixed ? contractedValue : hourlyTotalValue;
-    const receivedValue = isFixed ? allReceivedValueTotal : periodReceivedValue;
-    const pendingValue = totalValue - receivedValue;
+    // Non-profit projects stay out of every financial figure (no total, no
+    // received, no pending) while their hours keep flowing into the metrics.
+    const totalValue = isNonProfit ? 0 : isFixed ? contractedValue : hourlyTotalValue;
+    const receivedValue = isNonProfit
+      ? 0
+      : isFixed
+        ? allReceivedValueTotal
+        : periodReceivedValue;
+    const pendingValue = isNonProfit ? 0 : totalValue - receivedValue;
     const comparisonDelta = hoursValueAllTime - contractedValue;
     const lastPayment = project.payments.at(-1) ?? null;
     const sinceLastPaymentWakaTimeSeconds = project.wakatimeDays
@@ -814,8 +824,12 @@ export async function getDashboardSummary(
     globalDedicatedSeconds += allDedicatedSeconds;
     totalGeneratedValue += totalValue;
     totalReceivedValue += receivedValue;
-    globalGeneratedValue += isFixed ? contractedValue : allWakaTimeValue + allDedicatedValue;
-    globalReceivedValue += allReceivedValue;
+    globalGeneratedValue += isNonProfit
+      ? 0
+      : isFixed
+        ? contractedValue
+        : allWakaTimeValue + allDedicatedValue;
+    globalReceivedValue += isNonProfit ? 0 : allReceivedValue;
 
     const shareLink = project.shareLinks[0];
     const projectStatus = getProjectStatusMeta(project.status);
@@ -845,6 +859,7 @@ export async function getDashboardSummary(
       active: project.active,
       billDedicated: project.billDedicated,
       billingMode: project.billingMode,
+      isNonProfit,
       chargeDedicated,
       chargeWakaTime,
       clientId: project.clientId,

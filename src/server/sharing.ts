@@ -129,6 +129,7 @@ export async function getPublicProject(slug: string) {
     : 0;
   const isConfigured = project.configurationStatus === "CONFIGURED";
   const isFixed = project.billingMode === "FIXED";
+  const isNonProfit = project.billingMode === "NON_PROFIT";
   const fixedPrice = project.fixedPrice ? Number(project.fixedPrice) : 0;
   const hoursValue =
     (hourlyRate > 0 ? (wakaSeconds / 3600) * hourlyRate : 0) +
@@ -136,18 +137,19 @@ export async function getPublicProject(slug: string) {
       ? (dedicatedSeconds / 3600) * dedicatedHourlyRate
       : 0);
   // Fixed-price contracts expose the agreed total; hourly projects expose the
-  // value accrued from tracked hours. The internal "hours vs fixed" comparison
-  // is intentionally not surfaced publicly.
-  const generatedValue = isFixed ? fixedPrice : isConfigured ? hoursValue : 0;
-  const receivedValue = project.payments.reduce(
-    (total, payment) => total + Number(payment.amount),
-    0
-  );
+  // value accrued from tracked hours. Non-profit projects never charge, so all
+  // money figures stay at zero. The internal "hours vs fixed" comparison is
+  // intentionally not surfaced publicly.
+  const generatedValue = isNonProfit ? 0 : isFixed ? fixedPrice : isConfigured ? hoursValue : 0;
+  const receivedValue = isNonProfit
+    ? 0
+    : project.payments.reduce((total, payment) => total + Number(payment.amount), 0);
   const pendingValue = generatedValue - receivedValue;
   const projectStatus = getProjectStatusMeta(project.status);
 
   return {
     billingMode: project.billingMode,
+    isNonProfit,
     clientName: project.client?.name ?? "Projeto independente",
     createdAtLabel: formatDate(shareLink.createdAt),
     dedicatedLabel: formatDuration(dedicatedSeconds),

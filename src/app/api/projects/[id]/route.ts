@@ -75,7 +75,11 @@ export async function PATCH(
     const dedicatedHourlyRate = parseHourlyRate(body.dedicatedHourlyRate);
     const fixedPrice = parseHourlyRate(body.fixedPrice);
     const billingMode =
-      body.billingMode === "FIXED" ? BillingMode.FIXED : BillingMode.HOURLY;
+      body.billingMode === "FIXED"
+        ? BillingMode.FIXED
+        : body.billingMode === "NON_PROFIT"
+          ? BillingMode.NON_PROFIT
+          : BillingMode.HOURLY;
     const billDedicated = body.billDedicated === true;
     const active = body.active !== false;
     const repositoryUrl = parseRepositoryUrl(body.repositoryUrl);
@@ -198,14 +202,17 @@ export async function PATCH(
       }
     }
 
+    const isNonProfit = billingMode === BillingMode.NON_PROFIT;
     const hasBillableRate =
       Boolean(hourlyRate && hourlyRate > 0) ||
       Boolean(billDedicated && dedicatedHourlyRate && dedicatedHourlyRate > 0);
     const hasFixedPrice = Boolean(fixedPrice && fixedPrice > 0);
     const isBillable =
       billingMode === BillingMode.FIXED ? hasFixedPrice : hasBillableRate;
+    // Free / non-profit projects never charge, so they are considered fully
+    // configured on their own (no client or rate required).
     const configurationStatus =
-      clientId && isBillable
+      isNonProfit || (clientId && isBillable)
         ? ProjectConfigurationStatus.CONFIGURED
         : ProjectConfigurationStatus.PENDING;
     const nextStatus = status ?? project.status;

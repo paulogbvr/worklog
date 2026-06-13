@@ -65,7 +65,7 @@ export type OperationView = "clients" | "payments" | "projects" | "records";
 type ProjectDraft = {
   active: boolean;
   billDedicated: boolean;
-  billingMode: "FIXED" | "HOURLY";
+  billingMode: "FIXED" | "HOURLY" | "NON_PROFIT";
   clientId: string;
   clientPhone: string | null;
   dedicatedHourlyRate: string;
@@ -581,10 +581,13 @@ export function OperationsPanel({
         });
       }
 
+      const wasNonProfit = projectDraft.billingMode === "NON_PROFIT";
       setProjectDraft(null);
       toast({
-        message: "Cliente, cobrança e status foram atualizados.",
-        title: "Projeto salvo",
+        message: wasNonProfit
+          ? "Projeto sem fins lucrativos: as horas continuam registradas e nada será cobrado."
+          : "Cliente, cobrança e status foram atualizados.",
+        title: wasNonProfit ? "Projeto gratuito salvo" : "Projeto salvo",
         tone: "success"
       });
       router.refresh();
@@ -708,17 +711,28 @@ export function OperationsPanel({
     const shareLink = project.sharePath
       ? `${window.location.origin}${project.sharePath}`
       : "Sem link";
-    const lines = [
-      `Nome → ${project.name}`,
-      `Cliente → ${project.clientName ?? "Sem cliente"}`,
-      `Status → ${project.projectStatusLabel}`,
-      `Valor/hora → ${hourlyRate}`,
-      `Horas WakaTime → ${project.wakatimeLabel}`,
-      `Horas dedicadas → ${project.dedicatedLabel}`,
-      `${project.billingMode === "FIXED" ? "Preço fechado" : "Total"} → ${project.totalValueLabel}`,
-      `${project.pendingIsCredit ? "Excedente" : "Pendente"} → ${project.pendingValueLabel}`,
-      `Link compartilhado → ${shareLink}`
-    ];
+    const lines = project.isNonProfit
+      ? [
+          `Nome → ${project.name}`,
+          `Cliente → ${project.clientName ?? "Sem cliente"}`,
+          `Status → ${project.projectStatusLabel}`,
+          `Tipo → Projeto próprio sem fins lucrativos`,
+          `Cobrança → Gratuito`,
+          `Horas WakaTime → ${project.wakatimeLabel}`,
+          `Horas dedicadas → ${project.dedicatedLabel}`,
+          `Link compartilhado → ${shareLink}`
+        ]
+      : [
+          `Nome → ${project.name}`,
+          `Cliente → ${project.clientName ?? "Sem cliente"}`,
+          `Status → ${project.projectStatusLabel}`,
+          `Valor/hora → ${hourlyRate}`,
+          `Horas WakaTime → ${project.wakatimeLabel}`,
+          `Horas dedicadas → ${project.dedicatedLabel}`,
+          `${project.billingMode === "FIXED" ? "Preço fechado" : "Total"} → ${project.totalValueLabel}`,
+          `${project.pendingIsCredit ? "Excedente" : "Pendente"} → ${project.pendingValueLabel}`,
+          `Link compartilhado → ${shareLink}`
+        ];
 
     try {
       await copyTextToClipboard(lines.join("\n\n"));
@@ -1421,9 +1435,16 @@ export function OperationsPanel({
                       >
                         {project.statusLabel}
                       </span>
-                      <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
-                        {project.billingMode === "FIXED" ? "Preço fechado" : "Por horas"}
-                      </span>
+                      {project.isNonProfit ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
+                          <StatusPulse tone="success" />
+                          Sem fins lucrativos
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
+                          {project.billingMode === "FIXED" ? "Preço fechado" : "Por horas"}
+                        </span>
+                      )}
                       {project.reminderEnabled && project.reminderStatusLabel ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
                           <StatusPulse tone={project.reminderStatusTone} />
@@ -1503,47 +1524,63 @@ export function OperationsPanel({
                       Total {project.globalDedicatedLabel}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
-                      {project.billingMode === "FIXED" ? "Preço fechado" : "Valor Gerado"}
-                    </p>
-                    <p className="mt-1 text-sm">{project.totalValueLabel}</p>
-                    {project.billingMode === "FIXED" ? (
-                      <p
-                        className={[
-                          "mt-1 text-xs",
-                          project.comparisonPositive
-                            ? "text-emerald-400"
-                            : "text-[color:var(--text-soft)]"
-                        ].join(" ")}
-                      >
-                        Por horas {project.hoursComparisonLabel} ({project.comparisonDeltaLabel})
+                  {project.isNonProfit ? (
+                    <div className="col-span-2 sm:col-span-1 lg:col-span-3">
+                      <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                        Cobrança
                       </p>
-                    ) : null}
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
-                      Valor Recebido
-                    </p>
-                    <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
-                      {project.pendingIsCredit ? "Excedente" : "Valor Pendente"}
-                    </p>
-                    <p
-                      className={[
-                        "mt-1 text-sm",
-                        project.pendingIsCredit ? "text-emerald-400" : ""
-                      ].join(" ")}
-                    >
-                      {project.pendingValueLabel}
-                    </p>
-                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[color:var(--text-soft)]">
-                      <StatusPulse tone={project.projectStatusTone} />
-                      {project.projectStatusLabel}
-                    </p>
-                  </div>
+                      <p className="mt-1 text-sm text-emerald-500">Gratuito</p>
+                      <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[color:var(--text-soft)]">
+                        <StatusPulse tone={project.projectStatusTone} />
+                        {project.projectStatusLabel}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                          {project.billingMode === "FIXED" ? "Preço fechado" : "Valor Gerado"}
+                        </p>
+                        <p className="mt-1 text-sm">{project.totalValueLabel}</p>
+                        {project.billingMode === "FIXED" ? (
+                          <p
+                            className={[
+                              "mt-1 text-xs",
+                              project.comparisonPositive
+                                ? "text-emerald-400"
+                                : "text-[color:var(--text-soft)]"
+                            ].join(" ")}
+                          >
+                            Por horas {project.hoursComparisonLabel} (
+                            {project.comparisonDeltaLabel})
+                          </p>
+                        ) : null}
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                          Valor Recebido
+                        </p>
+                        <p className="mt-1 text-sm">{project.receivedValueLabel}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-[color:var(--text-faint)]">
+                          {project.pendingIsCredit ? "Excedente" : "Valor Pendente"}
+                        </p>
+                        <p
+                          className={[
+                            "mt-1 text-sm",
+                            project.pendingIsCredit ? "text-emerald-400" : ""
+                          ].join(" ")}
+                        >
+                          {project.pendingValueLabel}
+                        </p>
+                        <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[color:var(--text-soft)]">
+                          <StatusPulse tone={project.projectStatusTone} />
+                          {project.projectStatusLabel}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -2646,12 +2683,19 @@ export function OperationsPanel({
                   ) : null;
                 })()}
               </label>
-              <label className="block">
+              <label
+                className={
+                  projectDraft.billingMode === "NON_PROFIT"
+                    ? "block opacity-50"
+                    : "block"
+                }
+              >
                 <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                   Valor/hora WakaTime
                 </span>
                 <input
                   className={fieldClass}
+                  disabled={projectDraft.billingMode === "NON_PROFIT"}
                   inputMode="decimal"
                   onChange={(event) =>
                     setProjectDraft((current) =>
@@ -2663,7 +2707,9 @@ export function OperationsPanel({
                   value={projectDraft.hourlyRate}
                 />
                 <span className="mt-2 block text-xs text-[color:var(--text-faint)]">
-                  Vazio ou 0 mantém as horas visíveis sem gerar cobrança.
+                  {projectDraft.billingMode === "NON_PROFIT"
+                    ? "Projeto sem fins lucrativos: nenhum valor é cobrado."
+                    : "Vazio ou 0 mantém as horas visíveis sem gerar cobrança."}
                 </span>
               </label>
             </div>
@@ -2672,13 +2718,15 @@ export function OperationsPanel({
                 Tipo de cobrança
               </span>
               <span className="mt-1 block text-xs text-[color:var(--text-soft)]">
-                Cobre por horas trabalhadas ou por um preço fechado combinado.
+                Cobre por horas, por um preço fechado, ou marque como projeto próprio /
+                sem fins lucrativos.
               </span>
-              <div className="mt-3 grid grid-cols-2 gap-1 rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] p-1">
+              <div className="mt-3 grid grid-cols-3 gap-1 rounded-md border border-[color:var(--border)] bg-[var(--input-bg)] p-1">
                 {(
                   [
                     ["HOURLY", "Por horas"],
-                    ["FIXED", "Preço fechado"]
+                    ["FIXED", "Preço fechado"],
+                    ["NON_PROFIT", "Sem cobrança"]
                   ] as const
                 ).map(([value, label]) => (
                   <button
@@ -2723,12 +2771,25 @@ export function OperationsPanel({
                     salvos e servem só como comparação interna.
                   </span>
                 </label>
+              ) : projectDraft.billingMode === "NON_PROFIT" ? (
+                <p className="mt-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-[color:var(--text-soft)]">
+                  Projeto próprio, de parentes ou interno. As horas WakaTime, horas
+                  dedicadas, notas, tarefas, histórico e link compartilhável continuam
+                  funcionando — mas nada é cobrado e ele não entra em valor pendente,
+                  a receber ou faturamento.
+                </p>
               ) : null}
             </div>
-            <div className="rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4">
+            <div
+              className={[
+                "rounded-md border border-[color:var(--border)] bg-[var(--surface-subtle)] p-4",
+                projectDraft.billingMode === "NON_PROFIT" ? "opacity-50" : ""
+              ].join(" ")}
+            >
               <button
                 aria-checked={projectDraft.billDedicated}
-                className="flex w-full items-center justify-between gap-4 text-left"
+                className="flex w-full items-center justify-between gap-4 text-left disabled:cursor-not-allowed"
+                disabled={projectDraft.billingMode === "NON_PROFIT"}
                 onClick={() =>
                   setProjectDraft((current) =>
                     current
@@ -2770,6 +2831,7 @@ export function OperationsPanel({
                 </span>
                 <input
                   className={fieldClass}
+                  disabled={projectDraft.billingMode === "NON_PROFIT"}
                   inputMode="decimal"
                   onChange={(event) =>
                     setProjectDraft((current) =>
@@ -3367,6 +3429,12 @@ export function OperationsPanel({
                 <StatusPulse tone={previewProject.projectStatusTone} />
                 {previewProject.projectStatusLabel}
               </span>
+              {previewProject.isNonProfit ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
+                  <StatusPulse tone="success" />
+                  Sem fins lucrativos
+                </span>
+              ) : null}
               {previewProject.reminderEnabled && previewProject.reminderStatusLabel ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]">
                   <StatusPulse tone={previewProject.reminderStatusTone} />
@@ -3378,19 +3446,33 @@ export function OperationsPanel({
               <DetailRow label="Cliente" value={previewProject.clientName ?? "Sem cliente"} />
               <DetailRow
                 label="Tipo de cobrança"
-                value={previewProject.billingMode === "FIXED" ? "Preço fechado" : "Por horas"}
+                value={
+                  previewProject.isNonProfit
+                    ? "Projeto próprio / sem fins lucrativos"
+                    : previewProject.billingMode === "FIXED"
+                      ? "Preço fechado"
+                      : "Por horas"
+                }
               />
               <DetailRow label="Horas WakaTime" value={previewProject.wakatimeLabel} />
               <DetailRow label="Horas dedicadas" value={previewProject.dedicatedLabel} />
-              <DetailRow
-                label={previewProject.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado"}
-                value={previewProject.totalValueLabel}
-              />
-              <DetailRow label="Valor recebido" value={previewProject.receivedValueLabel} />
-              <DetailRow
-                label={previewProject.pendingIsCredit ? "Excedente" : "Valor pendente"}
-                value={previewProject.pendingValueLabel}
-              />
+              {previewProject.isNonProfit ? (
+                <DetailRow label="Cobrança" value="Gratuito" />
+              ) : (
+                <>
+                  <DetailRow
+                    label={
+                      previewProject.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado"
+                    }
+                    value={previewProject.totalValueLabel}
+                  />
+                  <DetailRow label="Valor recebido" value={previewProject.receivedValueLabel} />
+                  <DetailRow
+                    label={previewProject.pendingIsCredit ? "Excedente" : "Valor pendente"}
+                    value={previewProject.pendingValueLabel}
+                  />
+                </>
+              )}
               <DetailRow label="Criado em" value={previewProject.createdAtLabel} />
               {previewProject.repositoryUrl ? (
                 <DetailRow

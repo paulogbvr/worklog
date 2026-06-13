@@ -96,16 +96,22 @@ export default async function SharedProjectPage({
     shareLinkId: project.id
   });
 
-  const metrics = [
-    ["Horas WakaTime", project.wakaTimeLabel],
-    ["Horas dedicadas", project.dedicatedLabel],
-    [
-      project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado",
-      project.generatedValueLabel
-    ],
-    ["Valor recebido", project.receivedValueLabel],
-    [project.pendingIsCredit ? "Excedente" : "Valor pendente", project.pendingValueLabel]
-  ];
+  const metrics = project.isNonProfit
+    ? [
+        ["Horas WakaTime", project.wakaTimeLabel],
+        ["Horas dedicadas", project.dedicatedLabel],
+        ["Cobrança", "Projeto sem fins lucrativos"]
+      ]
+    : [
+        ["Horas WakaTime", project.wakaTimeLabel],
+        ["Horas dedicadas", project.dedicatedLabel],
+        [
+          project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado",
+          project.generatedValueLabel
+        ],
+        ["Valor recebido", project.receivedValueLabel],
+        [project.pendingIsCredit ? "Excedente" : "Valor pendente", project.pendingValueLabel]
+      ];
 
   return (
     <ToastProvider>
@@ -127,6 +133,11 @@ export default async function SharedProjectPage({
                 <span className="inline-flex items-center rounded-full border border-[color:var(--border)] bg-[var(--surface-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[color:var(--text-soft)]">
                   somente leitura
                 </span>
+                {project.isNonProfit ? (
+                  <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-500">
+                    projeto sem fins lucrativos
+                  </span>
+                ) : null}
               </div>
               <h1 className="mt-1 text-3xl font-semibold text-[color:var(--app-text-strong)]">
                 {project.name}
