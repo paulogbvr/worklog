@@ -111,6 +111,7 @@ model Project {
   name                String
   notes               String?
   repositoryUrl       String?
+  siteUrl             String?
   hourlyRate          Decimal?                   @db.Decimal(10, 2)
   dedicatedHourlyRate Decimal?                   @db.Decimal(10, 2)
   billDedicated       Boolean                    @default(false)

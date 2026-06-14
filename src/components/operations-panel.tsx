@@ -81,6 +81,7 @@ type ProjectDraft = {
   pendingValueLabel: string;
   status: ProjectStatusValue;
   repositoryUrl: string;
+  siteUrl: string;
   shareAccessCount: number;
   sharePath: string | null;
   reminderEnabled: boolean;
@@ -511,6 +512,7 @@ export function OperationsPanel({
       pendingValueLabel: project.pendingValueLabel,
       status: project.projectStatus,
       repositoryUrl: project.repositoryUrl ?? "",
+      siteUrl: project.siteUrl ?? "",
       shareAccessCount: project.shareAccessCount,
       sharePath: project.sharePath,
       reminderEnabled: project.reminderEnabled,
@@ -749,6 +751,7 @@ export function OperationsPanel({
     const shareLink = project.sharePath
       ? `${window.location.origin}${project.sharePath}`
       : "Sem link";
+    const siteLine = `Site do projeto → ${project.siteUrl ?? "Não informado"}`;
     const lines = project.isNonProfit
       ? [
           `Nome → ${project.name}`,
@@ -758,6 +761,7 @@ export function OperationsPanel({
           `Cobrança → Gratuito`,
           `Horas WakaTime → ${project.wakatimeLabel}`,
           `Horas dedicadas → ${project.dedicatedLabel}`,
+          siteLine,
           `Link compartilhado → ${shareLink}`,
         ]
       : [
@@ -769,6 +773,7 @@ export function OperationsPanel({
           `Horas dedicadas → ${project.dedicatedLabel}`,
           `${project.billingMode === "FIXED" ? "Preço fechado" : "Total"} → ${project.totalValueLabel}`,
           `${project.pendingIsCredit ? "Excedente" : "Pendente"} → ${project.pendingValueLabel}`,
+          siteLine,
           `Link compartilhado → ${shareLink}`,
         ];
 
@@ -3079,6 +3084,22 @@ export function OperationsPanel({
             </label>
             <label className="block">
               <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
+                Site do projeto
+              </span>
+              <input
+                className={fieldClass}
+                onChange={(event) =>
+                  setProjectDraft((current) =>
+                    current ? { ...current, siteUrl: event.target.value } : current,
+                  )
+                }
+                placeholder="https://exemplo.com"
+                type="url"
+                value={projectDraft.siteUrl}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-[color:var(--text-muted)]">
                 Observações
               </span>
               <textarea
@@ -3768,6 +3789,9 @@ export function OperationsPanel({
                   label="Repositório"
                   value={previewProject.repositoryUrl}
                 />
+              ) : null}
+              {previewProject.siteUrl ? (
+                <DetailRow full label="Site do projeto" value={previewProject.siteUrl} />
               ) : null}
               <DetailRow
                 full

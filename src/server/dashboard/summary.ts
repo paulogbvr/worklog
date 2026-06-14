@@ -134,6 +134,7 @@ export type DashboardProject = {
   receivedValue: number;
   receivedValueLabel: string;
   repositoryUrl: string | null;
+  siteUrl: string | null;
   shareAccessCount: number;
   shareLastAccessedLabel: string;
   sharePath: string | null;
@@ -563,6 +564,7 @@ export async function getDashboardSummary(
           }
         },
         repositoryUrl: true,
+        siteUrl: true,
         status: true,
         shareLinks: {
           orderBy: {
@@ -904,6 +906,7 @@ export async function getDashboardSummary(
       receivedValue,
       receivedValueLabel: formatCurrency(receivedValue),
       repositoryUrl: project.repositoryUrl,
+      siteUrl: project.siteUrl,
       shareAccessCount: shareLink?.accessCount ?? 0,
       shareLastAccessedLabel: formatDateTime(shareLink?.lastAccessedAt),
       sharePath: shareLink?.active ? `/share/${shareLink.slug}` : null,

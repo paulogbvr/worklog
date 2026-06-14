@@ -72,6 +72,7 @@ export async function getPublicProject(slug: string) {
             }
           },
           repositoryUrl: true,
+          siteUrl: true,
           status: true,
           statusEvents: {
             orderBy: {
@@ -182,6 +183,7 @@ export async function getPublicProject(slug: string) {
     projectId: project.id,
     receivedValueLabel: formatCurrency(receivedValue),
     repositoryUrl: project.repositoryUrl,
+    siteUrl: project.siteUrl,
     statusBadgeClass: projectStatus.badgeClass,
     statusLabel: projectStatus.label,
     statusTone: projectStatus.tone,

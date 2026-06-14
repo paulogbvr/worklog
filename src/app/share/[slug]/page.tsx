@@ -145,6 +145,17 @@ export default async function SharedProjectPage({
               <p className="mt-2 text-sm text-[color:var(--text-soft)]">
                 {project.clientName}
               </p>
+              {project.siteUrl ? (
+                <a
+                  className="mt-4 inline-flex w-fit items-center gap-2 rounded-md border border-blue-500/40 bg-blue-500/10 px-3.5 py-2 text-sm font-medium text-blue-400 transition-all duration-200 ease-out hover:bg-blue-500/20 active:scale-[0.98]"
+                  href={project.siteUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <ExternalLink className="size-4" />
+                  Acessar site do projeto
+                </a>
+              ) : null}
             </div>
             <div
               className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs ${project.statusBadgeClass}`}

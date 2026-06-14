@@ -33,10 +33,10 @@ function parseHourlyRate(value: unknown) {
   return parsed === 0 ? null : parsed;
 }
 
-function parseRepositoryUrl(value: unknown) {
-  const repositoryUrl = optionalText(value);
+function parseWebUrl(value: unknown, errorMessage: string) {
+  const rawUrl = optionalText(value);
 
-  if (!repositoryUrl) {
+  if (!rawUrl) {
     return {
       ok: true as const,
       value: null
@@ -44,7 +44,7 @@ function parseRepositoryUrl(value: unknown) {
   }
 
   try {
-    const url = new URL(repositoryUrl);
+    const url = new URL(rawUrl);
 
     if (url.protocol !== "https:" && url.protocol !== "http:") {
       throw new Error("invalid protocol");
@@ -56,7 +56,7 @@ function parseRepositoryUrl(value: unknown) {
     };
   } catch {
     return {
-      error: "Informe uma URL válida para o repositório Git.",
+      error: errorMessage,
       ok: false as const
     };
   }
@@ -82,7 +82,11 @@ export async function PATCH(
           : BillingMode.HOURLY;
     const billDedicated = body.billDedicated === true;
     const active = body.active !== false;
-    const repositoryUrl = parseRepositoryUrl(body.repositoryUrl);
+    const repositoryUrl = parseWebUrl(
+      body.repositoryUrl,
+      "Informe uma URL válida para o repositório Git."
+    );
+    const siteUrl = parseWebUrl(body.siteUrl, "Informe uma URL válida para o site do projeto.");
     const status =
       typeof body.status === "string" &&
       Object.values(ProjectStatus).includes(body.status as ProjectStatus)
@@ -103,6 +107,16 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: repositoryUrl.error,
+          ok: false
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!siteUrl.ok) {
+      return NextResponse.json(
+        {
+          error: siteUrl.error,
           ok: false
         },
         { status: 400 }
@@ -229,6 +243,7 @@ export async function PATCH(
         name,
         notes: optionalText(body.notes),
         repositoryUrl: repositoryUrl.value,
+        siteUrl: siteUrl.value,
         status: nextStatus
       },
       where: {
