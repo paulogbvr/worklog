@@ -204,6 +204,7 @@ export async function GET(
 
   await recordShareEvent(
     {
+      clientName: project.clientName,
       projectId: project.projectId,
       projectName: project.name,
       shareLinkId: project.id

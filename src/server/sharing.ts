@@ -10,6 +10,10 @@ import { formatCurrency, formatDuration } from "@/server/dashboard/summary";
 
 const TIME_ZONE = "America/Sao_Paulo";
 
+// Fallback label used on the public page when a project has no linked client.
+// Shared so share notifications can tell a real client apart from this default.
+export const INDEPENDENT_CLIENT_LABEL = "Projeto independente";
+
 function formatDateTime(date: Date | null) {
   if (!date) {
     return "Não realizada";
@@ -151,7 +155,7 @@ export async function getPublicProject(slug: string) {
   return {
     billingMode: project.billingMode,
     isNonProfit,
-    clientName: project.client?.name ?? "Projeto independente",
+    clientName: project.client?.name ?? INDEPENDENT_CLIENT_LABEL,
     createdAtLabel: formatDate(shareLink.createdAt),
     dedicatedLabel: formatDuration(dedicatedSeconds),
     description:
@@ -262,6 +266,7 @@ export async function getPublicProject(slug: string) {
 }
 
 type ShareEventInput = {
+  clientName?: string | null;
   projectId: string;
   projectName: string;
   shareLinkId: string;
@@ -271,19 +276,25 @@ export async function recordShareEvent(
   input: ShareEventInput,
   type: ShareEventType
 ) {
+  // Only mention the client when it's a real linked one (not the public-page
+  // fallback label), so the notification stays accurate.
+  const hasClient = Boolean(
+    input.clientName && input.clientName !== INDEPENDENT_CLIENT_LABEL
+  );
+  const clientSuffix = hasClient ? ` Cliente: ${input.clientName}.` : "";
   const content = {
     [ShareEventType.ACCESS]: {
-      message: `O link somente leitura de ${input.projectName} foi visualizado.`,
-      title: "Projeto acessado",
+      message: `O link compartilhado do projeto ${input.projectName} foi aberto.${clientSuffix}`,
+      title: "Link compartilhado aberto",
       notificationType: NotificationType.SHARE_ACCESSED
     },
     [ShareEventType.COPY_LINK]: {
-      message: `O link público de ${input.projectName} foi copiado.`,
+      message: `O link público do projeto ${input.projectName} foi copiado.${clientSuffix}`,
       title: "Link público copiado",
       notificationType: NotificationType.SHARE_COPIED
     },
     [ShareEventType.PDF_DOWNLOAD]: {
-      message: `O acompanhamento de ${input.projectName} foi salvo em PDF.`,
+      message: `O acompanhamento do projeto ${input.projectName} foi salvo em PDF.${clientSuffix}`,
       title: "Relatório público salvo",
       notificationType: NotificationType.SHARE_PDF_DOWNLOADED
     }

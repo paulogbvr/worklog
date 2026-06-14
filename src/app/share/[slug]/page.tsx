@@ -92,6 +92,7 @@ export default async function SharedProjectPage({
   }
 
   await recordShareAccess({
+    clientName: project.clientName,
     projectId: project.projectId,
     projectName: project.name,
     shareLinkId: project.id
