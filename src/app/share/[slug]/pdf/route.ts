@@ -96,7 +96,7 @@ export async function GET(
   y -= 65;
 
   const metrics = [
-    ["WakaTime", project.wakaTimeLabel],
+    ["Horas de código", project.wakaTimeLabel],
     ["Horas dedicadas", project.dedicatedLabel],
     ["Valor gerado", project.generatedValueLabel],
     ["Valor recebido", project.receivedValueLabel],

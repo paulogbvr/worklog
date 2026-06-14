@@ -98,12 +98,12 @@ export default async function SharedProjectPage({
 
   const metrics = project.isNonProfit
     ? [
-        ["Horas WakaTime", project.wakaTimeLabel],
+        ["Horas de código", project.wakaTimeLabel],
         ["Horas dedicadas", project.dedicatedLabel],
         ["Cobrança", "Projeto sem fins lucrativos"]
       ]
     : [
-        ["Horas WakaTime", project.wakaTimeLabel],
+        ["Horas de código", project.wakaTimeLabel],
         ["Horas dedicadas", project.dedicatedLabel],
         [
           project.billingMode === "FIXED" ? "Preço fechado" : "Valor gerado",
