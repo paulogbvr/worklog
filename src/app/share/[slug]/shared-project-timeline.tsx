@@ -26,6 +26,9 @@ export function SharedProjectTimeline({
 }) {
   const [filter, setFilter] = useState(initialFilter);
   const filtersRef = useRef<HTMLDivElement>(null);
+  // Skip the very first render so the filter strip doesn't scroll itself into
+  // view on mount — that was pulling the public page down to the metrics area.
+  const hasInteractedRef = useRef(false);
   const counts = useMemo(
     () => ({
       all: items.length,
@@ -49,6 +52,10 @@ export function SharedProjectTimeline({
   }, []);
 
   useEffect(() => {
+    if (!hasInteractedRef.current) {
+      return;
+    }
+
     const active = filtersRef.current?.querySelector<HTMLButtonElement>(
       `[data-filter="${filter}"]`
     );
@@ -56,6 +63,7 @@ export function SharedProjectTimeline({
   }, [filter]);
 
   function selectFilter(nextFilter: SharedTimelineFilter) {
+    hasInteractedRef.current = true;
     const url = new URL(window.location.href);
     url.searchParams.set("filter", nextFilter);
     window.history.replaceState(window.history.state, "", url);

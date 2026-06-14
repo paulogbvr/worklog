@@ -7,6 +7,7 @@ import { StatusPulse } from "@/components/status-pulse";
 import { SharedPaymentReceipt } from "@/app/share/[slug]/shared-payment-receipt";
 import { SharedPaymentInvoice } from "@/app/share/[slug]/shared-payment-invoice";
 import { SharedProjectActions } from "@/app/share/[slug]/shared-project-actions";
+import { ScrollToTopOnMount } from "@/app/share/[slug]/scroll-to-top-on-mount";
 import { ToastProvider } from "@/components/toast-provider";
 import {
   SharedProjectTimeline,
@@ -115,6 +116,7 @@ export default async function SharedProjectPage({
 
   return (
     <ToastProvider>
+    <ScrollToTopOnMount />
     <main className="min-h-screen bg-[var(--app-bg)] text-[color:var(--app-text)]">
       <div className="pointer-events-none fixed inset-0 bg-[var(--ambient-gradient)]" />
       <div className="relative mx-auto w-full max-w-5xl px-5 py-7 sm:px-8 lg:py-10">
@@ -138,12 +140,6 @@ export default async function SharedProjectPage({
                     projeto sem fins lucrativos
                   </span>
                 ) : null}
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${project.statusBadgeClass}`}
-                >
-                  <StatusPulse tone={project.statusTone} />
-                  {project.statusLabel}
-                </span>
               </div>
               <h1 className="mt-1 text-3xl font-semibold text-[color:var(--app-text-strong)]">
                 {project.name}
@@ -152,17 +148,25 @@ export default async function SharedProjectPage({
                 {project.clientName}
               </p>
             </div>
-            {project.siteUrl ? (
-              <a
-                className="inline-flex w-fit items-center gap-2 self-end rounded-md border border-blue-500/40 bg-blue-500/10 px-3.5 py-2 text-sm font-medium text-blue-400 transition-all duration-200 ease-out hover:bg-blue-500/20 active:scale-[0.98]"
-                href={project.siteUrl}
-                rel="noopener noreferrer"
-                target="_blank"
+            <div className="flex flex-col items-end gap-3 self-end sm:self-auto">
+              <div
+                className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs ${project.statusBadgeClass}`}
               >
-                <ExternalLink className="size-4" />
-                Acessar Site
-              </a>
-            ) : null}
+                <StatusPulse tone={project.statusTone} />
+                {project.statusLabel}
+              </div>
+              {project.siteUrl ? (
+                <a
+                  className="inline-flex w-fit items-center gap-2 rounded-md border border-blue-500/40 bg-blue-500/10 px-3.5 py-2 text-sm font-medium text-blue-400 transition-all duration-200 ease-out hover:bg-blue-500/20 active:scale-[0.98]"
+                  href={project.siteUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <ExternalLink className="size-4" />
+                  Acessar Site
+                </a>
+              ) : null}
+            </div>
           </div>
         </header>
 
